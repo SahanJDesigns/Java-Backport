@@ -7,7 +7,6 @@ Tools for building, testing, and verifying Java backport commits.
 This repository contains scripts to help automate the verification of backported commits across various Java projects. It includes:
 
 *   `reproduce_results.py`: The main script to reproduce build and test results for a specific commit.
-*   `run_tests.py`: Batch processing script (experimentation).
 *   `dataset/`: CSVs containing backport data.
 *   `helpers/`: Project-specific helpers (Dockerfiles, build scripts).
 
