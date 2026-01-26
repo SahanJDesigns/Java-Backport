@@ -1,0 +1,7 @@
+Project,Original Version,Original Commit,Backport Version,Backport Commit,Backport Date,Type
+hadoop,trunk,81e4848a7e77b5d827709b449ad187b77e5fb2db,branch-3.4,e6cf6e6d10bb2e8e4963e9e78d9c3ade3f0bf161,2025-05-19 14:26:06+00:00,TYPE-I
+hadoop,trunk,2fbbfe3cc93574818690373a26e1c3e0f88c560a,branch-3.3,745afa8ceb5dc88ce97d89d24c2236bd2ecb9e98,2024-06-26 16:52:07+00:00,TYPE-II
+hadoop,trunk,ecf665c6facf89d3b87b6e3cc684274b8155ca60,branch-3.3,75ad60ba99bdb4bd044879af20cab4f368866613,2024-04-27 12:32:28+00:00,TYPE-V
+hadoop,trunk,a386ac1f5632949bc49a9d09195073ba5f980b5c,branch-3.3,efc53d87252af3b2455d4c38df08d8d850d1879f,2024-04-23 00:14:03+00:00,TYPE-I
+hadoop,trunk,7504b8505fa208453e2a1ad55af4b03bafd133c0,branch-3.4,e40f696c448dcf9cf7ab33ab94d06812fb7df09b,2024-02-09 14:29:40+00:00,TYPE-II
+hadoop,trunk,f1e4376626efb15d1c3001c0e50ab06536ce7057,branch-3.3,585f9667e4b36c6347ec70d646d9ae4f216cfabb,2024-01-21 03:53:55+00:00,TYPE-I

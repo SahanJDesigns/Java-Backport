@@ -1,0 +1,20 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Local results and build artifacts
+build_results/
+temp_work/
+builder_backup.tar
+
+# Local cache folders
+.ccache/
+maven-repo/
+gradle-cache/
+
+# IDE / OS files
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo

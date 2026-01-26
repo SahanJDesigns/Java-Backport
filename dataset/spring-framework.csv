@@ -1,0 +1,10 @@
+Project,Original Version,Original Commit,Backport Version,Backport Commit,Backport Date,Type
+spring-framework,main,f0e7b42704e6b33958f242d91bd690d6ef7ada9c,6.1.x,fd68ea6fcbf94fc1d38bfefd3692fe094652ab3d,2025-06-12 06:39:41+00:00,TYPE-V
+spring-framework,main,b6a5402d885c41c911b42d35b3cd9e1f13d63ebf,6.1.x,c02d07fdef827890212ad9780a50898cc38e6deb,2025-02-25 16:57:27+00:00,TYPE-II
+spring-framework,main,5a0bd9e5d411d4837294f51660b9659c98b0864a,6.1.x,ccf4b028d2900b19690220ff7e4724ef61d823c0,2025-02-21 13:36:09+00:00,TYPE-I
+spring-framework,main,6dd73ae3e4aec0450220f13e7a652334dae195e1,6.1.x,b5c89c91a9aa3a8f6e2e58869da126c6c8e045bf,2025-02-21 13:35:37+00:00,TYPE-II
+spring-framework,main,174d0e4576b1bbd8c8bdb9cee3bf6cf844715e5d,6.1.x,65913c36552dc8cebf2d8862fab8a40d04c1a716,2025-02-06 17:34:24+00:00,TYPE-I
+spring-framework,main,b5a86dec92eefb43795ac0e9f6802d589fff5956,6.0.x,be7029c35dca4d70de15ea097649799aec19ac88,2024-07-10 10:40:24+00:00,TYPE-II
+spring-framework,main,ab236c7741dcf8ea9da738d1407a623bcd12bf0d,6.0.x,a352d884c986a9ed3492ce186d954fc31dad15d4,2024-07-01 09:49:42+00:00,TYPE-I
+spring-framework,main,70d9f7c62cc5f698490a926100da7c11503f169e,6.0.x,b484ab116f818129471d3bf19feea2a9df1f2c92,2024-01-22 10:28:07+00:00,TYPE-II
+spring-framework,main,7c9307e9706535e82de231a095d94fbf855dcc23,6.0.x,56c63c779f84e5e6e6aabafa7c1cdbb4d95ef45f,2024-01-04 16:06:17+00:00,TYPE-I
