@@ -1,11 +1,11 @@
 # JavaBackports: A Dataset for Benchmarking Automated Backporting in Java
 
-[![Dataset](https://img.shields.io/badge/dataset-474%20backports-blue.svg)](#-dataset-overview)
+[![Dataset](https://img.shields.io/badge/dataset-491%20backports-blue.svg)](#-dataset-overview)
 [![Projects](https://img.shields.io/badge/projects-12%20Java%20repos-green.svg)](#-included-projects)
 
 ## Dataset Overview
 
-The JavaBackports dataset contains **474 validated backport instances** spanning across major Java projects. Each backport represents a real-world scenario where a patch from a main development branch was adapted and applied to a long-term support or stable release branch.
+The JavaBackports dataset contains **491 validated backport instances** spanning across major Java projects. Each backport represents a real-world scenario where a patch from a main development branch was adapted and applied to a long-term support or stable release branch.
 
 ### Dataset Schema
 
