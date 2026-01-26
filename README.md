@@ -31,7 +31,6 @@ The dataset covers a wide range of Java projects. Note that tooling support may 
 | **Apache Druid** | [apache/druid](https://github.com/apache/druid) | Real-time analytics database |
 | **Elasticsearch** | [elastic/elasticsearch](https://github.com/elastic/elasticsearch) | Search and analytics engine |
 | **Apache Hadoop** | [apache/hadoop](https://github.com/apache/hadoop) | Distributed computing framework |
-| **Apache Kafka** | [apache/kafka](https://github.com/apache/kafka) | Distributed streaming platform |
 | **OpenJDK 8** | [openjdk/jdk8u-dev](https://github.com/openjdk/jdk8u-dev) | Java Development Kit 8 LTS |
 | **OpenJDK 11** | [openjdk/jdk11u-dev](https://github.com/openjdk/jdk11u-dev) | Java Development Kit 11 LTS |
 | **OpenJDK 17** | [openjdk/jdk17u-dev](https://github.com/openjdk/jdk17u-dev) | Java Development Kit 17 LTS |
@@ -176,5 +175,3 @@ The following projects have full build/test support in `reproduce_results.py`:
 *   **Spring Framework** (`spring-framework`)
 *   **SQL** (`sql`)
 *   **JDKs** (`jdk11u-dev`, `jdk17u-dev`, `jdk21u-dev`, `jdk25u-dev`)
-
-*(Note: Apache Kafka is included in the dataset but lacks fully automated reproduction scripts at this moment.)*
