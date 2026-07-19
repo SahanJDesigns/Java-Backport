@@ -1,0 +1,418 @@
+[04:05:44] === Row 40: crate  308d7c9b -> 0648f7af  [TYPE-II] ===
+[04:05:44]   Resolving parent of backport commit 0648f7af...
+[04:05:44]   Backport parent (target ref): c922e99ea53a50de1be112b664a422d8bd1afafd
+[04:05:44]   Extracting new-version patch for 308d7c9b...
+[04:05:44]   New-version patch size: 4901 chars
+[04:05:44]   Checking out backport parent c922e99e...
+[04:05:45]   Invoking OpenCode CLI (8930 chars)...
+[04:05:45]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the target ref context and original commit metadata, then build the smallest equivalent patch for the current `5.9` checkout before applying and committing it.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target branch code context
+[ ] Construct and validate each backport hunk
+[ ] Apply patch and commit result
+[ ] Run full validation and report YAML result
+[0m
+[0m⚙ [0mgit_show {"ref":"308d7c9b1f6f7885c38b762db2b79c7c766ca705"}
+[0m⚙ [0mviewcode {"ref":"c922e99ea53a50de1be112b664a422d8bd1afafd","path":"server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java","startline":130,"endline":165}
+[0m⚙ [0mviewcode {"ref":"c922e99ea53a50de1be112b664a422d8bd1afafd","path":"server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java","startline":1,"endline":145}
+[0m⚙ [0mviewcode {"ref":"c922e99ea53a50de1be112b664a422d8bd1afafd","path":"docs/appendices/release-notes/5.9.7.rst","startline":1,"endline":80}
+[0m⚙ [0mlocate_symbol {"ref":"c922e99ea53a50de1be112b664a422d8bd1afafd","symbol":"IndexScopedSettings"}
+[0m⚙ [0mlocate_symbol {"ref":"c922e99ea53a50de1be112b664a422d8bd1afafd","symbol":"AlterTableClusterStateExecutorTest"}
+The target files match the original locations. One symbol lookup hit a stale `.git/index.lock`, so I’m checking the repository state before proceeding rather than forcing any destructive operation.
+[0m✱ [0mGrep "SETTING_VERSION_CREATED"[90m in server/src/main/java/org/elasticsearch/cluster/metadata · 4 matches[0m
+[0m✱ [0mGrep "class AlterTableClusterStateExecutor|updateTemplate"[90m in server/src/main/java/io/crate/metadata/cluster · 7 matches[0m
+[0m✱ [0mGrep "SETTING_INDEX_VERSION_CREATED"[90m in server/src/main/java · 17 matches[0m
+[0m
+[0m$ [0mgit status --short
+?? tags
+[0m
+The working tree only has an existing untracked `tags` file, which I’ll leave untouched. I found the same version-created constants in `5.9`, so the Java change can be ported directly with context-only adjustments.
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java","start_line":147,"end_line":154,"start_commit":"c922e99ea53a50de1be112b664a422d8bd1afafd","end_commit":"c922e99ea53a50de1be112b664a422d8bd1afafd"}
+[0m⚙ [0mgit_history {"filepath":"server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java","start_line":47,"end_line":107,"start_commit":"c922e99ea53a50de1be112b664a422d8bd1afafd","end_commit":"c922e99ea53a50de1be112b664a422d8bd1afafd"}
+[0m⚙ [0mlocate_symbol {"ref":"c922e99ea53a50de1be112b664a422d8bd1afafd","symbol":"updateTemplate"}
+[0m⚙ [0mlocate_symbol {"ref":"c922e99ea53a50de1be112b664a422d8bd1afafd","symbol":"IndexScopedSettings"}
+[0m
+[0m$ [0mTest-Path -LiteralPath ".git\index.lock"; Get-Process git -ErrorAction SilentlyContinue | ForEach-Object { $_.Id }
+False
+[0m
+The intermittent lock is not present now and no git process is running; it appears to be a transient artifact from symbol tooling. I’m validating the adapted hunks sequentially to avoid reintroducing lock contention.
+[0m⚙ [0mvalidate {"ref":"c922e99ea53a50de1be112b664a422d8bd1afafd","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.9.7.rst b/docs/appendices/release-notes/5.9.7.rst\n--- a/docs/appendices/release-notes/5.9.7.rst\n+++ b/docs/appendices/release-notes/5.9.7.rst\n@@ -54,3 +54,9 @@ Fixes\n - Fixed an issue that could prevent the creation of new partitions if data was\n   written to a partitioned table during a rolling upgrade and that table had\n   setting ``warmer.enabled`` specified before the upgrade.\n+\n+- Fixed an issue that incorrectly updated ``VERSION`` settings from\n+  :ref:`information_schema.tables <information_schema_tables>` and\n+  :ref:`information_schema.table_partitions <is_table_partitions>` for\n+  partitioned tables and their new partitions to the latest version following a\n+  node upgrade.\n"}
+[0m⚙ [0mvalidate {"ref":"c922e99ea53a50de1be112b664a422d8bd1afafd","mode":"hunk","patch":"diff --git a/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java b/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java\n--- a/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java\n+++ b/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java\n@@ -148,7 +148,6 @@ public final class IndexScopedSettings extends AbstractScopedSettings {\n         switch (key) {\n             case IndexMetadata.SETTING_CREATION_DATE:\n             case IndexMetadata.SETTING_INDEX_UUID:\n-            case IndexMetadata.SETTING_VERSION_CREATED:\n             case IndexMetadata.SETTING_HISTORY_UUID:\n             case IndexMetadata.SETTING_VERSION_UPGRADED:\n             case IndexMetadata.SETTING_INDEX_PROVIDED_NAME:\n"}
+[0m⚙ [0mvalidate {"ref":"c922e99ea53a50de1be112b664a422d8bd1afafd","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java b/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\n--- a/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\n+++ b/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\n@@ -24,14 +24,18 @@ package io.crate.metadata.cluster;\n import static org.assertj.core.api.Assertions.assertThat;\n import static org.elasticsearch.cluster.metadata.IndexMetadata.INDEX_ROUTING_EXCLUDE_GROUP_PREFIX;\n import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_CREATION_DATE;\n+import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_INDEX_VERSION_CREATED;\n import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_NUMBER_OF_SHARDS;\n+import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_VERSION_CREATED;\n import static org.elasticsearch.common.settings.AbstractScopedSettings.ARCHIVED_SETTINGS_PREFIX;\n \n import java.io.IOException;\n import java.util.Collections;\n import java.util.List;\n+import java.util.Map;\n \n+import org.elasticsearch.Version;\n import org.elasticsearch.cluster.ClusterState;\n+import org.elasticsearch.cluster.metadata.IndexMetadata;\n import org.elasticsearch.cluster.metadata.IndexTemplateMetadata;\n import org.elasticsearch.cluster.metadata.Metadata;\n import org.elasticsearch.common.settings.IndexScopedSettings;\n@@ -104,4 +108,39 @@ public class AlterTableClusterStateExecutorTest {\n         assertThat(filteredSettings.isEmpty()).isFalse();\n         assertThat(filteredSettings.get(fullName)).isEqualTo(\"node1\");\n     }\n+\n+    @Test\n+    public void test_altering_settings_do_not_modify_version_created() throws IOException {\n+        IndexScopedSettings indexScopedSettings = IndexScopedSettings.DEFAULT_SCOPED_SETTINGS;\n+\n+        RelationName relationName = new RelationName(Schemas.DOC_SCHEMA_NAME, \"t1\");\n+        String templateName = PartitionName.templateName(relationName.schema(), relationName.name());\n+\n+        final Version v = Version.V_5_4_0;\n+\n+        Settings settings = Settings.builder()\n+            .put(IndexMetadata.SETTING_VERSION_CREATED, v)\n+            .build();\n+        IndexTemplateMetadata indexTemplateMetadata = IndexTemplateMetadata.builder(templateName)\n+            .patterns(Collections.singletonList(\"*\"))\n+            .settings(settings)\n+            .putMapping(\"{\\\"default\\\": {}}\")\n+            .build();\n+\n+        ClusterState initialState = ClusterState.builder(ClusterState.EMPTY_STATE)\n+            .metadata(Metadata.builder().put(indexTemplateMetadata))\n+            .build();\n+\n+        ClusterState result =\n+            AlterTableClusterStateExecutor.updateTemplate(initialState,\n+                relationName,\n+                settings,\n+                Map.of(),\n+                (_, _) -> { },\n+                indexScopedSettings);\n+\n+        IndexTemplateMetadata template = result.metadata().templates().get(templateName);\n+        assertThat(template.settings().keySet()).containsExactly(SETTING_VERSION_CREATED);\n+        assertThat(SETTING_INDEX_VERSION_CREATED.get(template.settings())).isEqualTo(v);\n+    }\n }\n"}
+The release notes and production-code hunks validate cleanly. The test hunk needs to be split because the validator rejected the larger combined hunk format, not because of a code-context mismatch.
+[0m⚙ [0mvalidate {"ref":"c922e99ea53a50de1be112b664a422d8bd1afafd","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java b/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\n--- a/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\n+++ b/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\n@@ -24,14 +24,18 @@ package io.crate.metadata.cluster;\n import static org.assertj.core.api.Assertions.assertThat;\n import static org.elasticsearch.cluster.metadata.IndexMetadata.INDEX_ROUTING_EXCLUDE_GROUP_PREFIX;\n import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_CREATION_DATE;\n+import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_INDEX_VERSION_CREATED;\n import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_NUMBER_OF_SHARDS;\n+import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_VERSION_CREATED;\n import static org.elasticsearch.common.settings.AbstractScopedSettings.ARCHIVED_SETTINGS_PREFIX;\n \n import java.io.IOException;\n import java.util.Collections;\n import java.util.List;\n+import java.util.Map;\n \n+import org.elasticsearch.Version;\n import org.elasticsearch.cluster.ClusterState;\n+import org.elasticsearch.cluster.metadata.IndexMetadata;\n import org.elasticsearch.cluster.metadata.IndexTemplateMetadata;\n import org.elasticsearch.cluster.metadata.Metadata;\n import org.elasticsearch.common.settings.IndexScopedSettings;\n"}
+[0m⚙ [0mvalidate {"ref":"c922e99ea53a50de1be112b664a422d8bd1afafd","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java b/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\n--- a/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\n+++ b/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\n@@ -24,14 +24,19 @@ package io.crate.metadata.cluster;\n import static org.assertj.core.api.Assertions.assertThat;\n import static org.elasticsearch.cluster.metadata.IndexMetadata.INDEX_ROUTING_EXCLUDE_GROUP_PREFIX;\n import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_CREATION_DATE;\n+import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_INDEX_VERSION_CREATED;\n import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_NUMBER_OF_SHARDS;\n+import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_VERSION_CREATED;\n import static org.elasticsearch.common.settings.AbstractScopedSettings.ARCHIVED_SETTINGS_PREFIX;\n \n import java.io.IOException;\n import java.util.Collections;\n import java.util.List;\n+import java.util.Map;\n \n+import org.elasticsearch.Version;\n import org.elasticsearch.cluster.ClusterState;\n+import org.elasticsearch.cluster.metadata.IndexMetadata;\n import org.elasticsearch.cluster.metadata.IndexTemplateMetadata;\n import org.elasticsearch.cluster.metadata.Metadata;\n import org.elasticsearch.common.settings.IndexScopedSettings;\n"}
+[0m⚙ [0mvalidate {"ref":"c922e99ea53a50de1be112b664a422d8bd1afafd","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java b/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\n--- a/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\n+++ b/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\n@@ -104,4 +109,39 @@ public class AlterTableClusterStateExecutorTest {\n         assertThat(filteredSettings.isEmpty()).isFalse();\n         assertThat(filteredSettings.get(fullName)).isEqualTo(\"node1\");\n     }\n+\n+    @Test\n+    public void test_altering_settings_do_not_modify_version_created() throws IOException {\n+        IndexScopedSettings indexScopedSettings = IndexScopedSettings.DEFAULT_SCOPED_SETTINGS;\n+\n+        RelationName relationName = new RelationName(Schemas.DOC_SCHEMA_NAME, \"t1\");\n+        String templateName = PartitionName.templateName(relationName.schema(), relationName.name());\n+\n+        final Version v = Version.V_5_4_0;\n+\n+        Settings settings = Settings.builder()\n+            .put(IndexMetadata.SETTING_VERSION_CREATED, v)\n+            .build();\n+        IndexTemplateMetadata indexTemplateMetadata = IndexTemplateMetadata.builder(templateName)\n+            .patterns(Collections.singletonList(\"*\"))\n+            .settings(settings)\n+            .putMapping(\"{\\\"default\\\": {}}\")\n+            .build();\n+\n+        ClusterState initialState = ClusterState.builder(ClusterState.EMPTY_STATE)\n+            .metadata(Metadata.builder().put(indexTemplateMetadata))\n+            .build();\n+\n+        ClusterState result =\n+            AlterTableClusterStateExecutor.updateTemplate(initialState,\n+                relationName,\n+                settings,\n+                Map.of(),\n+                (_, _) -> { },\n+                indexScopedSettings);\n+\n+        IndexTemplateMetadata template = result.metadata().templates().get(templateName);\n+        assertThat(template.settings().keySet()).containsExactly(SETTING_VERSION_CREATED);\n+        assertThat(SETTING_INDEX_VERSION_CREATED.get(template.settings())).isEqualTo(v);\n+    }\n }\n"}
+All adapted hunks validate against `c922e99e`. I’m applying the patch now, including the one extra `Map` import needed because the 5.9 test file did not yet import it.
+[0m% [0mPatch 3 files
+[0m
+[0m$ [0mgit log --oneline -10
+c922e99ea5 Fix link in create-repository.rst
+fd30324948 Upgrade template on new partitions creation
+57665e57f1 Use bigger buffer size for OpenDAL's OperatorOutputStream
+6afab01a2c Update OpenDAL to 0.47.6
+b52d509e6d Bump version to 5.9.7-SNAPSHOT
+28638ad43f Release 5.9.6
+0fd6e967d2 Fix release notes indentations
+2ba7f195c8 Prevent EXPLAIN from hanging
+45086cd7f7 Throw an expected exception for `EXPLAIN ANALYZE INSERT`
+cd61d9b930 Fix a ColumnUnknownException thrown when querying a dynamic table setting
+[0m
+[0m$ [0mgit diff -- docs/appendices/release-notes/5.9.7.rst server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java
+warning: in the working copy of 'docs/appendices/release-notes/5.9.7.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java', LF will be replaced by CRLF the next time Git touches it
+diff --git a/docs/appendices/release-notes/5.9.7.rst b/docs/appendices/release-notes/5.9.7.rst
+index 939212fa06..c7aaed714b 100644
+--- a/docs/appendices/release-notes/5.9.7.rst
++++ b/docs/appendices/release-notes/5.9.7.rst
+@@ -54,3 +54,9 @@ Fixes
+ - Fixed an issue that could prevent the creation of new partitions if data was
+   written to a partitioned table during a rolling upgrade and that table had
+   setting ``warmer.enabled`` specified before the upgrade.
++
++- Fixed an issue that incorrectly updated ``VERSION`` settings from
++  :ref:`information_schema.tables <information_schema_tables>` and
++  :ref:`information_schema.table_partitions <is_table_partitions>` for
++  partitioned tables and their new partitions to the latest version following a
++  node upgrade.
+diff --git a/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java b/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java
+index 1836c782e0..bc1348651d 100644
+--- a/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java
++++ b/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java
+@@ -150,7 +150,6 @@ public final class IndexScopedSettings extends AbstractScopedSettings {
+         switch (key) {
+             case IndexMetadata.SETTING_CREATION_DATE:
+             case IndexMetadata.SETTING_INDEX_UUID:
+-            case IndexMetadata.SETTING_VERSION_CREATED:
+             case IndexMetadata.SETTING_HISTORY_UUID:
+             case IndexMetadata.SETTING_VERSION_UPGRADED:
+             case IndexMetadata.SETTING_INDEX_PROVIDED_NAME:
+diff --git a/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java b/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java
+index 5a252bf5e8..9cf3f84356 100644
+--- a/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java
++++ b/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java
+@@ -24,14 +24,19 @@ package io.crate.metadata.cluster;
+ import static org.assertj.core.api.Assertions.assertThat;
+ import static org.elasticsearch.cluster.metadata.IndexMetadata.INDEX_ROUTING_EXCLUDE_GROUP_PREFIX;
+ import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_CREATION_DATE;
++import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_INDEX_VERSION_CREATED;
+ import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_NUMBER_OF_SHARDS;
++import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_VERSION_CREATED;
+ import static org.elasticsearch.common.settings.AbstractScopedSettings.ARCHIVED_SETTINGS_PREFIX;
+ 
+ import java.io.IOException;
+ import java.util.Collections;
+ import java.util.List;
++import java.util.Map;
+ 
++import org.elasticsearch.Version;
+ import org.elasticsearch.cluster.ClusterState;
++import org.elasticsearch.cluster.metadata.IndexMetadata;
+ import org.elasticsearch.cluster.metadata.IndexTemplateMetadata;
+ import org.elasticsearch.cluster.metadata.Metadata;
+ import org.elasticsearch.common.settings.IndexScopedSettings;
+@@ -103,4 +108,39 @@ public class AlterTableClusterStateExecutorTest {
+         assertThat(filteredSettings.isEmpty()).isFalse();
+         assertThat(filteredSettings.get(fullName)).isEqualTo("node1");
+     }
++
++    @Test
++    public void test_altering_settings_do_not_modify_version_created() throws IOException {
++        IndexScopedSettings indexScopedSettings = IndexScopedSettings.DEFAULT_SCOPED_SETTINGS;
++
++        RelationName relationName = new RelationName(Schemas.DOC_SCHEMA_NAME, "t1");
++        String templateName = PartitionName.templateName(relationName.schema(), relationName.name());
++
++        final Version v = Version.V_5_4_0;
++
++        Settings settings = Settings.builder()
++            .put(IndexMetadata.SETTING_VERSION_CREATED, v)
++            .build();
++        IndexTemplateMetadata indexTemplateMetadata = IndexTemplateMetadata.builder(templateName)
++            .patterns(Collections.singletonList("*"))
++            .settings(settings)
++            .putMapping("{\"default\": {}}")
++            .build();
++
++        ClusterState initialState = ClusterState.builder(ClusterState.EMPTY_STATE)
++            .metadata(Metadata.builder().put(indexTemplateMetadata))
++            .build();
++
++        ClusterState result =
++            AlterTableClusterStateExecutor.updateTemplate(initialState,
++                relationName,
++                settings,
++                Map.of(),
++                (_, _) -> { },
++                indexScopedSettings);
++
++        IndexTemplateMetadata template = result.metadata().templates().get(templateName);
++        assertThat(template.settings().keySet()).containsExactly(SETTING_VERSION_CREATED);
++        assertThat(SETTING_INDEX_VERSION_CREATED.get(template.settings())).isEqualTo(v);
++    }
+ }
+[0m
+[0m$ [0mgit status --short
+M docs/appendices/release-notes/5.9.7.rst
+ M server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java
+ M server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java
+?? tags
+[0m
+The diff matches the intended backport and leaves the pre-existing untracked `tags` file untouched. I’m staging only the three patched files and committing them.
+[0m$ [0mgit add -- "docs/appendices/release-notes/5.9.7.rst" "server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java" "server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java"; if ($?) { git commit -m "Fix altering version created setting" }
+warning: in the working copy of 'docs/appendices/release-notes/5.9.7.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java', LF will be replaced by CRLF the next time Git touches it
+[detached HEAD 40094951ab] Fix altering version created setting
+ 3 files changed, 46 insertions(+), 1 deletion(-)
+[0m
+The backport commit was created. I’m extracting the committed patch and running the requested full validation against the target base ref.
+[0m$ [0mgit diff c922e99ea53a50de1be112b664a422d8bd1afafd HEAD
+diff --git a/docs/appendices/release-notes/5.9.7.rst b/docs/appendices/release-notes/5.9.7.rst
+index 939212fa06..c7aaed714b 100644
+--- a/docs/appendices/release-notes/5.9.7.rst
++++ b/docs/appendices/release-notes/5.9.7.rst
+@@ -54,3 +54,9 @@ Fixes
+ - Fixed an issue that could prevent the creation of new partitions if data was
+   written to a partitioned table during a rolling upgrade and that table had
+   setting ``warmer.enabled`` specified before the upgrade.
++
++- Fixed an issue that incorrectly updated ``VERSION`` settings from
++  :ref:`information_schema.tables <information_schema_tables>` and
++  :ref:`information_schema.table_partitions <is_table_partitions>` for
++  partitioned tables and their new partitions to the latest version following a
++  node upgrade.
+diff --git a/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java b/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java
+index 1836c782e0..bc1348651d 100644
+--- a/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java
++++ b/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java
+@@ -150,7 +150,6 @@ public final class IndexScopedSettings extends AbstractScopedSettings {
+         switch (key) {
+             case IndexMetadata.SETTING_CREATION_DATE:
+             case IndexMetadata.SETTING_INDEX_UUID:
+-            case IndexMetadata.SETTING_VERSION_CREATED:
+             case IndexMetadata.SETTING_HISTORY_UUID:
+             case IndexMetadata.SETTING_VERSION_UPGRADED:
+             case IndexMetadata.SETTING_INDEX_PROVIDED_NAME:
+diff --git a/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java b/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java
+index 5a252bf5e8..9cf3f84356 100644
+--- a/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java
++++ b/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java
+@@ -24,14 +24,19 @@ package io.crate.metadata.cluster;
+ import static org.assertj.core.api.Assertions.assertThat;
+ import static org.elasticsearch.cluster.metadata.IndexMetadata.INDEX_ROUTING_EXCLUDE_GROUP_PREFIX;
+ import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_CREATION_DATE;
++import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_INDEX_VERSION_CREATED;
+ import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_NUMBER_OF_SHARDS;
++import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_VERSION_CREATED;
+ import static org.elasticsearch.common.settings.AbstractScopedSettings.ARCHIVED_SETTINGS_PREFIX;
+ 
+ import java.io.IOException;
+ import java.util.Collections;
+ import java.util.List;
++import java.util.Map;
+ 
++import org.elasticsearch.Version;
+ import org.elasticsearch.cluster.ClusterState;
++import org.elasticsearch.cluster.metadata.IndexMetadata;
+ import org.elasticsearch.cluster.metadata.IndexTemplateMetadata;
+ import org.elasticsearch.cluster.metadata.Metadata;
+ import org.elasticsearch.common.settings.IndexScopedSettings;
+@@ -103,4 +108,39 @@ public class AlterTableClusterStateExecutorTest {
+         assertThat(filteredSettings.isEmpty()).isFalse();
+         assertThat(filteredSettings.get(fullName)).isEqualTo("node1");
+     }
++
++    @Test
++    public void test_altering_settings_do_not_modify_version_created() throws IOException {
++        IndexScopedSettings indexScopedSettings = IndexScopedSettings.DEFAULT_SCOPED_SETTINGS;
++
++        RelationName relationName = new RelationName(Schemas.DOC_SCHEMA_NAME, "t1");
++        String templateName = PartitionName.templateName(relationName.schema(), relationName.name());
++
++        final Version v = Version.V_5_4_0;
++
++        Settings settings = Settings.builder()
++            .put(IndexMetadata.SETTING_VERSION_CREATED, v)
++            .build();
++        IndexTemplateMetadata indexTemplateMetadata = IndexTemplateMetadata.builder(templateName)
++            .patterns(Collections.singletonList("*"))
++            .settings(settings)
++            .putMapping("{\"default\": {}}")
++            .build();
++
++        ClusterState initialState = ClusterState.builder(ClusterState.EMPTY_STATE)
++            .metadata(Metadata.builder().put(indexTemplateMetadata))
++            .build();
++
++        ClusterState result =
++            AlterTableClusterStateExecutor.updateTemplate(initialState,
++                relationName,
++                settings,
++                Map.of(),
++                (_, _) -> { },
++                indexScopedSettings);
++
++        IndexTemplateMetadata template = result.metadata().templates().get(templateName);
++        assertThat(template.settings().keySet()).containsExactly(SETTING_VERSION_CREATED);
++        assertThat(SETTING_INDEX_VERSION_CREATED.get(template.settings())).isEqualTo(v);
++    }
+ }
+[0m
+[0m$ [0mgit status --short
+?? tags
+[0m
+Full validation is starting now; it may take longer because it runs the complete apply/compile/test pipeline.
+[0m⚙ [0mvalidate {"ref":"c922e99ea53a50de1be112b664a422d8bd1afafd","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.9.7.rst b/docs/appendices/release-notes/5.9.7.rst\nindex 939212fa06..c7aaed714b 100644\n--- a/docs/appendices/release-notes/5.9.7.rst\n+++ b/docs/appendices/release-notes/5.9.7.rst\n@@ -54,3 +54,9 @@ Fixes\n - Fixed an issue that could prevent the creation of new partitions if data was\n   written to a partitioned table during a rolling upgrade and that table had\n   setting ``warmer.enabled`` specified before the upgrade.\n+\n+- Fixed an issue that incorrectly updated ``VERSION`` settings from\n+  :ref:`information_schema.tables <information_schema_tables>` and\n+  :ref:`information_schema.table_partitions <is_table_partitions>` for\n+  partitioned tables and their new partitions to the latest version following a\n+  node upgrade.\ndiff --git a/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java b/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java\nindex 1836c782e0..bc1348651d 100644\n--- a/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java\n+++ b/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java\n@@ -150,7 +150,6 @@ public final class IndexScopedSettings extends AbstractScopedSettings {\n         switch (key) {\n             case IndexMetadata.SETTING_CREATION_DATE:\n             case IndexMetadata.SETTING_INDEX_UUID:\n-            case IndexMetadata.SETTING_VERSION_CREATED:\n             case IndexMetadata.SETTING_HISTORY_UUID:\n             case IndexMetadata.SETTING_VERSION_UPGRADED:\n             case IndexMetadata.SETTING_INDEX_PROVIDED_NAME:\ndiff --git a/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java b/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\nindex 5a252bf5e8..9cf3f84356 100644\n--- a/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\n+++ b/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\n@@ -24,14 +24,19 @@ package io.crate.metadata.cluster;\n import static org.assertj.core.api.Assertions.assertThat;\n import static org.elasticsearch.cluster.metadata.IndexMetadata.INDEX_ROUTING_EXCLUDE_GROUP_PREFIX;\n import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_CREATION_DATE;\n+import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_INDEX_VERSION_CREATED;\n import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_NUMBER_OF_SHARDS;\n+import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_VERSION_CREATED;\n import static org.elasticsearch.common.settings.AbstractScopedSettings.ARCHIVED_SETTINGS_PREFIX;\n \n import java.io.IOException;\n import java.util.Collections;\n import java.util.List;\n+import java.util.Map;\n \n+import org.elasticsearch.Version;\n import org.elasticsearch.cluster.ClusterState;\n+import org.elasticsearch.cluster.metadata.IndexMetadata;\n import org.elasticsearch.cluster.metadata.IndexTemplateMetadata;\n import org.elasticsearch.cluster.metadata.Metadata;\n import org.elasticsearch.common.settings.IndexScopedSettings;\n@@ -103,4 +108,39 @@ public class AlterTableClusterStateExecutorTest {\n         assertThat(filteredSettings.isEmpty()).isFalse();\n         assertThat(filteredSettings.get(fullName)).isEqualTo(\"node1\");\n     }\n+\n+    @Test\n+    public void test_altering_settings_do_not_modify_version_created() throws IOException {\n+        IndexScopedSettings indexScopedSettings = IndexScopedSettings.DEFAULT_SCOPED_SETTINGS;\n+\n+        RelationName relationName = new RelationName(Schemas.DOC_SCHEMA_NAME, \"t1\");\n+        String templateName = PartitionName.templateName(relationName.schema(), relationName.name());\n+\n+        final Version v = Version.V_5_4_0;\n+\n+        Settings settings = Settings.builder()\n+            .put(IndexMetadata.SETTING_VERSION_CREATED, v)\n+            .build();\n+        IndexTemplateMetadata indexTemplateMetadata = IndexTemplateMetadata.builder(templateName)\n+            .patterns(Collections.singletonList(\"*\"))\n+            .settings(settings)\n+            .putMapping(\"{\\\"default\\\": {}}\")\n+            .build();\n+\n+        ClusterState initialState = ClusterState.builder(ClusterState.EMPTY_STATE)\n+            .metadata(Metadata.builder().put(indexTemplateMetadata))\n+            .build();\n+\n+        ClusterState result =\n+            AlterTableClusterStateExecutor.updateTemplate(initialState,\n+                relationName,\n+                settings,\n+                Map.of(),\n+                (_, _) -> { },\n+                indexScopedSettings);\n+\n+        IndexTemplateMetadata template = result.metadata().templates().get(templateName);\n+        assertThat(template.settings().keySet()).containsExactly(SETTING_VERSION_CREATED);\n+        assertThat(SETTING_INDEX_VERSION_CREATED.get(template.settings())).isEqualTo(v);\n+    }\n }\n"}
+The full validator rejected the `git diff` patch despite finding 100% matching context, likely due its stricter context normalization. I’m retrying with context revision enabled, after hunk validation already confirmed each change applies cleanly.
+[0m⚙ [0mvalidate {"ref":"c922e99ea53a50de1be112b664a422d8bd1afafd","mode":"full","revise_context":true,"patch":"diff --git a/docs/appendices/release-notes/5.9.7.rst b/docs/appendices/release-notes/5.9.7.rst\nindex 939212fa06..c7aaed714b 100644\n--- a/docs/appendices/release-notes/5.9.7.rst\n+++ b/docs/appendices/release-notes/5.9.7.rst\n@@ -54,3 +54,9 @@ Fixes\n - Fixed an issue that could prevent the creation of new partitions if data was\n   written to a partitioned table during a rolling upgrade and that table had\n   setting ``warmer.enabled`` specified before the upgrade.\n+\n+- Fixed an issue that incorrectly updated ``VERSION`` settings from\n+  :ref:`information_schema.tables <information_schema_tables>` and\n+  :ref:`information_schema.table_partitions <is_table_partitions>` for\n+  partitioned tables and their new partitions to the latest version following a\n+  node upgrade.\ndiff --git a/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java b/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java\nindex 1836c782e0..bc1348651d 100644\n--- a/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java\n+++ b/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java\n@@ -150,7 +150,6 @@ public final class IndexScopedSettings extends AbstractScopedSettings {\n         switch (key) {\n             case IndexMetadata.SETTING_CREATION_DATE:\n             case IndexMetadata.SETTING_INDEX_UUID:\n-            case IndexMetadata.SETTING_VERSION_CREATED:\n             case IndexMetadata.SETTING_HISTORY_UUID:\n             case IndexMetadata.SETTING_VERSION_UPGRADED:\n             case IndexMetadata.SETTING_INDEX_PROVIDED_NAME:\ndiff --git a/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java b/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\nindex 5a252bf5e8..9cf3f84356 100644\n--- a/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\n+++ b/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\n@@ -24,14 +24,19 @@ package io.crate.metadata.cluster;\n import static org.assertj.core.api.Assertions.assertThat;\n import static org.elasticsearch.cluster.metadata.IndexMetadata.INDEX_ROUTING_EXCLUDE_GROUP_PREFIX;\n import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_CREATION_DATE;\n+import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_INDEX_VERSION_CREATED;\n import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_NUMBER_OF_SHARDS;\n+import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_VERSION_CREATED;\n import static org.elasticsearch.common.settings.AbstractScopedSettings.ARCHIVED_SETTINGS_PREFIX;\n \n import java.io.IOException;\n import java.util.Collections;\n import java.util.List;\n+import java.util.Map;\n \n+import org.elasticsearch.Version;\n import org.elasticsearch.cluster.ClusterState;\n+import org.elasticsearch.cluster.metadata.IndexMetadata;\n import org.elasticsearch.cluster.metadata.IndexTemplateMetadata;\n import org.elasticsearch.cluster.metadata.Metadata;\n import org.elasticsearch.common.settings.IndexScopedSettings;\n@@ -103,4 +108,39 @@ public class AlterTableClusterStateExecutorTest {\n         assertThat(filteredSettings.isEmpty()).isFalse();\n         assertThat(filteredSettings.get(fullName)).isEqualTo(\"node1\");\n     }\n+\n+    @Test\n+    public void test_altering_settings_do_not_modify_version_created() throws IOException {\n+        IndexScopedSettings indexScopedSettings = IndexScopedSettings.DEFAULT_SCOPED_SETTINGS;\n+\n+        RelationName relationName = new RelationName(Schemas.DOC_SCHEMA_NAME, \"t1\");\n+        String templateName = PartitionName.templateName(relationName.schema(), relationName.name());\n+\n+        final Version v = Version.V_5_4_0;\n+\n+        Settings settings = Settings.builder()\n+            .put(IndexMetadata.SETTING_VERSION_CREATED, v)\n+            .build();\n+        IndexTemplateMetadata indexTemplateMetadata = IndexTemplateMetadata.builder(templateName)\n+            .patterns(Collections.singletonList(\"*\"))\n+            .settings(settings)\n+            .putMapping(\"{\\\"default\\\": {}}\")\n+            .build();\n+\n+        ClusterState initialState = ClusterState.builder(ClusterState.EMPTY_STATE)\n+            .metadata(Metadata.builder().put(indexTemplateMetadata))\n+            .build();\n+\n+        ClusterState result =\n+            AlterTableClusterStateExecutor.updateTemplate(initialState,\n+                relationName,\n+                settings,\n+                Map.of(),\n+                (_, _) -> { },\n+                indexScopedSettings);\n+\n+        IndexTemplateMetadata template = result.metadata().templates().get(templateName);\n+        assertThat(template.settings().keySet()).containsExactly(SETTING_VERSION_CREATED);\n+        assertThat(SETTING_INDEX_VERSION_CREATED.get(template.settings())).isEqualTo(v);\n+    }\n }\n"}
+[0m
+[0m$ [0mgit ls-files --eol -- "docs/appendices/release-notes/5.9.7.rst" "server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java" "server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java"
+i/lf    w/mixed attr/                 	docs/appendices/release-notes/5.9.7.rst
+i/lf    w/mixed attr/                 	server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java
+i/lf    w/mixed attr/                 	server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java
+[0m
+The full validator is still failing at the apply phase with `?` line-end markers even though it reports 100% matching target blocks. I’m checking whether passing an explicitly LF-escaped patch avoids the validator’s CR handling issue.
+[0m⚙ [0mvalidate {"ref":"c922e99ea53a50de1be112b664a422d8bd1afafd","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.9.7.rst b/docs/appendices/release-notes/5.9.7.rst\n--- a/docs/appendices/release-notes/5.9.7.rst\n+++ b/docs/appendices/release-notes/5.9.7.rst\n@@ -52,5 +52,11 @@ Fixes\n   to the :ref:`Azure Blob Storage <sql-copy-to-az>`.\n   This also has a positive effect on performance.\n \n - Fixed an issue that could prevent the creation of new partitions if data was\n   written to a partitioned table during a rolling upgrade and that table had\n   setting ``warmer.enabled`` specified before the upgrade.\n+\n+- Fixed an issue that incorrectly updated ``VERSION`` settings from\n+  :ref:`information_schema.tables <information_schema_tables>` and\n+  :ref:`information_schema.table_partitions <is_table_partitions>` for\n+  partitioned tables and their new partitions to the latest version following a\n+  node upgrade.\n"}
+[0m⚙ [0mviewcode {"ref":"c922e99ea53a50de1be112b664a422d8bd1afafd","path":"server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java","startline":22,"endline":44}
+[0m⚙ [0mviewcode {"ref":"c922e99ea53a50de1be112b664a422d8bd1afafd","path":"server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java","startline":95,"endline":107}
+I’m retrying full validation with expanded three-plus-line context around every non-EOF hunk to satisfy the validator’s stricter apply check.
+[0m⚙ [0mvalidate {"ref":"c922e99ea53a50de1be112b664a422d8bd1afafd","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.9.7.rst b/docs/appendices/release-notes/5.9.7.rst\n--- a/docs/appendices/release-notes/5.9.7.rst\n+++ b/docs/appendices/release-notes/5.9.7.rst\n@@ -50,7 +50,13 @@ Fixes\n - Fixed an issue leading to an error when exporting big tables via ``COPY TO``\n   to the :ref:`Azure Blob Storage <sql-copy-to-az>`.\n   This also has a positive effect on performance.\n \n - Fixed an issue that could prevent the creation of new partitions if data was\n   written to a partitioned table during a rolling upgrade and that table had\n   setting ``warmer.enabled`` specified before the upgrade.\n+\n+- Fixed an issue that incorrectly updated ``VERSION`` settings from\n+  :ref:`information_schema.tables <information_schema_tables>` and\n+  :ref:`information_schema.table_partitions <is_table_partitions>` for\n+  partitioned tables and their new partitions to the latest version following a\n+  node upgrade.\ndiff --git a/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java b/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java\n--- a/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java\n+++ b/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java\n@@ -148,11 +148,10 @@ public final class IndexScopedSettings extends AbstractScopedSettings {\n     @Override\n     public boolean isPrivateSetting(String key) {\n         switch (key) {\n             case IndexMetadata.SETTING_CREATION_DATE:\n             case IndexMetadata.SETTING_INDEX_UUID:\n-            case IndexMetadata.SETTING_VERSION_CREATED:\n             case IndexMetadata.SETTING_HISTORY_UUID:\n             case IndexMetadata.SETTING_VERSION_UPGRADED:\n             case IndexMetadata.SETTING_INDEX_PROVIDED_NAME:\n             case MergePolicyConfig.INDEX_MERGE_ENABLED:\n             case IndexMetadata.INDEX_SHRINK_SOURCE_UUID_KEY:\ndiff --git a/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java b/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\n--- a/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\n+++ b/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\n@@ -22,23 +22,28 @@\n package io.crate.metadata.cluster;\n \n import static org.assertj.core.api.Assertions.assertThat;\n import static org.elasticsearch.cluster.metadata.IndexMetadata.INDEX_ROUTING_EXCLUDE_GROUP_PREFIX;\n import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_CREATION_DATE;\n+import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_INDEX_VERSION_CREATED;\n import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_NUMBER_OF_SHARDS;\n+import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_VERSION_CREATED;\n import static org.elasticsearch.common.settings.AbstractScopedSettings.ARCHIVED_SETTINGS_PREFIX;\n \n import java.io.IOException;\n import java.util.Collections;\n import java.util.List;\n+import java.util.Map;\n \n+import org.elasticsearch.Version;\n import org.elasticsearch.cluster.ClusterState;\n+import org.elasticsearch.cluster.metadata.IndexMetadata;\n import org.elasticsearch.cluster.metadata.IndexTemplateMetadata;\n import org.elasticsearch.cluster.metadata.Metadata;\n import org.elasticsearch.common.settings.IndexScopedSettings;\n import org.elasticsearch.common.settings.Setting;\n import org.elasticsearch.common.settings.Settings;\n import org.junit.Test;\n \n import io.crate.analyze.TableParameters;\n@@ -95,13 +100,48 @@ public class AlterTableClusterStateExecutorTest {\n \n         List<Setting<?>> supportedSettings = TableParameters.PARTITIONED_TABLE_PARAMETER_INFO_FOR_TEMPLATE_UPDATE\n             .supportedSettings()\n             .values()\n             .stream()\n             .toList();\n \n         Settings filteredSettings = AlterTableClusterStateExecutor.filterSettings(settingToFilter, supportedSettings);\n         assertThat(filteredSettings.isEmpty()).isFalse();\n         assertThat(filteredSettings.get(fullName)).isEqualTo(\"node1\");\n     }\n+\n+    @Test\n+    public void test_altering_settings_do_not_modify_version_created() throws IOException {\n+        IndexScopedSettings indexScopedSettings = IndexScopedSettings.DEFAULT_SCOPED_SETTINGS;\n+\n+        RelationName relationName = new RelationName(Schemas.DOC_SCHEMA_NAME, \"t1\");\n+        String templateName = PartitionName.templateName(relationName.schema(), relationName.name());\n+\n+        final Version v = Version.V_5_4_0;\n+\n+        Settings settings = Settings.builder()\n+            .put(IndexMetadata.SETTING_VERSION_CREATED, v)\n+            .build();\n+        IndexTemplateMetadata indexTemplateMetadata = IndexTemplateMetadata.builder(templateName)\n+            .patterns(Collections.singletonList(\"*\"))\n+            .settings(settings)\n+            .putMapping(\"{\\\"default\\\": {}}\")\n+            .build();\n+\n+        ClusterState initialState = ClusterState.builder(ClusterState.EMPTY_STATE)\n+            .metadata(Metadata.builder().put(indexTemplateMetadata))\n+            .build();\n+\n+        ClusterState result =\n+            AlterTableClusterStateExecutor.updateTemplate(initialState,\n+                relationName,\n+                settings,\n+                Map.of(),\n+                (_, _) -> { },\n+                indexScopedSettings);\n+\n+        IndexTemplateMetadata template = result.metadata().templates().get(templateName);\n+        assertThat(template.settings().keySet()).containsExactly(SETTING_VERSION_CREATED);\n+        assertThat(SETTING_INDEX_VERSION_CREATED.get(template.settings())).isEqualTo(v);\n+    }\n }\n"}
+[0m⚙ [0mviewcode {"ref":"c922e99ea53a50de1be112b664a422d8bd1afafd","path":"server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java","startline":42,"endline":48}
+[0m⚙ [0mvalidate {"ref":"c922e99ea53a50de1be112b664a422d8bd1afafd","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.9.7.rst b/docs/appendices/release-notes/5.9.7.rst\n--- a/docs/appendices/release-notes/5.9.7.rst\n+++ b/docs/appendices/release-notes/5.9.7.rst\n@@ -50,7 +50,13 @@ Fixes\n - Fixed an issue leading to an error when exporting big tables via ``COPY TO``\n   to the :ref:`Azure Blob Storage <sql-copy-to-az>`.\n   This also has a positive effect on performance.\n \n - Fixed an issue that could prevent the creation of new partitions if data was\n   written to a partitioned table during a rolling upgrade and that table had\n   setting ``warmer.enabled`` specified before the upgrade.\n+\n+- Fixed an issue that incorrectly updated ``VERSION`` settings from\n+  :ref:`information_schema.tables <information_schema_tables>` and\n+  :ref:`information_schema.table_partitions <is_table_partitions>` for\n+  partitioned tables and their new partitions to the latest version following a\n+  node upgrade.\ndiff --git a/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java b/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java\n--- a/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java\n+++ b/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java\n@@ -148,11 +148,10 @@ public final class IndexScopedSettings extends AbstractScopedSettings {\n     @Override\n     public boolean isPrivateSetting(String key) {\n         switch (key) {\n             case IndexMetadata.SETTING_CREATION_DATE:\n             case IndexMetadata.SETTING_INDEX_UUID:\n-            case IndexMetadata.SETTING_VERSION_CREATED:\n             case IndexMetadata.SETTING_HISTORY_UUID:\n             case IndexMetadata.SETTING_VERSION_UPGRADED:\n             case IndexMetadata.SETTING_INDEX_PROVIDED_NAME:\n             case MergePolicyConfig.INDEX_MERGE_ENABLED:\n             case IndexMetadata.INDEX_SHRINK_SOURCE_UUID_KEY:\ndiff --git a/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java b/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\n--- a/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\n+++ b/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java\n@@ -22,24 +22,29 @@\n package io.crate.metadata.cluster;\n \n import static org.assertj.core.api.Assertions.assertThat;\n import static org.elasticsearch.cluster.metadata.IndexMetadata.INDEX_ROUTING_EXCLUDE_GROUP_PREFIX;\n import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_CREATION_DATE;\n+import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_INDEX_VERSION_CREATED;\n import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_NUMBER_OF_SHARDS;\n+import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_VERSION_CREATED;\n import static org.elasticsearch.common.settings.AbstractScopedSettings.ARCHIVED_SETTINGS_PREFIX;\n \n import java.io.IOException;\n import java.util.Collections;\n import java.util.List;\n+import java.util.Map;\n \n+import org.elasticsearch.Version;\n import org.elasticsearch.cluster.ClusterState;\n+import org.elasticsearch.cluster.metadata.IndexMetadata;\n import org.elasticsearch.cluster.metadata.IndexTemplateMetadata;\n import org.elasticsearch.cluster.metadata.Metadata;\n import org.elasticsearch.common.settings.IndexScopedSettings;\n import org.elasticsearch.common.settings.Setting;\n import org.elasticsearch.common.settings.Settings;\n import org.junit.Test;\n \n import io.crate.analyze.TableParameters;\n import io.crate.metadata.PartitionName;\n import io.crate.metadata.RelationName;\n import io.crate.metadata.Schemas;\n \n@@ -95,12 +100,47 @@ public class AlterTableClusterStateExecutorTest {\n \n         List<Setting<?>> supportedSettings = TableParameters.PARTITIONED_TABLE_PARAMETER_INFO_FOR_TEMPLATE_UPDATE\n             .supportedSettings()\n             .values()\n             .stream()\n             .toList();\n \n         Settings filteredSettings = AlterTableClusterStateExecutor.filterSettings(settingToFilter, supportedSettings);\n         assertThat(filteredSettings.isEmpty()).isFalse();\n         assertThat(filteredSettings.get(fullName)).isEqualTo(\"node1\");\n     }\n+\n+    @Test\n+    public void test_altering_settings_do_not_modify_version_created() throws IOException {\n+        IndexScopedSettings indexScopedSettings = IndexScopedSettings.DEFAULT_SCOPED_SETTINGS;\n+\n+        RelationName relationName = new RelationName(Schemas.DOC_SCHEMA_NAME, \"t1\");\n+        String templateName = PartitionName.templateName(relationName.schema(), relationName.name());\n+\n+        final Version v = Version.V_5_4_0;\n+\n+        Settings settings = Settings.builder()\n+            .put(IndexMetadata.SETTING_VERSION_CREATED, v)\n+            .build();\n+        IndexTemplateMetadata indexTemplateMetadata = IndexTemplateMetadata.builder(templateName)\n+            .patterns(Collections.singletonList(\"*\"))\n+            .settings(settings)\n+            .putMapping(\"{\\\"default\\\": {}}\")\n+            .build();\n+\n+        ClusterState initialState = ClusterState.builder(ClusterState.EMPTY_STATE)\n+            .metadata(Metadata.builder().put(indexTemplateMetadata))\n+            .build();\n+\n+        ClusterState result =\n+            AlterTableClusterStateExecutor.updateTemplate(initialState,\n+                relationName,\n+                settings,\n+                Map.of(),\n+                (_, _) -> { },\n+                indexScopedSettings);\n+\n+        IndexTemplateMetadata template = result.metadata().templates().get(templateName);\n+        assertThat(template.settings().keySet()).containsExactly(SETTING_VERSION_CREATED);\n+        assertThat(SETTING_INDEX_VERSION_CREATED.get(template.settings())).isEqualTo(v);\n+    }\n }\n"}
+The validator’s full mode continues to fail before applying, with CR markers on hunk headers and 100% matching target context. I’m running the focused Gradle test locally as an additional functional check while preserving the committed patch.
+[0m
+[0m$ [0mTest-Path -LiteralPath ".\gradlew.bat"; if ($?) { .\gradlew.bat :server:test --tests io.crate.metadata.cluster.AlterTableClusterStateExecutorTest }
+False
+.\gradlew.bat : The term '.\gradlew.bat' is not recognized as the name of a cmdlet, function, script file, or operable 
+program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:51
++ ... st-Path -LiteralPath ".\gradlew.bat"; if ($?) { .\gradlew.bat :server ...
++                                                     ~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (.\gradlew.bat:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+[0m
+[0m✱ [0mGlob "gradlew*"[90m 0 matches[0m
+[0m✱ [0mGlob "**/gradlew*"[90m 0 matches[0m
+[0m→ [0mRead .[90m [limit=80][0m
+There is no Gradle wrapper in this checkout; this branch uses Maven. I’m running the focused Maven test for the changed test class instead.
+[0m
+[0m$ [0m.\mvnw.cmd -pl server -Dtest=AlterTableClusterStateExecutorTest test
+Error: JAVA_HOME not found in your environment. 
+Please set the JAVA_HOME variable in your environment to match the 
+location of your Java installation.
+[0m
+The focused Maven test could not run because `JAVA_HOME` is unset in the environment. The backport commit remains created; only the pre-existing untracked `tags` file is outside the commit.
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch code context
+[✓] Construct and validate each backport hunk
+[✓] Apply patch and commit result
+[✓] Run full validation and report YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/docs/appendices/release-notes/5.9.7.rst b/docs/appendices/release-notes/5.9.7.rst
+    index 939212fa06..c7aaed714b 100644
+    --- a/docs/appendices/release-notes/5.9.7.rst
+    +++ b/docs/appendices/release-notes/5.9.7.rst
+    @@ -54,3 +54,9 @@ Fixes
+     - Fixed an issue that could prevent the creation of new partitions if data was
+       written to a partitioned table during a rolling upgrade and that table had
+       setting ``warmer.enabled`` specified before the upgrade.
+    +
+    +- Fixed an issue that incorrectly updated ``VERSION`` settings from
+    +  :ref:`information_schema.tables <information_schema_tables>` and
+    +  :ref:`information_schema.table_partitions <is_table_partitions>` for
+    +  partitioned tables and their new partitions to the latest version following a
+    +  node upgrade.
+    diff --git a/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java b/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java
+    index 1836c782e0..bc1348651d 100644
+    --- a/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java
+    +++ b/server/src/main/java/org/elasticsearch/common/settings/IndexScopedSettings.java
+    @@ -150,7 +150,6 @@ public final class IndexScopedSettings extends AbstractScopedSettings {
+             switch (key) {
+                 case IndexMetadata.SETTING_CREATION_DATE:
+                 case IndexMetadata.SETTING_INDEX_UUID:
+    -            case IndexMetadata.SETTING_VERSION_CREATED:
+                 case IndexMetadata.SETTING_HISTORY_UUID:
+                 case IndexMetadata.SETTING_VERSION_UPGRADED:
+                 case IndexMetadata.SETTING_INDEX_PROVIDED_NAME:
+    diff --git a/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java b/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java
+    index 5a252bf5e8..9cf3f84356 100644
+    --- a/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java
+    +++ b/server/src/test/java/io/crate/metadata/cluster/AlterTableClusterStateExecutorTest.java
+    @@ -24,14 +24,19 @@ package io.crate.metadata.cluster;
+     import static org.assertj.core.api.Assertions.assertThat;
+     import static org.elasticsearch.cluster.metadata.IndexMetadata.INDEX_ROUTING_EXCLUDE_GROUP_PREFIX;
+     import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_CREATION_DATE;
+    +import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_INDEX_VERSION_CREATED;
+     import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_NUMBER_OF_SHARDS;
+    +import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_VERSION_CREATED;
+     import static org.elasticsearch.common.settings.AbstractScopedSettings.ARCHIVED_SETTINGS_PREFIX;
+     
+     import java.io.IOException;
+     import java.util.Collections;
+     import java.util.List;
+    +import java.util.Map;
+     
+    +import org.elasticsearch.Version;
+     import org.elasticsearch.cluster.ClusterState;
+    +import org.elasticsearch.cluster.metadata.IndexMetadata;
+     import org.elasticsearch.cluster.metadata.IndexTemplateMetadata;
+     import org.elasticsearch.cluster.metadata.Metadata;
+     import org.elasticsearch.common.settings.IndexScopedSettings;
+    @@ -103,4 +108,39 @@ public class AlterTableClusterStateExecutorTest {
+             assertThat(filteredSettings.isEmpty()).isFalse();
+             assertThat(filteredSettings.get(fullName)).isEqualTo("node1");
+         }
+    +
+    +    @Test
+    +    public void test_altering_settings_do_not_modify_version_created() throws IOException {
+    +        IndexScopedSettings indexScopedSettings = IndexScopedSettings.DEFAULT_SCOPED_SETTINGS;
+    +
+    +        RelationName relationName = new RelationName(Schemas.DOC_SCHEMA_NAME, "t1");
+    +        String templateName = PartitionName.templateName(relationName.schema(), relationName.name());
+    +
+    +        final Version v = Version.V_5_4_0;
+    +
+    +        Settings settings = Settings.builder()
+    +            .put(IndexMetadata.SETTING_VERSION_CREATED, v)
+    +            .build();
+    +        IndexTemplateMetadata indexTemplateMetadata = IndexTemplateMetadata.builder(templateName)
+    +            .patterns(Collections.singletonList("*"))
+    +            .settings(settings)
+    +            .putMapping("{\"default\": {}}")
+    +            .build();
+    +
+    +        ClusterState initialState = ClusterState.builder(ClusterState.EMPTY_STATE)
+    +            .metadata(Metadata.builder().put(indexTemplateMetadata))
+    +            .build();
+    +
+    +        ClusterState result =
+    +            AlterTableClusterStateExecutor.updateTemplate(initialState,
+    +                relationName,
+    +                settings,
+    +                Map.of(),
+    +                (_, _) -> { },
+    +                indexScopedSettings);
+    +
+    +        IndexTemplateMetadata template = result.metadata().templates().get(templateName);
+    +        assertThat(template.settings().keySet()).containsExactly(SETTING_VERSION_CREATED);
+    +        assertThat(SETTING_INDEX_VERSION_CREATED.get(template.settings())).isEqualTo(v);
+    +    }
+     }
+  notes: >
+    Backported and committed as 40094951ab; individual hunks validated, full validator failed at apply with line-ending/context markers, and local Maven test could not run because JAVA_HOME is unset.
+```
+
+--- END CLI OUTPUT ---
+[04:13:18]   Done in 453.6s | status=success

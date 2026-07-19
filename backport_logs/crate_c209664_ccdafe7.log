@@ -1,0 +1,531 @@
+[02:01:08] === Row 24: crate  c209664b -> ccdafe7d  [TYPE-II] ===
+[02:01:08]   Resolving parent of backport commit ccdafe7d...
+[02:01:08]   Backport parent (target ref): f80ea5d06f4dabc8e54d788615579de5f4a2bf45
+[02:01:08]   Extracting new-version patch for c209664b...
+[02:01:08]   New-version patch size: 4230 chars
+[02:01:08]   Checking out backport parent f80ea5d0...
+[02:01:10]   Invoking OpenCode CLI (8259 chars)...
+[02:01:10]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the target 5.1 context for the analyzer, test, and release-note locations, then construct the smallest equivalent patch and validate it hunk-by-hunk before applying and committing.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target branch code context
+[ ] Construct and validate backport hunks
+[ ] Apply patch to working tree
+[ ] Run final validation and commit
+[ ] Return YAML result with patch
+[0m
+[0m✱ [0mGlob "docs/appendices/release-notes/5.1*.rst"[90m 13 matches[0m
+[0m⚙ [0mviewcode {"ref":"f80ea5d06f4dabc8e54d788615579de5f4a2bf45","path":"server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java","startline":500,"endline":570}
+[0m⚙ [0mviewcode {"ref":"f80ea5d06f4dabc8e54d788615579de5f4a2bf45","path":"server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java","startline":1,"endline":280}
+[0m⚙ [0mgit_show {"ref":"c209664b06f0668788ad161f895aea23e94bddc1"}
+[0m⚙ [0mviewcode {"ref":"f80ea5d06f4dabc8e54d788615579de5f4a2bf45","path":"docs/appendices/release-notes/5.1.4.rst","startline":1,"endline":120}
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java","start_line":512,"end_line":520,"start_commit":"f80ea5d06f4dabc8e54d788615579de5f4a2bf45","end_commit":"f80ea5d06f4dabc8e54d788615579de5f4a2bf45"}
+[0m⚙ [0mlocate_symbol {"ref":"f80ea5d06f4dabc8e54d788615579de5f4a2bf45","symbol":"AlterTableAddColumnAnalyzerTest"}
+[0m⚙ [0mlocate_symbol {"ref":"f80ea5d06f4dabc8e54d788615579de5f4a2bf45","symbol":"TableElementsAnalyzer"}
+The target code has the same analyzer logic, but the 5.1 branch needs the lambda parameter adapted because `_` is not valid for its Java level. The release note target is `5.1.4.rst`, matching the current 5.1 series file at this ref.
+[0m✱ [0mGrep "class ArrayType"[90m in server/src/main/java/io/crate/types · 1 match[0m
+[0m✱ [0mGrep "hasType\("[90m in server/src/test/java/io/crate/analyze · 12 matches[0m
+[0m✱ [0mGrep "satisfiesExactly"[90m in server/src/test/java · 100 matches[0m
+[0m✱ [0mGrep "static .*assertThat"[90m in server/src/test/java/io/crate/testing · 2 matches[0m
+The existing test file already has an ambiguous static `assertThat` import; adding the new reference assertions requires matching the original import cleanup, plus adding `ArrayType`. I’m going to build the patch with the 5.1 Java-compatible `ignored ->` lambda.
+[0m✱ [0mGlob "**/io/crate/testing/Asserts.java"[90m 1 match[0m
+[0m⚙ [0mviewcode {"ref":"f80ea5d06f4dabc8e54d788615579de5f4a2bf45","path":"server/src/test/java/io/crate/analyze/CreateAlterTableStatementAnalyzerTest.java","startline":1870,"endline":1895}
+[0m⚙ [0mviewcode {"ref":"f80ea5d06f4dabc8e54d788615579de5f4a2bf45","path":"server/src/test/java/io/crate/analyze/AlterTableDropColumnAnalyzerTest.java","startline":1,"endline":220}
+[0m⚙ [0mvalidate {"ref":"f80ea5d06f4dabc8e54d788615579de5f4a2bf45","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.1.4.rst b/docs/appendices/release-notes/5.1.4.rst\n--- a/docs/appendices/release-notes/5.1.4.rst\n+++ b/docs/appendices/release-notes/5.1.4.rst\n@@ -40,6 +40,14 @@ See the :ref:`version_5.1.0` release notes for a full list of changes in the\n Fixes\n =====\n \n+- Fixed an issue that would cause wrong column data type to be used when adding\n+  parent and child object sub-columns in one\n+  :ref:`ALTER TABLE <alter-table-add-column>` statement, e.g.::\n+\n+    ALTER TABLE tbl\n+      ADD COLUMN obj['arr'] array(object(dynamic)),\n+      ADD COLUMN obj['arr']['id'] integer;\n+\n - Added validation to reject inner column names containing special whitespace\n   characters to avoid invalid schema definitions.\n \n"}
+[0m⚙ [0mvalidate {"ref":"f80ea5d06f4dabc8e54d788615579de5f4a2bf45","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java b/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java\n--- a/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java\n+++ b/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java\n@@ -515,7 +515,13 @@ public class TableElementsAnalyzer implements FieldProvider<Reference> {\n                     parentBuilder.builtReference = parentRef;\n                     columns.put(parent, parentBuilder);\n                 } else {\n-                    columns.put(parent, new RefBuilder(parent, ObjectType.UNTYPED));\n+                    /*\n+                      Parent can be missing in the table, but present in the same statement, e.g.:\n+                      ALTER TABLE tbl\n+                        ADD COLUMN obj['arr'] array(object(dynamic)),\n+                        ADD COLUMN obj['arr']['id'] integer\n+                     */\n+                    columns.computeIfAbsent(parent, ignored -> new RefBuilder(parent, ObjectType.UNTYPED));\n                 }\n             }\n             Reference reference = table.getReference(columnName);\n"}
+[0m⚙ [0mvalidate {"ref":"f80ea5d06f4dabc8e54d788615579de5f4a2bf45","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java b/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java\n--- a/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java\n+++ b/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java\n@@ -22,7 +22,6 @@\n package io.crate.analyze;\n \n import static io.crate.testing.Asserts.assertThat;\n-import static org.assertj.core.api.Assertions.assertThat;\n import static org.assertj.core.api.Assertions.assertThatThrownBy;\n \n import java.io.IOException;\n@@ -43,6 +42,7 @@ import io.crate.planner.operators.SubQueryResults;\n import io.crate.sql.parser.ParsingException;\n import io.crate.test.integration.CrateDummyClusterServiceUnitTest;\n import io.crate.testing.SQLExecutor;\n+import io.crate.types.ArrayType;\n import io.crate.types.DataTypes;\n \n public class AlterTableAddColumnAnalyzerTest extends CrateDummyClusterServiceUnitTest {\n@@ -239,4 +239,20 @@ public class AlterTableAddColumnAnalyzerTest extends CrateDummyClusterServiceUni\n             .hasMessage(\"CHECK constraint on column `o1['o2']['b']` cannot refer to column `b`. Use full path to \" +\n                         \"refer to a sub-column or a table check constraint instead\");\n     }\n+\n+    // Tracks a bug: https://github.com/crate/crate/issues/17875\n+    @Test\n+    public void test_add_parent_and_child_columns_within_one_statement() throws Exception {\n+        e = SQLExecutor.of(clusterService)\n+            .addTable(\"create table tbl(obj object(dynamic))\");\n+\n+        var addColumnRequest = analyze(\"alter table tbl \" +\n+                                       \"add column obj['arr'] array(object(dynamic)), \" +\n+                                       \"add column obj['arr']['id'] integer\");\n+        assertThat(addColumnRequest.references()).satisfiesExactly(\n+            o1 -> assertThat(o1).hasName(\"obj\"),\n+            o1 -> assertThat(o1).hasName(\"obj['arr']\").hasType(new ArrayType<>(DataTypes.UNTYPED_OBJECT)),\n+            o1 -> assertThat(o1).hasName(\"obj['arr']['id']\").hasType(DataTypes.INTEGER)\n+        );\n+    }\n }\n"}
+All individual hunks apply cleanly against the specified parent ref. I’m applying the validated patch to the working tree now.
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch code context
+[✓] Construct and validate backport hunks
+[•] Apply patch to working tree
+[ ] Run final validation and commit
+[ ] Return YAML result with patch
+[0m
+[0m% [0mPatch 3 files
+The working tree has the backport changes. I’ll inspect the resulting diff, run full patch validation, then commit only these files.
+[0m
+[0m$ [0mgit diff -- docs/appendices/release-notes/5.1.4.rst server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java
+warning: in the working copy of 'docs/appendices/release-notes/5.1.4.rst', LF will be replaced by CRLF the next time Git touches it
+diff --git a/docs/appendices/release-notes/5.1.4.rst b/docs/appendices/release-notes/5.1.4.rst
+index a866d71d6f..407667999e 100644
+--- a/docs/appendices/release-notes/5.1.4.rst
++++ b/docs/appendices/release-notes/5.1.4.rst
+@@ -41,6 +41,14 @@ See the :ref:`version_5.1.0` release notes for a full list of changes in the
+ Fixes
+ =====
+ 
++- Fixed an issue that would cause wrong column data type to be used when adding
++  parent and child object sub-columns in one
++  :ref:`ALTER TABLE <alter-table-add-column>` statement, e.g.::
++
++    ALTER TABLE tbl
++      ADD COLUMN obj['arr'] array(object(dynamic)),
++      ADD COLUMN obj['arr']['id'] integer;
++
+ - Added validation to reject inner column names containing special whitespace
+   characters to avoid invalid schema definitions.
+ 
+diff --git a/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java b/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java
+index 78da6f45a3..17ea501d24 100644
+--- a/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java
++++ b/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java
+@@ -516,7 +516,13 @@ public class TableElementsAnalyzer implements FieldProvider<Reference> {
+                     parentBuilder.builtReference = parentRef;
+                     columns.put(parent, parentBuilder);
+                 } else {
+-                    columns.put(parent, new RefBuilder(parent, ObjectType.UNTYPED));
++                    /*
++                      Parent can be missing in the table, but present in the same statement, e.g.:
++                      ALTER TABLE tbl
++                        ADD COLUMN obj['arr'] array(object(dynamic)),
++                        ADD COLUMN obj['arr']['id'] integer
++                     */
++                    columns.computeIfAbsent(parent, ignored -> new RefBuilder(parent, ObjectType.UNTYPED));
+                 }
+             }
+             Reference reference = table.getReference(columnName);
+diff --git a/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java b/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java
+index 69e7be7218..0f9d26bf4f 100644
+--- a/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java
++++ b/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java
+@@ -22,7 +22,6 @@
+ package io.crate.analyze;
+ 
+ import static io.crate.testing.Asserts.assertThat;
+-import static org.assertj.core.api.Assertions.assertThat;
+ import static org.assertj.core.api.Assertions.assertThatThrownBy;
+ 
+ import java.io.IOException;
+@@ -43,6 +42,7 @@ import io.crate.planner.operators.SubQueryResults;
+ import io.crate.sql.parser.ParsingException;
+ import io.crate.test.integration.CrateDummyClusterServiceUnitTest;
+ import io.crate.testing.SQLExecutor;
++import io.crate.types.ArrayType;
+ import io.crate.types.DataTypes;
+ 
+ public class AlterTableAddColumnAnalyzerTest extends CrateDummyClusterServiceUnitTest {
+@@ -239,4 +239,20 @@ public class AlterTableAddColumnAnalyzerTest extends CrateDummyClusterServiceUni
+             .hasMessage("CHECK constraint on column `o1['o2']['b']` cannot refer to column `b`. Use full path to " +
+                         "refer to a sub-column or a table check constraint instead");
+     }
++
++    // Tracks a bug: https://github.com/crate/crate/issues/17875
++    @Test
++    public void test_add_parent_and_child_columns_within_one_statement() throws Exception {
++        e = SQLExecutor.of(clusterService)
++            .addTable("create table tbl(obj object(dynamic))");
++
++        var addColumnRequest = analyze("alter table tbl " +
++                                       "add column obj['arr'] array(object(dynamic)), " +
++                                       "add column obj['arr']['id'] integer");
++        assertThat(addColumnRequest.references()).satisfiesExactly(
++            o1 -> assertThat(o1).hasName("obj"),
++            o1 -> assertThat(o1).hasName("obj['arr']").hasType(new ArrayType<>(DataTypes.UNTYPED_OBJECT)),
++            o1 -> assertThat(o1).hasName("obj['arr']['id']").hasType(DataTypes.INTEGER)
++        );
++    }
+ }
+warning: in the working copy of 'server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java', LF will be replaced by CRLF the next time Git touches it
+[0m
+[0m$ [0mgit status --short
+M docs/appendices/release-notes/5.1.4.rst
+ M server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java
+ M server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java
+?? tags
+[0m
+There is an unrelated untracked `tags` file in the worktree; I’m leaving it untouched and staging only the three backport files.
+[0m⚙ [0mvalidate {"ref":"f80ea5d06f4dabc8e54d788615579de5f4a2bf45","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.1.4.rst b/docs/appendices/release-notes/5.1.4.rst\nindex a866d71d6f..407667999e 100644\n--- a/docs/appendices/release-notes/5.1.4.rst\n+++ b/docs/appendices/release-notes/5.1.4.rst\n@@ -41,6 +41,14 @@ See the :ref:`version_5.1.0` release notes for a full list of changes in the\n Fixes\n =====\n \n+- Fixed an issue that would cause wrong column data type to be used when adding\n+  parent and child object sub-columns in one\n+  :ref:`ALTER TABLE <alter-table-add-column>` statement, e.g.::\n+\n+    ALTER TABLE tbl\n+      ADD COLUMN obj['arr'] array(object(dynamic)),\n+      ADD COLUMN obj['arr']['id'] integer;\n+\n - Added validation to reject inner column names containing special whitespace\n   characters to avoid invalid schema definitions.\n \ndiff --git a/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java b/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java\nindex 78da6f45a3..17ea501d24 100644\n--- a/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java\n+++ b/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java\n@@ -516,7 +516,13 @@ public class TableElementsAnalyzer implements FieldProvider<Reference> {\n                     parentBuilder.builtReference = parentRef;\n                     columns.put(parent, parentBuilder);\n                 } else {\n-                    columns.put(parent, new RefBuilder(parent, ObjectType.UNTYPED));\n+                    /*\n+                      Parent can be missing in the table, but present in the same statement, e.g.:\n+                      ALTER TABLE tbl\n+                        ADD COLUMN obj['arr'] array(object(dynamic)),\n+                        ADD COLUMN obj['arr']['id'] integer\n+                     */\n+                    columns.computeIfAbsent(parent, ignored -> new RefBuilder(parent, ObjectType.UNTYPED));\n                 }\n             }\n             Reference reference = table.getReference(columnName);\ndiff --git a/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java b/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java\nindex 69e7be7218..0f9d26bf4f 100644\n--- a/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java\n+++ b/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java\n@@ -22,7 +22,6 @@\n package io.crate.analyze;\n \n import static io.crate.testing.Asserts.assertThat;\n-import static org.assertj.core.api.Assertions.assertThat;\n import static org.assertj.core.api.Assertions.assertThatThrownBy;\n \n import java.io.IOException;\n@@ -43,6 +42,7 @@ import io.crate.planner.operators.SubQueryResults;\n import io.crate.sql.parser.ParsingException;\n import io.crate.test.integration.CrateDummyClusterServiceUnitTest;\n import io.crate.testing.SQLExecutor;\n+import io.crate.types.ArrayType;\n import io.crate.types.DataTypes;\n \n public class AlterTableAddColumnAnalyzerTest extends CrateDummyClusterServiceUnitTest {\n@@ -239,4 +239,20 @@ public class AlterTableAddColumnAnalyzerTest extends CrateDummyClusterServiceUni\n             .hasMessage(\"CHECK constraint on column `o1['o2']['b']` cannot refer to column `b`. Use full path to \" +\n                         \"refer to a sub-column or a table check constraint instead\");\n     }\n+\n+    // Tracks a bug: https://github.com/crate/crate/issues/17875\n+    @Test\n+    public void test_add_parent_and_child_columns_within_one_statement() throws Exception {\n+        e = SQLExecutor.of(clusterService)\n+            .addTable(\"create table tbl(obj object(dynamic))\");\n+\n+        var addColumnRequest = analyze(\"alter table tbl \" +\n+                                       \"add column obj['arr'] array(object(dynamic)), \" +\n+                                       \"add column obj['arr']['id'] integer\");\n+        assertThat(addColumnRequest.references()).satisfiesExactly(\n+            o1 -> assertThat(o1).hasName(\"obj\"),\n+            o1 -> assertThat(o1).hasName(\"obj['arr']\").hasType(new ArrayType<>(DataTypes.UNTYPED_OBJECT)),\n+            o1 -> assertThat(o1).hasName(\"obj['arr']['id']\").hasType(DataTypes.INTEGER)\n+        );\n+    }\n }\n"}
+[0m⚙ [0mvalidate {"ref":"f80ea5d06f4dabc8e54d788615579de5f4a2bf45","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.1.4.rst b/docs/appendices/release-notes/5.1.4.rst\n--- a/docs/appendices/release-notes/5.1.4.rst\n+++ b/docs/appendices/release-notes/5.1.4.rst\n@@ -38,9 +38,17 @@ See the :ref:`version_5.1.0` release notes for a full list of changes in the\n 5.1 series.\n \n Fixes\n =====\n \n+- Fixed an issue that would cause wrong column data type to be used when adding\n+  parent and child object sub-columns in one\n+  :ref:`ALTER TABLE <alter-table-add-column>` statement, e.g.::\n+\n+    ALTER TABLE tbl\n+      ADD COLUMN obj['arr'] array(object(dynamic)),\n+      ADD COLUMN obj['arr']['id'] integer;\n+\n - Added validation to reject inner column names containing special whitespace\n   characters to avoid invalid schema definitions.\n \n - Fixed an issue that caused the returned column names to be missing the\ndiff --git a/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java b/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java\n--- a/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java\n+++ b/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java\n@@ -511,13 +511,19 @@ public class TableElementsAnalyzer implements FieldProvider<Reference> {\n             resolveMissing = false;\n             ColumnIdent columnName = columnSymbol.toColumn();\n             for (ColumnIdent parent : columnName.parents()) {\n                 Reference parentRef = table.getReference(parent);\n                 if (parentRef != null) {\n                     RefBuilder parentBuilder = new RefBuilder(parent, parentRef.valueType());\n                     parentBuilder.builtReference = parentRef;\n                     columns.put(parent, parentBuilder);\n                 } else {\n-                    columns.put(parent, new RefBuilder(parent, ObjectType.UNTYPED));\n+                    /*\n+                      Parent can be missing in the table, but present in the same statement, e.g.:\n+                      ALTER TABLE tbl\n+                        ADD COLUMN obj['arr'] array(object(dynamic)),\n+                        ADD COLUMN obj['arr']['id'] integer\n+                     */\n+                    columns.computeIfAbsent(parent, ignored -> new RefBuilder(parent, ObjectType.UNTYPED));\n                 }\n             }\n             Reference reference = table.getReference(columnName);\n             if (reference != null) {\n                 throw new IllegalArgumentException(\"The table \" + tableName + \" already has a column named \" + columnName);\ndiff --git a/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java b/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java\n--- a/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java\n+++ b/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java\n@@ -20,11 +20,10 @@\n  */\n \n package io.crate.analyze;\n \n import static io.crate.testing.Asserts.assertThat;\n-import static org.assertj.core.api.Assertions.assertThat;\n import static org.assertj.core.api.Assertions.assertThatThrownBy;\n \n import java.io.IOException;\n import java.util.ArrayList;\n import java.util.List;\n@@ -41,9 +40,10 @@ import io.crate.planner.PlannerContext;\n import io.crate.planner.operators.SubQueryResults;\n import io.crate.sql.parser.ParsingException;\n import io.crate.test.integration.CrateDummyClusterServiceUnitTest;\n import io.crate.testing.SQLExecutor;\n+import io.crate.types.ArrayType;\n import io.crate.types.DataTypes;\n \n public class AlterTableAddColumnAnalyzerTest extends CrateDummyClusterServiceUnitTest {\n \n     private SQLExecutor e;\n@@ -234,10 +234,26 @@ public class AlterTableAddColumnAnalyzerTest extends CrateDummyClusterServiceUni\n     public void test_check_constraint_cannot_be_added_to_nested_object_sub_column_without_full_path() throws Exception {\n         e = SQLExecutor.of(clusterService)\n             .addTable(\"create table t (i int, o object)\");\n \n         assertThatThrownBy(\n             () -> analyze(\"alter table t add column o1 object as (o2 object as (b int check (b > 100)))\"))\n             .isExactlyInstanceOf(UnsupportedOperationException.class)\n             .hasMessage(\"CHECK constraint on column `o1['o2']['b']` cannot refer to column `b`. Use full path to \" +\n                         \"refer to a sub-column or a table check constraint instead\");\n     }\n+\n+    // Tracks a bug: https://github.com/crate/crate/issues/17875\n+    @Test\n+    public void test_add_parent_and_child_columns_within_one_statement() throws Exception {\n+        e = SQLExecutor.of(clusterService)\n+            .addTable(\"create table tbl(obj object(dynamic))\");\n+\n+        var addColumnRequest = analyze(\"alter table tbl \" +\n+                                       \"add column obj['arr'] array(object(dynamic)), \" +\n+                                       \"add column obj['arr']['id'] integer\");\n+        assertThat(addColumnRequest.references()).satisfiesExactly(\n+            o1 -> assertThat(o1).hasName(\"obj\"),\n+            o1 -> assertThat(o1).hasName(\"obj['arr']\").hasType(new ArrayType<>(DataTypes.UNTYPED_OBJECT)),\n+            o1 -> assertThat(o1).hasName(\"obj['arr']['id']\").hasType(DataTypes.INTEGER)\n+        );\n+    }\n }\n"}
+`validate full` failed after the patch was already applied because its apply-check is seeing an already-modified worktree, while the same hunks were validated cleanly before application. I’ll proceed with the requested commit, then capture the final diff from the base ref.
+[0m
+[0m$ [0mgit diff -- docs/appendices/release-notes/5.1.4.rst server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java
+warning: in the working copy of 'docs/appendices/release-notes/5.1.4.rst', LF will be replaced by CRLF the next time Git touches it
+diff --git a/docs/appendices/release-notes/5.1.4.rst b/docs/appendices/release-notes/5.1.4.rst
+index a866d71d6f..407667999e 100644
+--- a/docs/appendices/release-notes/5.1.4.rst
++++ b/docs/appendices/release-notes/5.1.4.rst
+@@ -41,6 +41,14 @@ See the :ref:`version_5.1.0` release notes for a full list of changes in the
+ Fixes
+ =====
+ 
++- Fixed an issue that would cause wrong column data type to be used when adding
++  parent and child object sub-columns in one
++  :ref:`ALTER TABLE <alter-table-add-column>` statement, e.g.::
++
++    ALTER TABLE tbl
++      ADD COLUMN obj['arr'] array(object(dynamic)),
++      ADD COLUMN obj['arr']['id'] integer;
++
+ - Added validation to reject inner column names containing special whitespace
+   characters to avoid invalid schema definitions.
+ 
+diff --git a/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java b/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java
+index 78da6f45a3..17ea501d24 100644
+--- a/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java
++++ b/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java
+@@ -516,7 +516,13 @@ public class TableElementsAnalyzer implements FieldProvider<Reference> {
+                     parentBuilder.builtReference = parentRef;
+                     columns.put(parent, parentBuilder);
+                 } else {
+-                    columns.put(parent, new RefBuilder(parent, ObjectType.UNTYPED));
++                    /*
++                      Parent can be missing in the table, but present in the same statement, e.g.:
++                      ALTER TABLE tbl
++                        ADD COLUMN obj['arr'] array(object(dynamic)),
++                        ADD COLUMN obj['arr']['id'] integer
++                     */
++                    columns.computeIfAbsent(parent, ignored -> new RefBuilder(parent, ObjectType.UNTYPED));
+                 }
+             }
+             Reference reference = table.getReference(columnName);
+diff --git a/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java b/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java
+index 69e7be7218..0f9d26bf4f 100644
+--- a/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java
++++ b/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java
+@@ -22,7 +22,6 @@
+ package io.crate.analyze;
+ 
+ import static io.crate.testing.Asserts.assertThat;
+-import static org.assertj.core.api.Assertions.assertThat;
+ import static org.assertj.core.api.Assertions.assertThatThrownBy;
+ 
+ import java.io.IOException;
+@@ -43,6 +42,7 @@ import io.crate.planner.operators.SubQueryResults;
+ import io.crate.sql.parser.ParsingException;
+ import io.crate.test.integration.CrateDummyClusterServiceUnitTest;
+ import io.crate.testing.SQLExecutor;
++import io.crate.types.ArrayType;
+ import io.crate.types.DataTypes;
+ 
+ public class AlterTableAddColumnAnalyzerTest extends CrateDummyClusterServiceUnitTest {
+@@ -239,4 +239,20 @@ public class AlterTableAddColumnAnalyzerTest extends CrateDummyClusterServiceUni
+             .hasMessage("CHECK constraint on column `o1['o2']['b']` cannot refer to column `b`. Use full path to " +
+                         "refer to a sub-column or a table check constraint instead");
+     }
++
++    // Tracks a bug: https://github.com/crate/crate/issues/17875
++    @Test
++    public void test_add_parent_and_child_columns_within_one_statement() throws Exception {
++        e = SQLExecutor.of(clusterService)
++            .addTable("create table tbl(obj object(dynamic))");
++
++        var addColumnRequest = analyze("alter table tbl " +
++                                       "add column obj['arr'] array(object(dynamic)), " +
++                                       "add column obj['arr']['id'] integer");
++        assertThat(addColumnRequest.references()).satisfiesExactly(
++            o1 -> assertThat(o1).hasName("obj"),
++            o1 -> assertThat(o1).hasName("obj['arr']").hasType(new ArrayType<>(DataTypes.UNTYPED_OBJECT)),
++            o1 -> assertThat(o1).hasName("obj['arr']['id']").hasType(DataTypes.INTEGER)
++        );
++    }
+ }
+warning: in the working copy of 'server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java', LF will be replaced by CRLF the next time Git touches it
+[0m
+[0m$ [0mgit log --oneline -10
+f80ea5d06f Improve EXPLAIN printing for WindowAgg operator
+057dd5d976 Fix WindowFunction plan when reusing same window def with params
+94ca527f2b DELETE must be retried on temporal errors and not be retried on non-retryable errors.
+b2b4e0d368 Make error_on_unknown_object_key setting work on views
+91704eea13 Remove duplicated vars at CoordinatorSessionSettings
+0cba43f687 Bump to 5.10.7-SNAPSHOT
+f5f32d685f Release 5.10.6
+480d8358d3 Fix value lookup for array objects
+674c67b31e Auto level LIKE ANY same as other ANY operators
+4a35dcbe90 Fix storageIdent for pre-oid doclookup references
+[0m
+[0m$ [0mgit add -- "docs/appendices/release-notes/5.1.4.rst" "server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java" "server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java"; if ($?) { git commit -m "Fix adding parent and child object columns" }
+warning: in the working copy of 'docs/appendices/release-notes/5.1.4.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java', LF will be replaced by CRLF the next time Git touches it
+[detached HEAD 17360dccdd] Fix adding parent and child object columns
+ 3 files changed, 32 insertions(+), 2 deletions(-)
+[0m
+The backport commit was created at `17360dccdd`. I’m retrying full validation now that the intended files are committed and the index is clean apart from the pre-existing untracked `tags` file.
+[0m$ [0mgit diff f80ea5d06f4dabc8e54d788615579de5f4a2bf45 HEAD -- docs/appendices/release-notes/5.1.4.rst server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java
+diff --git a/docs/appendices/release-notes/5.1.4.rst b/docs/appendices/release-notes/5.1.4.rst
+index a866d71d6f..407667999e 100644
+--- a/docs/appendices/release-notes/5.1.4.rst
++++ b/docs/appendices/release-notes/5.1.4.rst
+@@ -41,6 +41,14 @@ See the :ref:`version_5.1.0` release notes for a full list of changes in the
+ Fixes
+ =====
+ 
++- Fixed an issue that would cause wrong column data type to be used when adding
++  parent and child object sub-columns in one
++  :ref:`ALTER TABLE <alter-table-add-column>` statement, e.g.::
++
++    ALTER TABLE tbl
++      ADD COLUMN obj['arr'] array(object(dynamic)),
++      ADD COLUMN obj['arr']['id'] integer;
++
+ - Added validation to reject inner column names containing special whitespace
+   characters to avoid invalid schema definitions.
+ 
+diff --git a/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java b/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java
+index 78da6f45a3..17ea501d24 100644
+--- a/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java
++++ b/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java
+@@ -516,7 +516,13 @@ public class TableElementsAnalyzer implements FieldProvider<Reference> {
+                     parentBuilder.builtReference = parentRef;
+                     columns.put(parent, parentBuilder);
+                 } else {
+-                    columns.put(parent, new RefBuilder(parent, ObjectType.UNTYPED));
++                    /*
++                      Parent can be missing in the table, but present in the same statement, e.g.:
++                      ALTER TABLE tbl
++                        ADD COLUMN obj['arr'] array(object(dynamic)),
++                        ADD COLUMN obj['arr']['id'] integer
++                     */
++                    columns.computeIfAbsent(parent, ignored -> new RefBuilder(parent, ObjectType.UNTYPED));
+                 }
+             }
+             Reference reference = table.getReference(columnName);
+diff --git a/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java b/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java
+index 69e7be7218..0f9d26bf4f 100644
+--- a/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java
++++ b/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java
+@@ -22,7 +22,6 @@
+ package io.crate.analyze;
+ 
+ import static io.crate.testing.Asserts.assertThat;
+-import static org.assertj.core.api.Assertions.assertThat;
+ import static org.assertj.core.api.Assertions.assertThatThrownBy;
+ 
+ import java.io.IOException;
+@@ -43,6 +42,7 @@ import io.crate.planner.operators.SubQueryResults;
+ import io.crate.sql.parser.ParsingException;
+ import io.crate.test.integration.CrateDummyClusterServiceUnitTest;
+ import io.crate.testing.SQLExecutor;
++import io.crate.types.ArrayType;
+ import io.crate.types.DataTypes;
+ 
+ public class AlterTableAddColumnAnalyzerTest extends CrateDummyClusterServiceUnitTest {
+@@ -239,4 +239,20 @@ public class AlterTableAddColumnAnalyzerTest extends CrateDummyClusterServiceUni
+             .hasMessage("CHECK constraint on column `o1['o2']['b']` cannot refer to column `b`. Use full path to " +
+                         "refer to a sub-column or a table check constraint instead");
+     }
++
++    // Tracks a bug: https://github.com/crate/crate/issues/17875
++    @Test
++    public void test_add_parent_and_child_columns_within_one_statement() throws Exception {
++        e = SQLExecutor.of(clusterService)
++            .addTable("create table tbl(obj object(dynamic))");
++
++        var addColumnRequest = analyze("alter table tbl " +
++                                       "add column obj['arr'] array(object(dynamic)), " +
++                                       "add column obj['arr']['id'] integer");
++        assertThat(addColumnRequest.references()).satisfiesExactly(
++            o1 -> assertThat(o1).hasName("obj"),
++            o1 -> assertThat(o1).hasName("obj['arr']").hasType(new ArrayType<>(DataTypes.UNTYPED_OBJECT)),
++            o1 -> assertThat(o1).hasName("obj['arr']['id']").hasType(DataTypes.INTEGER)
++        );
++    }
+ }
+[0m
+[0m⚙ [0mvalidate {"ref":"f80ea5d06f4dabc8e54d788615579de5f4a2bf45","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.1.4.rst b/docs/appendices/release-notes/5.1.4.rst\nindex a866d71d6f..407667999e 100644\n--- a/docs/appendices/release-notes/5.1.4.rst\n+++ b/docs/appendices/release-notes/5.1.4.rst\n@@ -41,6 +41,14 @@ See the :ref:`version_5.1.0` release notes for a full list of changes in the\n Fixes\n =====\n \n+- Fixed an issue that would cause wrong column data type to be used when adding\n+  parent and child object sub-columns in one\n+  :ref:`ALTER TABLE <alter-table-add-column>` statement, e.g.::\n+\n+    ALTER TABLE tbl\n+      ADD COLUMN obj['arr'] array(object(dynamic)),\n+      ADD COLUMN obj['arr']['id'] integer;\n+\n - Added validation to reject inner column names containing special whitespace\n   characters to avoid invalid schema definitions.\n \ndiff --git a/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java b/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java\nindex 78da6f45a3..17ea501d24 100644\n--- a/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java\n+++ b/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java\n@@ -516,7 +516,13 @@ public class TableElementsAnalyzer implements FieldProvider<Reference> {\n                     parentBuilder.builtReference = parentRef;\n                     columns.put(parent, parentBuilder);\n                 } else {\n-                    columns.put(parent, new RefBuilder(parent, ObjectType.UNTYPED));\n+                    /*\n+                      Parent can be missing in the table, but present in the same statement, e.g.:\n+                      ALTER TABLE tbl\n+                        ADD COLUMN obj['arr'] array(object(dynamic)),\n+                        ADD COLUMN obj['arr']['id'] integer\n+                     */\n+                    columns.computeIfAbsent(parent, ignored -> new RefBuilder(parent, ObjectType.UNTYPED));\n                 }\n             }\n             Reference reference = table.getReference(columnName);\ndiff --git a/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java b/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java\nindex 69e7be7218..0f9d26bf4f 100644\n--- a/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java\n+++ b/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java\n@@ -22,7 +22,6 @@\n package io.crate.analyze;\n \n import static io.crate.testing.Asserts.assertThat;\n-import static org.assertj.core.api.Assertions.assertThat;\n import static org.assertj.core.api.Assertions.assertThatThrownBy;\n \n import java.io.IOException;\n@@ -43,6 +42,7 @@ import io.crate.planner.operators.SubQueryResults;\n import io.crate.sql.parser.ParsingException;\n import io.crate.test.integration.CrateDummyClusterServiceUnitTest;\n import io.crate.testing.SQLExecutor;\n+import io.crate.types.ArrayType;\n import io.crate.types.DataTypes;\n \n public class AlterTableAddColumnAnalyzerTest extends CrateDummyClusterServiceUnitTest {\n@@ -239,4 +239,20 @@ public class AlterTableAddColumnAnalyzerTest extends CrateDummyClusterServiceUni\n             .hasMessage(\"CHECK constraint on column `o1['o2']['b']` cannot refer to column `b`. Use full path to \" +\n                         \"refer to a sub-column or a table check constraint instead\");\n     }\n+\n+    // Tracks a bug: https://github.com/crate/crate/issues/17875\n+    @Test\n+    public void test_add_parent_and_child_columns_within_one_statement() throws Exception {\n+        e = SQLExecutor.of(clusterService)\n+            .addTable(\"create table tbl(obj object(dynamic))\");\n+\n+        var addColumnRequest = analyze(\"alter table tbl \" +\n+                                       \"add column obj['arr'] array(object(dynamic)), \" +\n+                                       \"add column obj['arr']['id'] integer\");\n+        assertThat(addColumnRequest.references()).satisfiesExactly(\n+            o1 -> assertThat(o1).hasName(\"obj\"),\n+            o1 -> assertThat(o1).hasName(\"obj['arr']\").hasType(new ArrayType<>(DataTypes.UNTYPED_OBJECT)),\n+            o1 -> assertThat(o1).hasName(\"obj['arr']['id']\").hasType(DataTypes.INTEGER)\n+        );\n+    }\n }\n"}
+Full validation still reports context failures for the already-applied patch, but hunk validation succeeded before application. I’ll run the targeted analyzer test to catch compile/runtime issues in the actual working tree.
+[0m
+[0m$ [0m.\gradlew.bat :server:test --tests io.crate.analyze.AlterTableAddColumnAnalyzerTest.test_add_parent_and_child_columns_within_one_statement
+.\gradlew.bat : The term '.\gradlew.bat' is not recognized as the name of a cmdlet, function, script file, or operable 
+program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:1
++ .\gradlew.bat :server:test --tests io.crate.analyze.AlterTableAddColu ...
++ ~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (.\gradlew.bat:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+[0m
+The Windows Gradle wrapper isn’t present at the workspace root, so the targeted test command could not start. I’ll check the available wrapper/script name before deciding whether another local verification is possible.
+[0m✱ [0mGlob "gradlew*"[90m 0 matches[0m
+[0m
+[0m$ [0mgit status --short
+?? tags
+[0m
+[0m$ [0mgit rev-parse --short HEAD
+17360dccdd
+[0m
+[0m$ [0mgit diff f80ea5d06f4dabc8e54d788615579de5f4a2bf45 HEAD -- docs/appendices/release-notes/5.1.4.rst server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java
+diff --git a/docs/appendices/release-notes/5.1.4.rst b/docs/appendices/release-notes/5.1.4.rst
+index a866d71d6f..407667999e 100644
+--- a/docs/appendices/release-notes/5.1.4.rst
++++ b/docs/appendices/release-notes/5.1.4.rst
+@@ -41,6 +41,14 @@ See the :ref:`version_5.1.0` release notes for a full list of changes in the
+ Fixes
+ =====
+ 
++- Fixed an issue that would cause wrong column data type to be used when adding
++  parent and child object sub-columns in one
++  :ref:`ALTER TABLE <alter-table-add-column>` statement, e.g.::
++
++    ALTER TABLE tbl
++      ADD COLUMN obj['arr'] array(object(dynamic)),
++      ADD COLUMN obj['arr']['id'] integer;
++
+ - Added validation to reject inner column names containing special whitespace
+   characters to avoid invalid schema definitions.
+ 
+diff --git a/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java b/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java
+index 78da6f45a3..17ea501d24 100644
+--- a/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java
++++ b/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java
+@@ -516,7 +516,13 @@ public class TableElementsAnalyzer implements FieldProvider<Reference> {
+                     parentBuilder.builtReference = parentRef;
+                     columns.put(parent, parentBuilder);
+                 } else {
+-                    columns.put(parent, new RefBuilder(parent, ObjectType.UNTYPED));
++                    /*
++                      Parent can be missing in the table, but present in the same statement, e.g.:
++                      ALTER TABLE tbl
++                        ADD COLUMN obj['arr'] array(object(dynamic)),
++                        ADD COLUMN obj['arr']['id'] integer
++                     */
++                    columns.computeIfAbsent(parent, ignored -> new RefBuilder(parent, ObjectType.UNTYPED));
+                 }
+             }
+             Reference reference = table.getReference(columnName);
+diff --git a/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java b/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java
+index 69e7be7218..0f9d26bf4f 100644
+--- a/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java
++++ b/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java
+@@ -22,7 +22,6 @@
+ package io.crate.analyze;
+ 
+ import static io.crate.testing.Asserts.assertThat;
+-import static org.assertj.core.api.Assertions.assertThat;
+ import static org.assertj.core.api.Assertions.assertThatThrownBy;
+ 
+ import java.io.IOException;
+@@ -43,6 +42,7 @@ import io.crate.planner.operators.SubQueryResults;
+ import io.crate.sql.parser.ParsingException;
+ import io.crate.test.integration.CrateDummyClusterServiceUnitTest;
+ import io.crate.testing.SQLExecutor;
++import io.crate.types.ArrayType;
+ import io.crate.types.DataTypes;
+ 
+ public class AlterTableAddColumnAnalyzerTest extends CrateDummyClusterServiceUnitTest {
+@@ -239,4 +239,20 @@ public class AlterTableAddColumnAnalyzerTest extends CrateDummyClusterServiceUni
+             .hasMessage("CHECK constraint on column `o1['o2']['b']` cannot refer to column `b`. Use full path to " +
+                         "refer to a sub-column or a table check constraint instead");
+     }
++
++    // Tracks a bug: https://github.com/crate/crate/issues/17875
++    @Test
++    public void test_add_parent_and_child_columns_within_one_statement() throws Exception {
++        e = SQLExecutor.of(clusterService)
++            .addTable("create table tbl(obj object(dynamic))");
++
++        var addColumnRequest = analyze("alter table tbl " +
++                                       "add column obj['arr'] array(object(dynamic)), " +
++                                       "add column obj['arr']['id'] integer");
++        assertThat(addColumnRequest.references()).satisfiesExactly(
++            o1 -> assertThat(o1).hasName("obj"),
++            o1 -> assertThat(o1).hasName("obj['arr']").hasType(new ArrayType<>(DataTypes.UNTYPED_OBJECT)),
++            o1 -> assertThat(o1).hasName("obj['arr']['id']").hasType(DataTypes.INTEGER)
++        );
++    }
+ }
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch code context
+[✓] Construct and validate backport hunks
+[✓] Apply patch to working tree
+[✓] Run final validation and commit
+[•] Return YAML result with patch
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/docs/appendices/release-notes/5.1.4.rst b/docs/appendices/release-notes/5.1.4.rst
+    index a866d71d6f..407667999e 100644
+    --- a/docs/appendices/release-notes/5.1.4.rst
+    +++ b/docs/appendices/release-notes/5.1.4.rst
+    @@ -41,6 +41,14 @@ See the :ref:`version_5.1.0` release notes for a full list of changes in the
+     Fixes
+     =====
+     
+    +- Fixed an issue that would cause wrong column data type to be used when adding
+    +  parent and child object sub-columns in one
+    +  :ref:`ALTER TABLE <alter-table-add-column>` statement, e.g.::
+    +
+    +    ALTER TABLE tbl
+    +      ADD COLUMN obj['arr'] array(object(dynamic)),
+    +      ADD COLUMN obj['arr']['id'] integer;
+    +
+     - Added validation to reject inner column names containing special whitespace
+       characters to avoid invalid schema definitions.
+     
+    diff --git a/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java b/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java
+    index 78da6f45a3..17ea501d24 100644
+    --- a/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java
+    +++ b/server/src/main/java/io/crate/analyze/TableElementsAnalyzer.java
+    @@ -516,7 +516,13 @@ public class TableElementsAnalyzer implements FieldProvider<Reference> {
+                         parentBuilder.builtReference = parentRef;
+                         columns.put(parent, parentBuilder);
+                     } else {
+    -                    columns.put(parent, new RefBuilder(parent, ObjectType.UNTYPED));
+    +                    /*
+    +                      Parent can be missing in the table, but present in the same statement, e.g.:
+    +                      ALTER TABLE tbl
+    +                        ADD COLUMN obj['arr'] array(object(dynamic)),
+    +                        ADD COLUMN obj['arr']['id'] integer
+    +                     */
+    +                    columns.computeIfAbsent(parent, ignored -> new RefBuilder(parent, ObjectType.UNTYPED));
+                     }
+                 }
+                 Reference reference = table.getReference(columnName);
+    diff --git a/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java b/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java
+    index 69e7be7218..0f9d26bf4f 100644
+    --- a/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java
+    +++ b/server/src/test/java/io/crate/analyze/AlterTableAddColumnAnalyzerTest.java
+    @@ -22,7 +22,6 @@
+     package io.crate.analyze;
+     
+     import static io.crate.testing.Asserts.assertThat;
+    -import static org.assertj.core.api.Assertions.assertThat;
+     import static org.assertj.core.api.Assertions.assertThatThrownBy;
+     
+     import java.io.IOException;
+    @@ -43,6 +42,7 @@ import io.crate.planner.operators.SubQueryResults;
+     import io.crate.sql.parser.ParsingException;
+     import io.crate.test.integration.CrateDummyClusterServiceUnitTest;
+     import io.crate.testing.SQLExecutor;
+    +import io.crate.types.ArrayType;
+     import io.crate.types.DataTypes;
+     
+     public class AlterTableAddColumnAnalyzerTest extends CrateDummyClusterServiceUnitTest {
+    @@ -239,4 +239,20 @@ public class AlterTableAddColumnAnalyzerTest extends CrateDummyClusterServiceUni
+                 .hasMessage("CHECK constraint on column `o1['o2']['b']` cannot refer to column `b`. Use full path to " +
+                             "refer to a sub-column or a table check constraint instead");
+         }
+    +
+    +    // Tracks a bug: https://github.com/crate/crate/issues/17875
+    +    @Test
+    +    public void test_add_parent_and_child_columns_within_one_statement() throws Exception {
+    +        e = SQLExecutor.of(clusterService)
+    +            .addTable("create table tbl(obj object(dynamic))");
+    +
+    +        var addColumnRequest = analyze("alter table tbl " +
+    +                                       "add column obj['arr'] array(object(dynamic)), " +
+    +                                       "add column obj['arr']['id'] integer");
+    +        assertThat(addColumnRequest.references()).satisfiesExactly(
+    +            o1 -> assertThat(o1).hasName("obj"),
+    +            o1 -> assertThat(o1).hasName("obj['arr']").hasType(new ArrayType<>(DataTypes.UNTYPED_OBJECT)),
+    +            o1 -> assertThat(o1).hasName("obj['arr']['id']").hasType(DataTypes.INTEGER)
+    +        );
+    +    }
+     }
+  notes: >
+    Backported and committed as 17360dccdd; individual hunks validated cleanly, full validate apply-check failed after the patch was already applied, and local targeted test could not run because no Gradle wrapper was present.
+```
+
+--- END CLI OUTPUT ---
+[02:07:15]   Done in 367.2s | status=success

@@ -1,0 +1,144 @@
+[11:45:15] === Row 3: crate  73778220 -> 963aaf1b  [TYPE-II] ===
+[11:45:15]   Resolving parent of backport commit 963aaf1b...
+[11:45:15]   Backport parent (target ref): b61b98b028e17a1aac8cd88e2fc5b1a18358beaf
+[11:45:15]   Extracting new-version patch for 73778220...
+[11:45:15]   New-version patch size: 4936 chars
+[11:45:15]   Checking out backport parent b61b98b0...
+[11:45:15]   Invoking OpenCode CLI (8792 chars)...
+[11:45:15]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the 5.6-side context for the three changed areas, then construct and hunk-validate a minimal backport diff against the specified parent ref.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target-branch context for changed files
+[ ] Construct adapted unified diff for 5.6 parent ref
+[ ] Validate each patch hunk with validate mode=hunk
+[ ] Return parseable YAML result
+[0m
+[0m⚙ [0mgit_show {"ref":"73778220a2031cdbc0f19fee7bbf4dc32b1fe991"}
+[0m⚙ [0mviewcode {"ref":"b61b98b028e17a1aac8cd88e2fc5b1a18358beaf","path":"server/src/main/java/io/crate/analyze/relations/RelationAnalyzer.java","startline":290,"endline":370}
+[0m⚙ [0mviewcode {"ref":"b61b98b028e17a1aac8cd88e2fc5b1a18358beaf","path":"server/src/test/java/io/crate/planner/operators/JoinTest.java","startline":950,"endline":1035}
+[0m⚙ [0mviewcode {"ref":"b61b98b028e17a1aac8cd88e2fc5b1a18358beaf","path":"docs/appendices/release-notes/5.6.3.rst","startline":35,"endline":60}
+[0m⚙ [0mlocate_symbol {"ref":"b61b98b028e17a1aac8cd88e2fc5b1a18358beaf","symbol":"JoinTest"}
+[0m⚙ [0mlocate_symbol {"ref":"b61b98b028e17a1aac8cd88e2fc5b1a18358beaf","symbol":"RelationAnalyzer"}
+The 5.6 parent already contains the same target method and nearby test location, so this appears to be a direct contextual port. One symbol lookup hit a stale Git lock while trying to reset internally, but the relevant source context was retrieved successfully.
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/analyze/relations/RelationAnalyzer.java","start_line":309,"end_line":354,"start_commit":"b61b98b028e17a1aac8cd88e2fc5b1a18358beaf","end_commit":"b61b98b028e17a1aac8cd88e2fc5b1a18358beaf"}
+[0m⚙ [0mgit_history {"filepath":"server/src/test/java/io/crate/planner/operators/JoinTest.java","start_line":950,"end_line":990,"start_commit":"b61b98b028e17a1aac8cd88e2fc5b1a18358beaf","end_commit":"b61b98b028e17a1aac8cd88e2fc5b1a18358beaf"}
+[0m⚙ [0mgit_history {"filepath":"docs/appendices/release-notes/5.6.3.rst","start_line":47,"end_line":51,"start_commit":"b61b98b028e17a1aac8cd88e2fc5b1a18358beaf","end_commit":"b61b98b028e17a1aac8cd88e2fc5b1a18358beaf"}
+The history tool cannot compare a ref range where start and end are identical, but the direct `viewcode` checks confirmed all counterparts exist in the specified parent. I’m validating the direct three-hunk backport now.
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target-branch context for changed files
+[•] Construct adapted unified diff for 5.6 parent ref
+[ ] Validate each patch hunk with validate mode=hunk
+[ ] Return parseable YAML result
+[0m
+[0m⚙ [0mvalidate {"ref":"b61b98b028e17a1aac8cd88e2fc5b1a18358beaf","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.6.3.rst b/docs/appendices/release-notes/5.6.3.rst\n--- a/docs/appendices/release-notes/5.6.3.rst\n+++ b/docs/appendices/release-notes/5.6.3.rst\n@@ -47,4 +47,5 @@ See the :ref:`version_5.6.0` release notes for a full list of changes in the\n Fixes\n =====\n \n-None\n+- Fixed ``NullPointerException`` thrown when joining tables with ``USING``\n+  clause which contains columns not existing in either or both tables.\n"}
+[0m⚙ [0mvalidate {"ref":"b61b98b028e17a1aac8cd88e2fc5b1a18358beaf","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/analyze/relations/RelationAnalyzer.java b/server/src/main/java/io/crate/analyze/relations/RelationAnalyzer.java\n--- a/server/src/main/java/io/crate/analyze/relations/RelationAnalyzer.java\n+++ b/server/src/main/java/io/crate/analyze/relations/RelationAnalyzer.java\n@@ -315,9 +315,11 @@ public class RelationAnalyzer extends DefaultTraversalVisitor<AnalyzedRelation,\n \n         for (var joinColumn : joinUsing.getColumns()) {\n \n+            boolean joinColumnExistsInLeft = false;\n             for (var leftOutput : leftOutputs) {\n                 var columnIdent = Symbols.pathFromSymbol(leftOutput);\n                 if (columnIdent.name().equals(joinColumn)) {\n+                    joinColumnExistsInLeft = true;\n                     if (lhsOutputs.put(joinColumn, leftOutput) != null) {\n                         throw new IllegalArgumentException(String.format(Locale.ENGLISH,\n                                                                          \"common column name %s appears more than once in left table\", joinColumn));\n@@ -325,14 +327,16 @@ public class RelationAnalyzer extends DefaultTraversalVisitor<AnalyzedRelation,\n                 }\n             }\n \n-            if (lhsOutputs.isEmpty()) {\n+            if (!joinColumnExistsInLeft) {\n                 throw new IllegalArgumentException(String.format(Locale.ENGLISH,\n                                                                  \"column %s specified in USING clause does not exist in left table\", joinColumn));\n             }\n \n+            boolean joinColumnExistsInRight = false;\n             for (Symbol rightOutput : rightOutputs) {\n                 var columnIdent = Symbols.pathFromSymbol(rightOutput);\n                 if (columnIdent.name().equals(joinColumn)) {\n+                    joinColumnExistsInRight = true;\n                     if (rhsOutputs.put(joinColumn, rightOutput) != null) {\n                         throw new IllegalArgumentException(String.format(Locale.ENGLISH,\n                                                                          \"common column name %s appears more than once in right table\", joinColumn));\n@@ -348,7 +352,7 @@ public class RelationAnalyzer extends DefaultTraversalVisitor<AnalyzedRelation,\n                 }\n             }\n \n-            if (rhsOutputs.isEmpty()) {\n+            if (!joinColumnExistsInRight) {\n                 throw new IllegalArgumentException(String.format(Locale.ENGLISH,\n                                                                  \"column %s specified in USING clause does not exist in right table\", joinColumn));\n             }\n"}
+The release-note and analyzer hunks apply cleanly against the target ref. I’m validating the regression-test hunk next.
+[0m⚙ [0mvalidate {"ref":"b61b98b028e17a1aac8cd88e2fc5b1a18358beaf","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/planner/operators/JoinTest.java b/server/src/test/java/io/crate/planner/operators/JoinTest.java\n--- a/server/src/test/java/io/crate/planner/operators/JoinTest.java\n+++ b/server/src/test/java/io/crate/planner/operators/JoinTest.java\n@@ -986,6 +986,28 @@ public class JoinTest extends CrateDummyClusterServiceUnitTest {\n \n     }\n \n+    @Test\n+    public void test_using_clause_specifying_multiple_columns_with_a_non_existing_column_raises_error() throws IOException {\n+        var executor = SQLExecutor.builder(clusterService, 2, Randomness.get(), List.of())\n+            .addTable(\"CREATE TABLE j1 (x INT, y INT)\")\n+            .addTable(\"CREATE TABLE j2 (x INT)\")\n+            .build();\n+\n+        assertThatThrownBy(() -> executor.analyze(\"SELECT * FROM j1 JOIN j2 USING(x, y)\"))\n+            .isExactlyInstanceOf(IllegalArgumentException.class)\n+            .hasMessageContaining(\"column y specified in USING clause does not exist in right table\");\n+\n+        // left and right sides swapped\n+        assertThatThrownBy(() -> executor.analyze(\"SELECT * FROM j2 JOIN j1 USING(x, y)\"))\n+            .isExactlyInstanceOf(IllegalArgumentException.class)\n+            .hasMessageContaining(\"column y specified in USING clause does not exist in left table\");\n+\n+        // column unknown from both sides\n+        assertThatThrownBy(() -> executor.analyze(\"SELECT * FROM j2 JOIN j1 USING(x, z)\"))\n+            .isExactlyInstanceOf(IllegalArgumentException.class)\n+            .hasMessageContaining(\"column z specified in USING clause does not exist in left table\");\n+    }\n+\n     /**\n      * Verifies a bug fix (and regression that was introduced with 5.2.4)\n      * See https://github.com/crate/crate/issues/13808\n"}
+All three hunks apply cleanly with `validate` in hunk mode. Final full validation was intentionally skipped per instructions.
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target-branch context for changed files
+[✓] Construct adapted unified diff for 5.6 parent ref
+[✓] Validate each patch hunk with validate mode=hunk
+[•] Return parseable YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/docs/appendices/release-notes/5.6.3.rst b/docs/appendices/release-notes/5.6.3.rst
+    --- a/docs/appendices/release-notes/5.6.3.rst
+    +++ b/docs/appendices/release-notes/5.6.3.rst
+    @@ -47,4 +47,5 @@ See the :ref:`version_5.6.0` release notes for a full list of changes in the
+     Fixes
+     =====
+     
+    -None
+    +- Fixed ``NullPointerException`` thrown when joining tables with ``USING``
+    +  clause which contains columns not existing in either or both tables.
+    diff --git a/server/src/main/java/io/crate/analyze/relations/RelationAnalyzer.java b/server/src/main/java/io/crate/analyze/relations/RelationAnalyzer.java
+    --- a/server/src/main/java/io/crate/analyze/relations/RelationAnalyzer.java
+    +++ b/server/src/main/java/io/crate/analyze/relations/RelationAnalyzer.java
+    @@ -315,9 +315,11 @@ public class RelationAnalyzer extends DefaultTraversalVisitor<AnalyzedRelation,
+     
+             for (var joinColumn : joinUsing.getColumns()) {
+     
+    +            boolean joinColumnExistsInLeft = false;
+                 for (var leftOutput : leftOutputs) {
+                     var columnIdent = Symbols.pathFromSymbol(leftOutput);
+                     if (columnIdent.name().equals(joinColumn)) {
+    +                    joinColumnExistsInLeft = true;
+                         if (lhsOutputs.put(joinColumn, leftOutput) != null) {
+                             throw new IllegalArgumentException(String.format(Locale.ENGLISH,
+                                                                              "common column name %s appears more than once in left table", joinColumn));
+    @@ -325,14 +327,16 @@ public class RelationAnalyzer extends DefaultTraversalVisitor<AnalyzedRelation,
+                     }
+                 }
+     
+    -            if (lhsOutputs.isEmpty()) {
+    +            if (!joinColumnExistsInLeft) {
+                     throw new IllegalArgumentException(String.format(Locale.ENGLISH,
+                                                                      "column %s specified in USING clause does not exist in left table", joinColumn));
+                 }
+     
+    +            boolean joinColumnExistsInRight = false;
+                 for (Symbol rightOutput : rightOutputs) {
+                     var columnIdent = Symbols.pathFromSymbol(rightOutput);
+                     if (columnIdent.name().equals(joinColumn)) {
+    +                    joinColumnExistsInRight = true;
+                         if (rhsOutputs.put(joinColumn, rightOutput) != null) {
+                             throw new IllegalArgumentException(String.format(Locale.ENGLISH,
+                                                                              "common column name %s appears more than once in right table", joinColumn));
+    @@ -348,7 +352,7 @@ public class RelationAnalyzer extends DefaultTraversalVisitor<AnalyzedRelation,
+                     }
+                 }
+     
+    -            if (rhsOutputs.isEmpty()) {
+    +            if (!joinColumnExistsInRight) {
+                     throw new IllegalArgumentException(String.format(Locale.ENGLISH,
+                                                                      "column %s specified in USING clause does not exist in right table", joinColumn));
+                 }
+    diff --git a/server/src/test/java/io/crate/planner/operators/JoinTest.java b/server/src/test/java/io/crate/planner/operators/JoinTest.java
+    --- a/server/src/test/java/io/crate/planner/operators/JoinTest.java
+    +++ b/server/src/test/java/io/crate/planner/operators/JoinTest.java
+    @@ -986,6 +986,28 @@ public class JoinTest extends CrateDummyClusterServiceUnitTest {
+     
+         }
+     
+    +    @Test
+    +    public void test_using_clause_specifying_multiple_columns_with_a_non_existing_column_raises_error() throws IOException {
+    +        var executor = SQLExecutor.builder(clusterService, 2, Randomness.get(), List.of())
+    +            .addTable("CREATE TABLE j1 (x INT, y INT)")
+    +            .addTable("CREATE TABLE j2 (x INT)")
+    +            .build();
+    +
+    +        assertThatThrownBy(() -> executor.analyze("SELECT * FROM j1 JOIN j2 USING(x, y)"))
+    +            .isExactlyInstanceOf(IllegalArgumentException.class)
+    +            .hasMessageContaining("column y specified in USING clause does not exist in right table");
+    +
+    +        // left and right sides swapped
+    +        assertThatThrownBy(() -> executor.analyze("SELECT * FROM j2 JOIN j1 USING(x, y)"))
+    +            .isExactlyInstanceOf(IllegalArgumentException.class)
+    +            .hasMessageContaining("column y specified in USING clause does not exist in left table");
+    +
+    +        // column unknown from both sides
+    +        assertThatThrownBy(() -> executor.analyze("SELECT * FROM j2 JOIN j1 USING(x, z)"))
+    +            .isExactlyInstanceOf(IllegalArgumentException.class)
+    +            .hasMessageContaining("column z specified in USING clause does not exist in left table");
+    +    }
+    +
+         /**
+          * Verifies a bug fix (and regression that was introduced with 5.2.4)
+          * See https://github.com/crate/crate/issues/13808
+  notes: >
+    Backported the USING-clause existence checks, regression test, and release note; all hunks validated cleanly against b61b98b028e17a1aac8cd88e2fc5b1a18358beaf.
+```
+
+--- END CLI OUTPUT ---
+[11:47:28]   Done in 132.8s | status=success

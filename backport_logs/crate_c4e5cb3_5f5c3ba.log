@@ -1,0 +1,704 @@
+[04:38:43] === Row 1: crate  c4e5cb30 -> 5f5c3ba8  [TYPE-V] ===
+[04:38:43]   Resolving parent of backport commit 5f5c3ba8...
+[04:38:43]   Backport parent (target ref): 140164b93ac4273f65f10a92ef555b6cbce8b2a8
+[04:38:43]   Extracting new-version patch for c4e5cb30...
+[04:38:43]   New-version patch size: 12128 chars
+[04:38:43]   Checking out backport parent 140164b9...
+[04:38:43]   Invoking OpenCode CLI (16216 chars)...
+[04:38:43]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the target-branch context for each changed class, then build and validate the smallest equivalent patch against the specified parent ref.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target branch code context
+[ ] Construct adapted unified diff for 5.9 parent
+[ ] Validate hunks and full patch
+[ ] Apply patch and commit result
+[ ] Return final YAML with patch
+[0m
+[0m⚙ [0mviewcode {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","path":"server/src/main/java/io/crate/execution/dml/ArrayIndexer.java","startline":1,"endline":190}
+[0m⚙ [0mviewcode {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","path":"server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java","startline":1,"endline":220}
+[0m⚙ [0mviewcode {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","path":"server/src/main/java/io/crate/expression/predicate/IsNullPredicate.java","startline":1,"endline":180}
+[0m⚙ [0mgit_show {"ref":"c4e5cb305ee2a07c1b0c5c06d876111194ba5c18"}
+[0m⚙ [0mviewcode {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","path":"server/src/main/java/io/crate/expression/scalar/ArrayUpperFunction.java","startline":1,"endline":230}
+[0m⚙ [0mviewcode {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","path":"server/src/test/java/io/crate/execution/dml/IndexerTest.java","startline":830,"endline":910}
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java","start_line":40,"end_line":128,"start_commit":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","end_commit":"140164b93ac4273f65f10a92ef555b6cbce8b2a8"}
+[0m⚙ [0mviewcode {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","path":"server/src/main/java/io/crate/execution/dml/ArrayIndexer.java","startline":190,"endline":280}
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/execution/dml/ArrayIndexer.java","start_line":120,"end_line":145,"start_commit":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","end_commit":"140164b93ac4273f65f10a92ef555b6cbce8b2a8"}
+[0m⚙ [0mlocate_symbol {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","symbol":"noStoredField"}
+The 5.9 parent lacks the newer stored-field suppression API, so the backport needs the same array-length suppression flag without porting unrelated stored-field mechanics. I’m going to add a minimal `IndexDocumentBuilder` flag/wrapper and adapt `ArrayIndexer` to pass a child builder with array-length indexing disabled.
+[0m✱ [0mGrep "getFields\(\)\.stream\(\)"[90m in server/src/test/java/io/crate/execution/dml · 0 matches[0m
+[0m✱ [0mGrep "getFirst\(\)"[90m in server/src/test/java · 100 matches[0m
+[0m⚙ [0mviewcode {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","path":"server/src/test/java/io/crate/execution/dml/IndexerTest.java","startline":1,"endline":80}
+I’ve identified all target locations. The backport is not need-not-ported: 5.9 already has `_array_length_` indexing and the failing behavior, but its `IndexDocumentBuilder` is older, so the patch will be structurally smaller than master.
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java b/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n--- a/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n+++ b/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n@@ -47,6 +47,8 @@ import io.crate.types.StorageSupport;\n \n public class ArrayIndexer<T> implements ValueIndexer<List<T>> {\n \n+    public static final Version ARRAY_LENGTH_FIELD_SUPPORTED_VERSION = Version.V_5_9_0;\n+\n     public static Query arrayLengthTermQuery(Reference arrayRef, int length, Function<ColumnIdent, Reference> getRef) {\n         return IntPoint.newExactQuery(toArrayLengthFieldName(arrayRef, getRef), length);\n     }\n@@ -123,7 +125,8 @@ public class ArrayIndexer<T> implements ValueIndexer<List<T>> {\n     public void indexValue(@NotNull List<T> values, IndexDocumentBuilder docBuilder) throws IOException {\n         docBuilder.translogWriter().startArray();\n+        var nestedDocBuilder = docBuilder.noArrayLengthField();\n         for (T value : values) {\n             if (value == null) {\n                 docBuilder.translogWriter().writeNull();\n             } else {\n-                innerIndexer.indexValue(value, docBuilder);\n+                innerIndexer.indexValue(value, nestedDocBuilder);\n             }\n         }\n-        if (docBuilder.getTableVersionCreated().onOrAfter(Version.V_5_9_0)) {\n+        if (docBuilder.maybeAddArrayLengthField()) {\n             // map '[]' to '_array_length_ = 0'\n             // map '[null]' to '_array_length_ = 1'\n             // 'null' is not mapped; can utilize 'FieldExistsQuery' for 'IS NULL' filtering\n"}
+The first hunk attempt exposed a context formatting issue, not a semantic mismatch. I’m revising the unified hunks with wider exact context from the 5.9 parent before applying.
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java b/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n--- a/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n+++ b/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n@@ -46,6 +46,8 @@ import io.crate.types.StorageSupport;\n \n public class ArrayIndexer<T> implements ValueIndexer<List<T>> {\n \n+    public static final Version ARRAY_LENGTH_FIELD_SUPPORTED_VERSION = Version.V_5_9_0;\n+\n     public static Query arrayLengthTermQuery(Reference arrayRef, int length, Function<ColumnIdent, Reference> getRef) {\n         return IntPoint.newExactQuery(toArrayLengthFieldName(arrayRef, getRef), length);\n     }\n@@ -112,17 +114,18 @@ public class ArrayIndexer<T> implements ValueIndexer<List<T>> {\n     @Override\n     public void indexValue(@NotNull List<T> values, IndexDocumentBuilder docBuilder) throws IOException {\n         docBuilder.translogWriter().startArray();\n+        var nestedDocBuilder = docBuilder.noArrayLengthField();\n         for (T value : values) {\n             if (value == null) {\n                 docBuilder.translogWriter().writeNull();\n             } else {\n-                innerIndexer.indexValue(value, docBuilder);\n+                innerIndexer.indexValue(value, nestedDocBuilder);\n             }\n         }\n-        if (docBuilder.getTableVersionCreated().onOrAfter(Version.V_5_9_0)) {\n+        if (docBuilder.maybeAddArrayLengthField()) {\n             // map '[]' to '_array_length_ = 0'\n             // map '[null]' to '_array_length_ = 1'\n             // 'null' is not mapped; can utilize 'FieldExistsQuery' for 'IS NULL' filtering\n             docBuilder.addField(new IntField(arrayLengthFieldName, values.size(), Field.Store.NO));\n         }\n"}
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java b/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\nindex 4ef4f33..0000000 100644\n--- a/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n+++ b/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n@@ -46,6 +46,8 @@ import io.crate.types.StorageSupport;\n \n public class ArrayIndexer<T> implements ValueIndexer<List<T>> {\n \n+    public static final Version ARRAY_LENGTH_FIELD_SUPPORTED_VERSION = Version.V_5_9_0;\n+\n     public static Query arrayLengthTermQuery(Reference arrayRef, int length, Function<ColumnIdent, Reference> getRef) {\n         return IntPoint.newExactQuery(toArrayLengthFieldName(arrayRef, getRef), length);\n     }\n@@ -112,6 +114,7 @@ public class ArrayIndexer<T> implements ValueIndexer<List<T>> {\n     @Override\n     public void indexValue(@NotNull List<T> values, IndexDocumentBuilder docBuilder) throws IOException {\n         docBuilder.translogWriter().startArray();\n+        var nestedDocBuilder = docBuilder.noArrayLengthField();\n         for (T value : values) {\n             if (value == null) {\n                 docBuilder.translogWriter().writeNull();\n@@ -119,10 +122,10 @@ public class ArrayIndexer<T> implements ValueIndexer<List<T>> {\n-                innerIndexer.indexValue(value, docBuilder);\n+                innerIndexer.indexValue(value, nestedDocBuilder);\n             }\n         }\n-        if (docBuilder.getTableVersionCreated().onOrAfter(Version.V_5_9_0)) {\n+        if (docBuilder.maybeAddArrayLengthField()) {\n             // map '[]' to '_array_length_ = 0'\n             // map '[null]' to '_array_length_ = 1'\n             // 'null' is not mapped; can utilize 'FieldExistsQuery' for 'IS NULL' filtering\n"}
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"--- a/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n+++ b/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n@@ -46,6 +46,8 @@ import io.crate.types.StorageSupport;\n \n public class ArrayIndexer<T> implements ValueIndexer<List<T>> {\n \n+    public static final Version ARRAY_LENGTH_FIELD_SUPPORTED_VERSION = Version.V_5_9_0;\n+\n     public static Query arrayLengthTermQuery(Reference arrayRef, int length, Function<ColumnIdent, Reference> getRef) {\n         return IntPoint.newExactQuery(toArrayLengthFieldName(arrayRef, getRef), length);\n     }\n@@ -112,17 +114,18 @@ public class ArrayIndexer<T> implements ValueIndexer<List<T>> {\n     @Override\n     public void indexValue(@NotNull List<T> values, IndexDocumentBuilder docBuilder) throws IOException {\n         docBuilder.translogWriter().startArray();\n+        var nestedDocBuilder = docBuilder.noArrayLengthField();\n         for (T value : values) {\n             if (value == null) {\n                 docBuilder.translogWriter().writeNull();\n             } else {\n-                innerIndexer.indexValue(value, docBuilder);\n+                innerIndexer.indexValue(value, nestedDocBuilder);\n             }\n         }\n-        if (docBuilder.getTableVersionCreated().onOrAfter(Version.V_5_9_0)) {\n+        if (docBuilder.maybeAddArrayLengthField()) {\n             // map '[]' to '_array_length_ = 0'\n             // map '[null]' to '_array_length_ = 1'\n             // 'null' is not mapped; can utilize 'FieldExistsQuery' for 'IS NULL' filtering\n             docBuilder.addField(new IntField(arrayLengthFieldName, values.size(), Field.Store.NO));\n         }\n"}
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"--- a/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n+++ b/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n@@ -113,16 +113,17 @@ public class ArrayIndexer<T> implements ValueIndexer<List<T>> {\n     public void indexValue(@NotNull List<T> values, IndexDocumentBuilder docBuilder) throws IOException {\n         docBuilder.translogWriter().startArray();\n+        var nestedDocBuilder = docBuilder.noArrayLengthField();\n         for (T value : values) {\n             if (value == null) {\n                 docBuilder.translogWriter().writeNull();\n             } else {\n-                innerIndexer.indexValue(value, docBuilder);\n+                innerIndexer.indexValue(value, nestedDocBuilder);\n             }\n         }\n-        if (docBuilder.getTableVersionCreated().onOrAfter(Version.V_5_9_0)) {\n+        if (docBuilder.maybeAddArrayLengthField()) {\n             // map '[]' to '_array_length_ = 0'\n             // map '[null]' to '_array_length_ = 1'\n             // 'null' is not mapped; can utilize 'FieldExistsQuery' for 'IS NULL' filtering\n             docBuilder.addField(new IntField(arrayLengthFieldName, values.size(), Field.Store.NO));\n         }"}
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java b/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n--- a/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n+++ b/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n@@ -113,16 +113,17 @@ public class ArrayIndexer<T> implements ValueIndexer<List<T>> {\n     public void indexValue(@NotNull List<T> values, IndexDocumentBuilder docBuilder) throws IOException {\n         docBuilder.translogWriter().startArray();\n+        var nestedDocBuilder = docBuilder.noArrayLengthField();\n         for (T value : values) {\n             if (value == null) {\n                 docBuilder.translogWriter().writeNull();\n             } else {\n-                innerIndexer.indexValue(value, docBuilder);\n+                innerIndexer.indexValue(value, nestedDocBuilder);\n             }\n         }\n-        if (docBuilder.getTableVersionCreated().onOrAfter(Version.V_5_9_0)) {\n+        if (docBuilder.maybeAddArrayLengthField()) {\n             // map '[]' to '_array_length_ = 0'\n             // map '[null]' to '_array_length_ = 1'\n             // 'null' is not mapped; can utilize 'FieldExistsQuery' for 'IS NULL' filtering\n             docBuilder.addField(new IntField(arrayLengthFieldName, values.size(), Field.Store.NO));\n         }"}
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"--- a/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n+++ b/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n@@ -113,16 +113,17 @@\n     public void indexValue(@NotNull List<T> values, IndexDocumentBuilder docBuilder) throws IOException {\n         docBuilder.translogWriter().startArray();\n+        var nestedDocBuilder = docBuilder.noArrayLengthField();\n         for (T value : values) {\n             if (value == null) {\n                 docBuilder.translogWriter().writeNull();\n             } else {\n-                innerIndexer.indexValue(value, docBuilder);\n+                innerIndexer.indexValue(value, nestedDocBuilder);\n             }\n         }\n-        if (docBuilder.getTableVersionCreated().onOrAfter(Version.V_5_9_0)) {\n+        if (docBuilder.maybeAddArrayLengthField()) {\n             // map '[]' to '_array_length_ = 0'\n             // map '[null]' to '_array_length_ = 1'\n             // 'null' is not mapped; can utilize 'FieldExistsQuery' for 'IS NULL' filtering\n             docBuilder.addField(new IntField(arrayLengthFieldName, values.size(), Field.Store.NO));\n         }\n"}
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"--- a/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n+++ b/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n@@ -113,16 +113,17 @@\n     public void indexValue(@NotNull List<T> values, IndexDocumentBuilder docBuilder) throws IOException {\n         docBuilder.translogWriter().startArray();\n+        var nestedDocBuilder = docBuilder.noArrayLengthField();\n         for (T value : values) {\n             if (value == null) {\n                 docBuilder.translogWriter().writeNull();\n             } else {\n-                innerIndexer.indexValue(value, docBuilder);\n+                innerIndexer.indexValue(value, nestedDocBuilder);\n             }\n         }\n-        if (docBuilder.getTableVersionCreated().onOrAfter(Version.V_5_9_0)) {\n+        if (docBuilder.maybeAddArrayLengthField()) {\n             // map '[]' to '_array_length_ = 0'\n             // map '[null]' to '_array_length_ = 1'\n             // 'null' is not mapped; can utilize 'FieldExistsQuery' for 'IS NULL' filtering\n             docBuilder.addField(new IntField(arrayLengthFieldName, values.size(), Field.Store.NO));\n         }"}
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"--- a/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n+++ b/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n@@ -113,15 +113,16 @@\n     public void indexValue(@NotNull List<T> values, IndexDocumentBuilder docBuilder) throws IOException {\n         docBuilder.translogWriter().startArray();\n+        var nestedDocBuilder = docBuilder.noArrayLengthField();\n         for (T value : values) {\n             if (value == null) {\n                 docBuilder.translogWriter().writeNull();\n             } else {\n-                innerIndexer.indexValue(value, docBuilder);\n+                innerIndexer.indexValue(value, nestedDocBuilder);\n             }\n         }\n-        if (docBuilder.getTableVersionCreated().onOrAfter(Version.V_5_9_0)) {\n+        if (docBuilder.maybeAddArrayLengthField()) {\n             // map '[]' to '_array_length_ = 0'\n             // map '[null]' to '_array_length_ = 1'\n             // 'null' is not mapped; can utilize 'FieldExistsQuery' for 'IS NULL' filtering\n             docBuilder.addField(new IntField(arrayLengthFieldName, values.size(), Field.Store.NO));\n         }"}
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"--- a/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n+++ b/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n@@ -113,17 +113,18 @@\n     public void indexValue(@NotNull List<T> values, IndexDocumentBuilder docBuilder) throws IOException {\n         docBuilder.translogWriter().startArray();\n+        var nestedDocBuilder = docBuilder.noArrayLengthField();\n         for (T value : values) {\n             if (value == null) {\n                 docBuilder.translogWriter().writeNull();\n             } else {\n-                innerIndexer.indexValue(value, docBuilder);\n+                innerIndexer.indexValue(value, nestedDocBuilder);\n             }\n         }\n-        if (docBuilder.getTableVersionCreated().onOrAfter(Version.V_5_9_0)) {\n+        if (docBuilder.maybeAddArrayLengthField()) {\n             // map '[]' to '_array_length_ = 0'\n             // map '[null]' to '_array_length_ = 1'\n             // 'null' is not mapped; can utilize 'FieldExistsQuery' for 'IS NULL' filtering\n             docBuilder.addField(new IntField(arrayLengthFieldName, values.size(), Field.Store.NO));\n         }\n         docBuilder.translogWriter().endArray();\n"}
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"--- a/server/src/main/java/io/crate/expression/predicate/IsNullPredicate.java\n+++ b/server/src/main/java/io/crate/expression/predicate/IsNullPredicate.java\n@@ -21,6 +21,7 @@\n \n package io.crate.expression.predicate;\n \n+import static io.crate.execution.dml.ArrayIndexer.ARRAY_LENGTH_FIELD_SUPPORTED_VERSION;\n import static io.crate.lucene.LuceneQueryBuilder.genericFunctionFilter;\n import static io.crate.metadata.functions.TypeVariableConstraint.typeVariable;\n \n@@ -35,7 +36,6 @@\n import org.apache.lucene.search.MatchNoDocsQuery;\n import org.apache.lucene.search.Query;\n import org.apache.lucene.search.TermQuery;\n-import org.elasticsearch.Version;\n import org.elasticsearch.common.lucene.search.Queries;\n import org.jetbrains.annotations.Nullable;\n \n@@ -124,7 +124,7 @@\n         DataType<?> valueType = ref.valueType();\n         boolean canUseFieldsExist = ref.hasDocValues() || ref.indexType() == IndexType.FULLTEXT;\n         if (valueType instanceof ArrayType<?>) {\n-            if (context.tableInfo().versionCreated().onOrAfter(Version.V_5_9_0)) {\n+            if (context.tableInfo().versionCreated().onOrAfter(ARRAY_LENGTH_FIELD_SUPPORTED_VERSION)) {\n                 // Array columns in tables on and after 5.9 indexes _array_length_ fields. For null rows, nothing is indexed\n                 // such that FieldExistsQuery can be used.\n                 return ArrayIndexer.arrayLengthExistsQuery(ref, context.tableInfo()::getReference);\n"}
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"--- a/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n+++ b/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n@@ -46,6 +46,8 @@\n \n public class ArrayIndexer<T> implements ValueIndexer<List<T>> {\n \n+    public static final Version ARRAY_LENGTH_FIELD_SUPPORTED_VERSION = Version.V_5_9_0;\n+\n     public static Query arrayLengthTermQuery(Reference arrayRef, int length, Function<ColumnIdent, Reference> getRef) {\n         return IntPoint.newExactQuery(toArrayLengthFieldName(arrayRef, getRef), length);\n     }\n"}
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"--- a/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n+++ b/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n@@ -113,16 +113,17 @@\n     public void indexValue(@NotNull List<T> values, IndexDocumentBuilder docBuilder) throws IOException {\n         docBuilder.translogWriter().startArray();\n+        var nestedDocBuilder = docBuilder.noArrayLengthField();\n         for (T value : values) {\n             if (value == null) {\n                 docBuilder.translogWriter().writeNull();\n             } else {\n-                innerIndexer.indexValue(value, docBuilder);\n+                innerIndexer.indexValue(value, nestedDocBuilder);\n             }\n         }\n-        if (docBuilder.getTableVersionCreated().onOrAfter(Version.V_5_9_0)) {\n+        if (docBuilder.maybeAddArrayLengthField()) {\n             // map '[]' to '_array_length_ = 0'\n             // map '[null]' to '_array_length_ = 1'\n             // 'null' is not mapped; can utilize 'FieldExistsQuery' for 'IS NULL' filtering\n             docBuilder.addField(new IntField(arrayLengthFieldName, values.size(), Field.Store.NO));\n         }\n         docBuilder.translogWriter().endArray();\n"}
+The revised `ArrayIndexer` and import hunks apply cleanly. I’m validating the remaining builder, scalar, and test hunks now.
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"--- a/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java\n+++ b/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java\n@@ -47,6 +47,7 @@\n     private final ValueIndexer.Synthetics synthetics;\n     private final Map<ColumnIdent, Indexer.ColumnConstraint> constraints;\n     private final Version tableVersionCreated;\n+    private final boolean addArrayLengthField;\n \n     /**\n      * Builds a new IndexDocumentBuilder\n@@ -58,10 +59,22 @@\n         ValueIndexer.Synthetics synthetics,\n         Map<ColumnIdent, Indexer.ColumnConstraint> constraints,\n         Version tableVersionCreated\n+    ) {\n+        this(translogWriter, synthetics, constraints, tableVersionCreated,\n+            tableVersionCreated.onOrAfter(ArrayIndexer.ARRAY_LENGTH_FIELD_SUPPORTED_VERSION));\n+    }\n+\n+    private IndexDocumentBuilder(\n+        TranslogWriter translogWriter,\n+        ValueIndexer.Synthetics synthetics,\n+        Map<ColumnIdent, Indexer.ColumnConstraint> constraints,\n+        Version tableVersionCreated,\n+        boolean addArrayLengthField\n     ) {\n         this.translogWriter = translogWriter;\n         this.synthetics = synthetics;\n         this.constraints = constraints;\n         this.tableVersionCreated = tableVersionCreated;\n+        this.addArrayLengthField = addArrayLengthField;\n     }\n \n     /**\n@@ -125,4 +138,20 @@\n     public Version getTableVersionCreated() {\n         return tableVersionCreated;\n     }\n+\n+    /**\n+     * Should the current arrayIndexer index its array length?\n+     */\n+    public boolean maybeAddArrayLengthField() {\n+        return addArrayLengthField;\n+    }\n+\n+    /**\n+     * Returns an IndexDocumentBuilder that shares a lucene document and translog with the current one,\n+     * but that tells any child indexers they should not add array length fields.\n+     */\n+    public IndexDocumentBuilder noArrayLengthField() {\n+        return new IndexDocumentBuilder(translogWriter, synthetics, constraints, tableVersionCreated, false);\n+    }\n }\n"}
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"--- a/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java\n+++ b/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java\n@@ -48,7 +48,8 @@\n     private final TranslogWriter translogWriter;\n     private final ValueIndexer.Synthetics synthetics;\n     private final Map<ColumnIdent, Indexer.ColumnConstraint> constraints;\n     private final Version tableVersionCreated;\n+    private final boolean addArrayLengthField;\n \n     /**\n      * Builds a new IndexDocumentBuilder\n"}
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"--- a/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java\n+++ b/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java\n@@ -56,14 +56,27 @@\n     public IndexDocumentBuilder(\n         TranslogWriter translogWriter,\n         ValueIndexer.Synthetics synthetics,\n         Map<ColumnIdent, Indexer.ColumnConstraint> constraints,\n         Version tableVersionCreated\n+    ) {\n+        this(translogWriter, synthetics, constraints, tableVersionCreated,\n+            tableVersionCreated.onOrAfter(ArrayIndexer.ARRAY_LENGTH_FIELD_SUPPORTED_VERSION));\n+    }\n+\n+    private IndexDocumentBuilder(\n+        TranslogWriter translogWriter,\n+        ValueIndexer.Synthetics synthetics,\n+        Map<ColumnIdent, Indexer.ColumnConstraint> constraints,\n+        Version tableVersionCreated,\n+        boolean addArrayLengthField\n     ) {\n         this.translogWriter = translogWriter;\n         this.synthetics = synthetics;\n         this.constraints = constraints;\n         this.tableVersionCreated = tableVersionCreated;\n+        this.addArrayLengthField = addArrayLengthField;\n     }\n \n     /**\n      * Add a new lucene indexable field\n"}
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"--- a/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java\n+++ b/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java\n@@ -56,13 +56,27 @@\n     public IndexDocumentBuilder(\n         TranslogWriter translogWriter,\n         ValueIndexer.Synthetics synthetics,\n         Map<ColumnIdent, Indexer.ColumnConstraint> constraints,\n         Version tableVersionCreated\n     ) {\n+        this(translogWriter, synthetics, constraints, tableVersionCreated,\n+            tableVersionCreated.onOrAfter(ArrayIndexer.ARRAY_LENGTH_FIELD_SUPPORTED_VERSION));\n+    }\n+\n+    private IndexDocumentBuilder(\n+        TranslogWriter translogWriter,\n+        ValueIndexer.Synthetics synthetics,\n+        Map<ColumnIdent, Indexer.ColumnConstraint> constraints,\n+        Version tableVersionCreated,\n+        boolean addArrayLengthField\n+    ) {\n         this.translogWriter = translogWriter;\n         this.synthetics = synthetics;\n         this.constraints = constraints;\n         this.tableVersionCreated = tableVersionCreated;\n+        this.addArrayLengthField = addArrayLengthField;\n     }\n \n     /**\n"}
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"--- a/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java\n+++ b/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java\n@@ -56,13 +56,25 @@\n     public IndexDocumentBuilder(\n         TranslogWriter translogWriter,\n         ValueIndexer.Synthetics synthetics,\n         Map<ColumnIdent, Indexer.ColumnConstraint> constraints,\n         Version tableVersionCreated\n     ) {\n+        this(translogWriter, synthetics, constraints, tableVersionCreated,\n+            tableVersionCreated.onOrAfter(ArrayIndexer.ARRAY_LENGTH_FIELD_SUPPORTED_VERSION));\n+    }\n+\n+    private IndexDocumentBuilder(\n+        TranslogWriter translogWriter,\n+        ValueIndexer.Synthetics synthetics,\n+        Map<ColumnIdent, Indexer.ColumnConstraint> constraints,\n+        Version tableVersionCreated,\n+        boolean addArrayLengthField\n+    ) {\n         this.translogWriter = translogWriter;\n         this.synthetics = synthetics;\n         this.constraints = constraints;\n         this.tableVersionCreated = tableVersionCreated;\n+        this.addArrayLengthField = addArrayLengthField;\n     }\n \n     /**\n"}
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"--- a/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java\n+++ b/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java\n@@ -122,7 +122,23 @@\n     }\n \n     public Version getTableVersionCreated() {\n         return tableVersionCreated;\n     }\n+\n+    /**\n+     * Should the current arrayIndexer index its array length?\n+     */\n+    public boolean maybeAddArrayLengthField() {\n+        return addArrayLengthField;\n+    }\n+\n+    /**\n+     * Returns an IndexDocumentBuilder that shares a lucene document and translog with the current one,\n+     * but that tells any child indexers they should not add array length fields.\n+     */\n+    public IndexDocumentBuilder noArrayLengthField() {\n+        return new IndexDocumentBuilder(translogWriter, synthetics, constraints, tableVersionCreated, false);\n+    }\n }\n"}
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"--- a/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java\n+++ b/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java\n@@ -122,6 +122,22 @@\n     }\n \n     public Version getTableVersionCreated() {\n         return tableVersionCreated;\n     }\n+\n+    /**\n+     * Should the current arrayIndexer index its array length?\n+     */\n+    public boolean maybeAddArrayLengthField() {\n+        return addArrayLengthField;\n+    }\n+\n+    /**\n+     * Returns an IndexDocumentBuilder that shares a lucene document and translog with the current one,\n+     * but that tells any child indexers they should not add array length fields.\n+     */\n+    public IndexDocumentBuilder noArrayLengthField() {\n+        return new IndexDocumentBuilder(translogWriter, synthetics, constraints, tableVersionCreated, false);\n+    }\n }\n"}
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"--- a/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java\n+++ b/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java\n@@ -122,6 +122,21 @@\n     }\n \n     public Version getTableVersionCreated() {\n         return tableVersionCreated;\n     }\n+\n+    /**\n+     * Should the current arrayIndexer index its array length?\n+     */\n+    public boolean maybeAddArrayLengthField() {\n+        return addArrayLengthField;\n+    }\n+\n+    /**\n+     * Returns an IndexDocumentBuilder that shares a lucene document and translog with the current one,\n+     * but that tells any child indexers they should not add array length fields.\n+     */\n+    public IndexDocumentBuilder noArrayLengthField() {\n+        return new IndexDocumentBuilder(translogWriter, synthetics, constraints, tableVersionCreated, false);\n+    }\n }\n"}
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"--- a/server/src/main/java/io/crate/expression/scalar/ArrayUpperFunction.java\n+++ b/server/src/main/java/io/crate/expression/scalar/ArrayUpperFunction.java\n@@ -21,6 +21,7 @@\n \n package io.crate.expression.scalar;\n \n+import static io.crate.execution.dml.ArrayIndexer.ARRAY_LENGTH_FIELD_SUPPORTED_VERSION;\n import static io.crate.expression.scalar.array.ArrayArgumentValidators.ensureInnerTypeIsNotUndefined;\n import static io.crate.lucene.LuceneQueryBuilder.genericFunctionFilter;\n import static io.crate.metadata.functions.TypeVariableConstraint.typeVariable;\n@@ -32,7 +33,6 @@\n import org.apache.lucene.search.BooleanQuery;\n import org.apache.lucene.search.MatchNoDocsQuery;\n import org.apache.lucene.search.Query;\n-import org.elasticsearch.Version;\n import org.jetbrains.annotations.Nullable;\n \n import io.crate.data.Input;\n@@ -179,7 +179,7 @@\n         int cmpVal = cmpNumber.intValue();\n         // If the array col is from a table created on or after 5.9, we can utilize '_array_length_' indexes,\n         // see ArrayIndexer for details\n-        if (context.tableInfo().versionCreated().onOrAfter(Version.V_5_9_0)) {\n+        if (context.tableInfo().versionCreated().onOrAfter(ARRAY_LENGTH_FIELD_SUPPORTED_VERSION)) {\n             return toQueryUsingArrayLengthIndex(parentName, arrayRef, cmpVal, context.tableInfo()::getReference);\n         }\n \n"}
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"--- a/server/src/test/java/io/crate/execution/dml/IndexerTest.java\n+++ b/server/src/test/java/io/crate/execution/dml/IndexerTest.java\n@@ -843,24 +843,37 @@\n     }\n \n     @Test\n-    public void test_array_length_is_indexed_for_child_arrays() throws Exception {\n+    public void test_array_length_is_not_indexed_for_object_arrays_within_object_arrays() throws Exception {\n         SQLExecutor e = SQLExecutor.of(clusterService)\n-            .addTable(\"create table tbl (o_array array(object as (xs int[], o_array_2 array(object as (xs int[])))))\");\n+            .addTable(\"create table tbl (o object as (o2 object as (a int)[])[])\");\n+        DocTableInfo table = e.resolveTableInfo(\"tbl\");\n+\n+        var indexer = getIndexer(e, \"tbl\", \"o\");\n+        ParsedDocument doc = indexer.index(item(List.of(Map.of(\"o2\", List.of(Map.of(\"a\", 1))))));\n+\n+        var arrayLengthFields = doc.doc().getFields().stream().filter(f -> f.name().startsWith(ARRAY_LENGTH_FIELD_PREFIX)).toList();\n+        assertThat(arrayLengthFields).hasSize(1);\n+        assertThat(arrayLengthFields.getFirst().toString()).isEqualTo(\"IntField <_array_length_1:1>\");\n+\n+        assertTranslogParses(doc, table);\n+    }\n+\n+    @Test\n+    public void test_array_length_is_not_indexed_for_child_arrays() throws Exception {\n+        SQLExecutor e = SQLExecutor.of(clusterService)\n+            .addTable(\"create table tbl (o_array array(object as (xs int[], o_array_2 array(object as (xs2 int[])))))\");\n         DocTableInfo table = e.resolveTableInfo(\"tbl\");\n \n         var indexer = getIndexer(e, \"tbl\", \"o_array\");\n-        ParsedDocument doc = indexer.index(item(List.of(Map.of(\"xs\", List.of(), \"o_array_2\", List.of(Map.of(\"xs\", List.of()))))));\n-        assertThat(doc.doc().getField(ARRAY_LENGTH_FIELD_PREFIX + ((Reference) e.asSymbol(\"o_array['xs']\")).storageIdentLeafName()).toString())\n-            .isEqualTo(\"IntField <_array_length_2:0>\"); // o_array['xs'] is empty\n-        assertThat(doc.doc().getField(ARRAY_LENGTH_FIELD_PREFIX + ((Reference) e.asSymbol(\"o_array['o_array_2']\")).storageIdentLeafName()).toString())\n-            .isEqualTo(\"IntField <_array_length_3:1>\"); // 1 element of o_array['o_array_2']\n-        assertThat(doc.doc().getField(ARRAY_LENGTH_FIELD_PREFIX + ((Reference) e.asSymbol(\"o_array['o_array_2']['xs']\")).storageIdentLeafName()).toString())\n-            .isEqualTo(\"IntField <_array_length_4:0>\"); // o_array['o_array_2']['xs'] is empty\n+        ParsedDocument doc = indexer.index(item(List.of(Map.of(\"xs\", List.of(), \"o_array_2\", List.of(Map.of(\"xs2\", List.of()))))));\n+        var arrayLengthFields = doc.doc().getFields().stream().filter(field -> field.name().startsWith(ARRAY_LENGTH_FIELD_PREFIX)).toList();\n+        assertThat(arrayLengthFields.getFirst().toString()).isEqualTo(\"IntField <_array_length_1:1>\"); // for the groot level array\n+\n         assertTranslogParses(doc, table);\n     }\n \n     @Test\n"}
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"hunk","patch":"--- a/server/src/test/java/io/crate/execution/dml/IndexerTest.java\n+++ b/server/src/test/java/io/crate/execution/dml/IndexerTest.java\n@@ -843,18 +843,31 @@\n     @Test\n-    public void test_array_length_is_indexed_for_child_arrays() throws Exception {\n+    public void test_array_length_is_not_indexed_for_object_arrays_within_object_arrays() throws Exception {\n         SQLExecutor e = SQLExecutor.of(clusterService)\n-            .addTable(\"create table tbl (o_array array(object as (xs int[], o_array_2 array(object as (xs int[])))))\");\n+            .addTable(\"create table tbl (o object as (o2 object as (a int)[])[])\");\n+        DocTableInfo table = e.resolveTableInfo(\"tbl\");\n+\n+        var indexer = getIndexer(e, \"tbl\", \"o\");\n+        ParsedDocument doc = indexer.index(item(List.of(Map.of(\"o2\", List.of(Map.of(\"a\", 1))))));\n+\n+        var arrayLengthFields = doc.doc().getFields().stream().filter(f -> f.name().startsWith(ARRAY_LENGTH_FIELD_PREFIX)).toList();\n+        assertThat(arrayLengthFields).hasSize(1);\n+        assertThat(arrayLengthFields.getFirst().toString()).isEqualTo(\"IntField <_array_length_1:1>\");\n+\n+        assertTranslogParses(doc, table);\n+    }\n+\n+    @Test\n+    public void test_array_length_is_not_indexed_for_child_arrays() throws Exception {\n+        SQLExecutor e = SQLExecutor.of(clusterService)\n+            .addTable(\"create table tbl (o_array array(object as (xs int[], o_array_2 array(object as (xs2 int[])))))\");\n         DocTableInfo table = e.resolveTableInfo(\"tbl\");\n \n         var indexer = getIndexer(e, \"tbl\", \"o_array\");\n-        ParsedDocument doc = indexer.index(item(List.of(Map.of(\"xs\", List.of(), \"o_array_2\", List.of(Map.of(\"xs\", List.of()))))));\n-        assertThat(doc.doc().getField(ARRAY_LENGTH_FIELD_PREFIX + ((Reference) e.asSymbol(\"o_array['xs']\")).storageIdentLeafName()).toString())\n-            .isEqualTo(\"IntField <_array_length_2:0>\"); // o_array['xs'] is empty\n-        assertThat(doc.doc().getField(ARRAY_LENGTH_FIELD_PREFIX + ((Reference) e.asSymbol(\"o_array['o_array_2']\")).storageIdentLeafName()).toString())\n-            .isEqualTo(\"IntField <_array_length_3:1>\"); // 1 element of o_array['o_array_2']\n-        assertThat(doc.doc().getField(ARRAY_LENGTH_FIELD_PREFIX + ((Reference) e.asSymbol(\"o_array['o_array_2']['xs']\")).storageIdentLeafName()).toString())\n-            .isEqualTo(\"IntField <_array_length_4:0>\"); // o_array['o_array_2']['xs'] is empty\n+        ParsedDocument doc = indexer.index(item(List.of(Map.of(\"xs\", List.of(), \"o_array_2\", List.of(Map.of(\"xs2\", List.of()))))));\n+        var arrayLengthFields = doc.doc().getFields().stream().filter(field -> field.name().startsWith(ARRAY_LENGTH_FIELD_PREFIX)).toList();\n+        assertThat(arrayLengthFields.getFirst().toString()).isEqualTo(\"IntField <_array_length_1:1>\"); // for the groot level array\n+\n         assertTranslogParses(doc, table);\n     }\n \n     @Test\n"}
+All individual hunks now validate. I’m running full patch validation next, then I’ll apply the same patch to the working tree and commit it if validation passes.
+[0m⚙ [0mvalidate {"ref":"140164b93ac4273f65f10a92ef555b6cbce8b2a8","mode":"full","patch":"--- a/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n+++ b/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java\n@@ -46,6 +46,8 @@\n \n public class ArrayIndexer<T> implements ValueIndexer<List<T>> {\n \n+    public static final Version ARRAY_LENGTH_FIELD_SUPPORTED_VERSION = Version.V_5_9_0;\n+\n     public static Query arrayLengthTermQuery(Reference arrayRef, int length, Function<ColumnIdent, Reference> getRef) {\n         return IntPoint.newExactQuery(toArrayLengthFieldName(arrayRef, getRef), length);\n     }\n@@ -113,16 +115,17 @@\n     public void indexValue(@NotNull List<T> values, IndexDocumentBuilder docBuilder) throws IOException {\n         docBuilder.translogWriter().startArray();\n+        var nestedDocBuilder = docBuilder.noArrayLengthField();\n         for (T value : values) {\n             if (value == null) {\n                 docBuilder.translogWriter().writeNull();\n             } else {\n-                innerIndexer.indexValue(value, docBuilder);\n+                innerIndexer.indexValue(value, nestedDocBuilder);\n             }\n         }\n-        if (docBuilder.getTableVersionCreated().onOrAfter(Version.V_5_9_0)) {\n+        if (docBuilder.maybeAddArrayLengthField()) {\n             // map '[]' to '_array_length_ = 0'\n             // map '[null]' to '_array_length_ = 1'\n             // 'null' is not mapped; can utilize 'FieldExistsQuery' for 'IS NULL' filtering\n             docBuilder.addField(new IntField(arrayLengthFieldName, values.size(), Field.Store.NO));\n         }\n         docBuilder.translogWriter().endArray();\n--- a/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java\n+++ b/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java\n@@ -48,7 +48,8 @@\n     private final TranslogWriter translogWriter;\n     private final ValueIndexer.Synthetics synthetics;\n     private final Map<ColumnIdent, Indexer.ColumnConstraint> constraints;\n     private final Version tableVersionCreated;\n+    private final boolean addArrayLengthField;\n \n     /**\n      * Builds a new IndexDocumentBuilder\n@@ -56,13 +57,25 @@\n     public IndexDocumentBuilder(\n         TranslogWriter translogWriter,\n         ValueIndexer.Synthetics synthetics,\n         Map<ColumnIdent, Indexer.ColumnConstraint> constraints,\n         Version tableVersionCreated\n     ) {\n+        this(translogWriter, synthetics, constraints, tableVersionCreated,\n+            tableVersionCreated.onOrAfter(ArrayIndexer.ARRAY_LENGTH_FIELD_SUPPORTED_VERSION));\n+    }\n+\n+    private IndexDocumentBuilder(\n+        TranslogWriter translogWriter,\n+        ValueIndexer.Synthetics synthetics,\n+        Map<ColumnIdent, Indexer.ColumnConstraint> constraints,\n+        Version tableVersionCreated,\n+        boolean addArrayLengthField\n+    ) {\n         this.translogWriter = translogWriter;\n         this.synthetics = synthetics;\n         this.constraints = constraints;\n         this.tableVersionCreated = tableVersionCreated;\n+        this.addArrayLengthField = addArrayLengthField;\n     }\n \n     /**\n@@ -122,6 +135,21 @@\n     }\n \n     public Version getTableVersionCreated() {\n         return tableVersionCreated;\n     }\n+\n+    /**\n+     * Should the current arrayIndexer index its array length?\n+     */\n+    public boolean maybeAddArrayLengthField() {\n+        return addArrayLengthField;\n+    }\n+\n+    /**\n+     * Returns an IndexDocumentBuilder that shares a lucene document and translog with the current one,\n+     * but that tells any child indexers they should not add array length fields.\n+     */\n+    public IndexDocumentBuilder noArrayLengthField() {\n+        return new IndexDocumentBuilder(translogWriter, synthetics, constraints, tableVersionCreated, false);\n+    }\n }\n--- a/server/src/main/java/io/crate/expression/predicate/IsNullPredicate.java\n+++ b/server/src/main/java/io/crate/expression/predicate/IsNullPredicate.java\n@@ -21,6 +21,7 @@\n \n package io.crate.expression.predicate;\n \n+import static io.crate.execution.dml.ArrayIndexer.ARRAY_LENGTH_FIELD_SUPPORTED_VERSION;\n import static io.crate.lucene.LuceneQueryBuilder.genericFunctionFilter;\n import static io.crate.metadata.functions.TypeVariableConstraint.typeVariable;\n \n@@ -35,7 +36,6 @@\n import org.apache.lucene.search.MatchNoDocsQuery;\n import org.apache.lucene.search.Query;\n import org.apache.lucene.search.TermQuery;\n-import org.elasticsearch.Version;\n import org.elasticsearch.common.lucene.search.Queries;\n import org.jetbrains.annotations.Nullable;\n \n@@ -124,7 +124,7 @@\n         DataType<?> valueType = ref.valueType();\n         boolean canUseFieldsExist = ref.hasDocValues() || ref.indexType() == IndexType.FULLTEXT;\n         if (valueType instanceof ArrayType<?>) {\n-            if (context.tableInfo().versionCreated().onOrAfter(Version.V_5_9_0)) {\n+            if (context.tableInfo().versionCreated().onOrAfter(ARRAY_LENGTH_FIELD_SUPPORTED_VERSION)) {\n                 // Array columns in tables on and after 5.9 indexes _array_length_ fields. For null rows, nothing is indexed\n                 // such that FieldExistsQuery can be used.\n                 return ArrayIndexer.arrayLengthExistsQuery(ref, context.tableInfo()::getReference);\n--- a/server/src/main/java/io/crate/expression/scalar/ArrayUpperFunction.java\n+++ b/server/src/main/java/io/crate/expression/scalar/ArrayUpperFunction.java\n@@ -21,6 +21,7 @@\n \n package io.crate.expression.scalar;\n \n+import static io.crate.execution.dml.ArrayIndexer.ARRAY_LENGTH_FIELD_SUPPORTED_VERSION;\n import static io.crate.expression.scalar.array.ArrayArgumentValidators.ensureInnerTypeIsNotUndefined;\n import static io.crate.lucene.LuceneQueryBuilder.genericFunctionFilter;\n import static io.crate.metadata.functions.TypeVariableConstraint.typeVariable;\n@@ -32,7 +33,6 @@\n import org.apache.lucene.search.BooleanQuery;\n import org.apache.lucene.search.MatchNoDocsQuery;\n import org.apache.lucene.search.Query;\n-import org.elasticsearch.Version;\n import org.jetbrains.annotations.Nullable;\n \n import io.crate.data.Input;\n@@ -179,7 +179,7 @@\n         int cmpVal = cmpNumber.intValue();\n         // If the array col is from a table created on or after 5.9, we can utilize '_array_length_' indexes,\n         // see ArrayIndexer for details\n-        if (context.tableInfo().versionCreated().onOrAfter(Version.V_5_9_0)) {\n+        if (context.tableInfo().versionCreated().onOrAfter(ARRAY_LENGTH_FIELD_SUPPORTED_VERSION)) {\n             return toQueryUsingArrayLengthIndex(parentName, arrayRef, cmpVal, context.tableInfo()::getReference);\n         }\n \n--- a/server/src/test/java/io/crate/execution/dml/IndexerTest.java\n+++ b/server/src/test/java/io/crate/execution/dml/IndexerTest.java\n@@ -843,18 +843,31 @@\n     @Test\n-    public void test_array_length_is_indexed_for_child_arrays() throws Exception {\n+    public void test_array_length_is_not_indexed_for_object_arrays_within_object_arrays() throws Exception {\n         SQLExecutor e = SQLExecutor.of(clusterService)\n-            .addTable(\"create table tbl (o_array array(object as (xs int[], o_array_2 array(object as (xs int[])))))\");\n+            .addTable(\"create table tbl (o object as (o2 object as (a int)[])[])\");\n+        DocTableInfo table = e.resolveTableInfo(\"tbl\");\n+\n+        var indexer = getIndexer(e, \"tbl\", \"o\");\n+        ParsedDocument doc = indexer.index(item(List.of(Map.of(\"o2\", List.of(Map.of(\"a\", 1))))));\n+\n+        var arrayLengthFields = doc.doc().getFields().stream().filter(f -> f.name().startsWith(ARRAY_LENGTH_FIELD_PREFIX)).toList();\n+        assertThat(arrayLengthFields).hasSize(1);\n+        assertThat(arrayLengthFields.getFirst().toString()).isEqualTo(\"IntField <_array_length_1:1>\");\n+\n+        assertTranslogParses(doc, table);\n+    }\n+\n+    @Test\n+    public void test_array_length_is_not_indexed_for_child_arrays() throws Exception {\n+        SQLExecutor e = SQLExecutor.of(clusterService)\n+            .addTable(\"create table tbl (o_array array(object as (xs int[], o_array_2 array(object as (xs2 int[])))))\");\n         DocTableInfo table = e.resolveTableInfo(\"tbl\");\n \n         var indexer = getIndexer(e, \"tbl\", \"o_array\");\n-        ParsedDocument doc = indexer.index(item(List.of(Map.of(\"xs\", List.of(), \"o_array_2\", List.of(Map.of(\"xs\", List.of()))))));\n-        assertThat(doc.doc().getField(ARRAY_LENGTH_FIELD_PREFIX + ((Reference) e.asSymbol(\"o_array['xs']\")).storageIdentLeafName()).toString())\n-            .isEqualTo(\"IntField <_array_length_2:0>\"); // o_array['xs'] is empty\n-        assertThat(doc.doc().getField(ARRAY_LENGTH_FIELD_PREFIX + ((Reference) e.asSymbol(\"o_array['o_array_2']\")).storageIdentLeafName()).toString())\n-            .isEqualTo(\"IntField <_array_length_3:1>\"); // 1 element of o_array['o_array_2']\n-        assertThat(doc.doc().getField(ARRAY_LENGTH_FIELD_PREFIX + ((Reference) e.asSymbol(\"o_array['o_array_2']['xs']\")).storageIdentLeafName()).toString())\n-            .isEqualTo(\"IntField <_array_length_4:0>\"); // o_array['o_array_2']['xs'] is empty\n+        ParsedDocument doc = indexer.index(item(List.of(Map.of(\"xs\", List.of(), \"o_array_2\", List.of(Map.of(\"xs2\", List.of()))))));\n+        var arrayLengthFields = doc.doc().getFields().stream().filter(field -> field.name().startsWith(ARRAY_LENGTH_FIELD_PREFIX)).toList();\n+        assertThat(arrayLengthFields.getFirst().toString()).isEqualTo(\"IntField <_array_length_1:1>\"); // for the groot level array\n+\n         assertTranslogParses(doc, table);\n     }\n \n     @Test\n"}
+Full validation passed, including compile and the selected test suite in Docker. I’m applying the validated patch to the working tree and preparing the required commit.
+[0m% [0mPatch 5 files
+The patch is applied locally. I’m inspecting the working diff and recent history before committing only these intended files.
+[0m
+[0m$ [0mgit log --oneline -10
+140164b93a Test: backport NestedArrayLuceneQueryBuilderTest
+325b053624 Documentation: Fix link to HyperLogLog++ paper
+784541b952 Increase ensureGreenOnSubscriber wait timeout, fix flaky LR tests
+30adf7d9eb Minor LR restore future chaining refactoring to improve readability
+a714bd8870 [Test] Stop LR clusters even if `dropSubscriptions` fails
+d1e7619192 Fix rendering of ref in docs
+d126890650 Bump version to 5.9.4-SNAPSHOT
+f542b18b05 Release 5.9.3
+35345ac31e Use floatValue and doubleValue to validate values
+064c90f128 Fix exceptions thrown when querying nested object arrays' sub-columns
+[0m
+[0m$ [0mgit diff -- server/src/main/java/io/crate/execution/dml/ArrayIndexer.java server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java server/src/main/java/io/crate/expression/predicate/IsNullPredicate.java server/src/main/java/io/crate/expression/scalar/ArrayUpperFunction.java server/src/test/java/io/crate/execution/dml/IndexerTest.java
+warning: in the working copy of 'server/src/main/java/io/crate/execution/dml/ArrayIndexer.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/expression/predicate/IsNullPredicate.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/expression/scalar/ArrayUpperFunction.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/execution/dml/IndexerTest.java', LF will be replaced by CRLF the next time Git touches it
+diff --git a/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java b/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java
+index 4f6f6a123f..f84a10955e 100644
+--- a/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java
++++ b/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java
+@@ -46,6 +46,8 @@ import io.crate.types.StorageSupport;
+ 
+ public class ArrayIndexer<T> implements ValueIndexer<List<T>> {
+ 
++    public static final Version ARRAY_LENGTH_FIELD_SUPPORTED_VERSION = Version.V_5_9_0;
++
+     public static Query arrayLengthTermQuery(Reference arrayRef, int length, Function<ColumnIdent, Reference> getRef) {
+         return IntPoint.newExactQuery(toArrayLengthFieldName(arrayRef, getRef), length);
+     }
+@@ -112,14 +114,15 @@ public class ArrayIndexer<T> implements ValueIndexer<List<T>> {
+     @Override
+     public void indexValue(@NotNull List<T> values, IndexDocumentBuilder docBuilder) throws IOException {
+         docBuilder.translogWriter().startArray();
++        var nestedDocBuilder = docBuilder.noArrayLengthField();
+         for (T value : values) {
+             if (value == null) {
+                 docBuilder.translogWriter().writeNull();
+             } else {
+-                innerIndexer.indexValue(value, docBuilder);
++                innerIndexer.indexValue(value, nestedDocBuilder);
+             }
+         }
+-        if (docBuilder.getTableVersionCreated().onOrAfter(Version.V_5_9_0)) {
++        if (docBuilder.maybeAddArrayLengthField()) {
+             // map '[]' to '_array_length_ = 0'
+             // map '[null]' to '_array_length_ = 1'
+             // 'null' is not mapped; can utilize 'FieldExistsQuery' for 'IS NULL' filtering
+diff --git a/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java b/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java
+index 3e44fc353c..b5a68f0dd6 100644
+--- a/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java
++++ b/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java
+@@ -49,6 +49,7 @@ public class IndexDocumentBuilder {
+     private final ValueIndexer.Synthetics synthetics;
+     private final Map<ColumnIdent, Indexer.ColumnConstraint> constraints;
+     private final Version tableVersionCreated;
++    private final boolean addArrayLengthField;
+ 
+     /**
+      * Builds a new IndexDocumentBuilder
+@@ -58,11 +59,23 @@ public class IndexDocumentBuilder {
+         ValueIndexer.Synthetics synthetics,
+         Map<ColumnIdent, Indexer.ColumnConstraint> constraints,
+         Version tableVersionCreated
++    ) {
++        this(translogWriter, synthetics, constraints, tableVersionCreated,
++            tableVersionCreated.onOrAfter(ArrayIndexer.ARRAY_LENGTH_FIELD_SUPPORTED_VERSION));
++    }
++
++    private IndexDocumentBuilder(
++        TranslogWriter translogWriter,
++        ValueIndexer.Synthetics synthetics,
++        Map<ColumnIdent, Indexer.ColumnConstraint> constraints,
++        Version tableVersionCreated,
++        boolean addArrayLengthField
+     ) {
+         this.translogWriter = translogWriter;
+         this.synthetics = synthetics;
+         this.constraints = constraints;
+         this.tableVersionCreated = tableVersionCreated;
++        this.addArrayLengthField = addArrayLengthField;
+     }
+ 
+     /**
+@@ -124,4 +137,19 @@ public class IndexDocumentBuilder {
+     public Version getTableVersionCreated() {
+         return tableVersionCreated;
+     }
++
++    /**
++     * Should the current arrayIndexer index its array length?
++     */
++    public boolean maybeAddArrayLengthField() {
++        return addArrayLengthField;
++    }
++
++    /**
++     * Returns an IndexDocumentBuilder that shares a lucene document and translog with the current one,
++     * but that tells any child indexers they should not add array length fields.
++     */
++    public IndexDocumentBuilder noArrayLengthField() {
++        return new IndexDocumentBuilder(translogWriter, synthetics, constraints, tableVersionCreated, false);
++    }
+ }
+diff --git a/server/src/main/java/io/crate/expression/predicate/IsNullPredicate.java b/server/src/main/java/io/crate/expression/predicate/IsNullPredicate.java
+index 395776c479..7680570e13 100644
+--- a/server/src/main/java/io/crate/expression/predicate/IsNullPredicate.java
++++ b/server/src/main/java/io/crate/expression/predicate/IsNullPredicate.java
+@@ -21,6 +21,7 @@
+ 
+ package io.crate.expression.predicate;
+ 
++import static io.crate.execution.dml.ArrayIndexer.ARRAY_LENGTH_FIELD_SUPPORTED_VERSION;
+ import static io.crate.lucene.LuceneQueryBuilder.genericFunctionFilter;
+ import static io.crate.metadata.functions.TypeVariableConstraint.typeVariable;
+ 
+@@ -35,7 +36,6 @@ import org.apache.lucene.search.FieldExistsQuery;
+ import org.apache.lucene.search.MatchNoDocsQuery;
+ import org.apache.lucene.search.Query;
+ import org.apache.lucene.search.TermQuery;
+-import org.elasticsearch.Version;
+ import org.elasticsearch.common.lucene.search.Queries;
+ import org.jetbrains.annotations.Nullable;
+ 
+@@ -124,7 +124,7 @@ public class IsNullPredicate<T> extends Scalar<Boolean, T> {
+         DataType<?> valueType = ref.valueType();
+         boolean canUseFieldsExist = ref.hasDocValues() || ref.indexType() == IndexType.FULLTEXT;
+         if (valueType instanceof ArrayType<?>) {
+-            if (context.tableInfo().versionCreated().onOrAfter(Version.V_5_9_0)) {
++            if (context.tableInfo().versionCreated().onOrAfter(ARRAY_LENGTH_FIELD_SUPPORTED_VERSION)) {
+                 // Array columns in tables on and after 5.9 indexes _array_length_ fields. For null rows, nothing is indexed
+                 // such that FieldExistsQuery can be used.
+                 return ArrayIndexer.arrayLengthExistsQuery(ref, context.tableInfo()::getReference);
+diff --git a/server/src/main/java/io/crate/expression/scalar/ArrayUpperFunction.java b/server/src/main/java/io/crate/expression/scalar/ArrayUpperFunction.java
+index eb84e7f1c9..b4d48ea36c 100644
+--- a/server/src/main/java/io/crate/expression/scalar/ArrayUpperFunction.java
++++ b/server/src/main/java/io/crate/expression/scalar/ArrayUpperFunction.java
+@@ -21,6 +21,7 @@
+ 
+ package io.crate.expression.scalar;
+ 
++import static io.crate.execution.dml.ArrayIndexer.ARRAY_LENGTH_FIELD_SUPPORTED_VERSION;
+ import static io.crate.expression.scalar.array.ArrayArgumentValidators.ensureInnerTypeIsNotUndefined;
+ import static io.crate.lucene.LuceneQueryBuilder.genericFunctionFilter;
+ import static io.crate.metadata.functions.TypeVariableConstraint.typeVariable;
+@@ -32,7 +33,6 @@ import org.apache.lucene.search.BooleanClause;
+ import org.apache.lucene.search.BooleanQuery;
+ import org.apache.lucene.search.MatchNoDocsQuery;
+ import org.apache.lucene.search.Query;
+-import org.elasticsearch.Version;
+ import org.jetbrains.annotations.Nullable;
+ 
+ import io.crate.data.Input;
+@@ -179,7 +179,7 @@ public class ArrayUpperFunction extends Scalar<Integer, Object> {
+         int cmpVal = cmpNumber.intValue();
+         // If the array col is from a table created on or after 5.9, we can utilize '_array_length_' indexes,
+         // see ArrayIndexer for details
+-        if (context.tableInfo().versionCreated().onOrAfter(Version.V_5_9_0)) {
++        if (context.tableInfo().versionCreated().onOrAfter(ARRAY_LENGTH_FIELD_SUPPORTED_VERSION)) {
+             return toQueryUsingArrayLengthIndex(parentName, arrayRef, cmpVal, context.tableInfo()::getReference);
+         }
+ 
+diff --git a/server/src/test/java/io/crate/execution/dml/IndexerTest.java b/server/src/test/java/io/crate/execution/dml/IndexerTest.java
+index 609398a72c..3248b7b244 100644
+--- a/server/src/test/java/io/crate/execution/dml/IndexerTest.java
++++ b/server/src/test/java/io/crate/execution/dml/IndexerTest.java
+@@ -840,19 +840,32 @@ public class IndexerTest extends CrateDummyClusterServiceUnitTest {
+     }
+ 
+     @Test
+-    public void test_array_length_is_indexed_for_child_arrays() throws Exception {
++    public void test_array_length_is_not_indexed_for_object_arrays_within_object_arrays() throws Exception {
+         SQLExecutor e = SQLExecutor.of(clusterService)
+-            .addTable("create table tbl (o_array array(object as (xs int[], o_array_2 array(object as (xs int[])))))");
++            .addTable("create table tbl (o object as (o2 object as (a int)[])[])");
++        DocTableInfo table = e.resolveTableInfo("tbl");
++
++        var indexer = getIndexer(e, "tbl", "o");
++        ParsedDocument doc = indexer.index(item(List.of(Map.of("o2", List.of(Map.of("a", 1))))));
++
++        var arrayLengthFields = doc.doc().getFields().stream().filter(f -> f.name().startsWith(ARRAY_LENGTH_FIELD_PREFIX)).toList();
++        assertThat(arrayLengthFields).hasSize(1);
++        assertThat(arrayLengthFields.getFirst().toString()).isEqualTo("IntField <_array_length_1:1>");
++
++        assertTranslogParses(doc, table);
++    }
++
++    @Test
++    public void test_array_length_is_not_indexed_for_child_arrays() throws Exception {
++        SQLExecutor e = SQLExecutor.of(clusterService)
++            .addTable("create table tbl (o_array array(object as (xs int[], o_array_2 array(object as (xs2 int[])))))");
+         DocTableInfo table = e.resolveTableInfo("tbl");
+ 
+         var indexer = getIndexer(e, "tbl", "o_array");
+-        ParsedDocument doc = indexer.index(item(List.of(Map.of("xs", List.of(), "o_array_2", List.of(Map.of("xs", List.of()))))));
+-        assertThat(doc.doc().getField(ARRAY_LENGTH_FIELD_PREFIX + ((Reference) e.asSymbol("o_array['xs']")).storageIdentLeafName()).toString())
+-            .isEqualTo("IntField <_array_length_2:0>"); // o_array['xs'] is empty
+-        assertThat(doc.doc().getField(ARRAY_LENGTH_FIELD_PREFIX + ((Reference) e.asSymbol("o_array['o_array_2']")).storageIdentLeafName()).toString())
+-            .isEqualTo("IntField <_array_length_3:1>"); // 1 element of o_array['o_array_2']
+-        assertThat(doc.doc().getField(ARRAY_LENGTH_FIELD_PREFIX + ((Reference) e.asSymbol("o_array['o_array_2']['xs']")).storageIdentLeafName()).toString())
+-            .isEqualTo("IntField <_array_length_4:0>"); // o_array['o_array_2']['xs'] is empty
++        ParsedDocument doc = indexer.index(item(List.of(Map.of("xs", List.of(), "o_array_2", List.of(Map.of("xs2", List.of()))))));
++        var arrayLengthFields = doc.doc().getFields().stream().filter(field -> field.name().startsWith(ARRAY_LENGTH_FIELD_PREFIX)).toList();
++        assertThat(arrayLengthFields.getFirst().toString()).isEqualTo("IntField <_array_length_1:1>"); // for the groot level array
++
+         assertTranslogParses(doc, table);
+     }
+[0m
+[0m$ [0mgit status --short
+M server/src/main/java/io/crate/execution/dml/ArrayIndexer.java
+ M server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java
+ M server/src/main/java/io/crate/expression/predicate/IsNullPredicate.java
+ M server/src/main/java/io/crate/expression/scalar/ArrayUpperFunction.java
+ M server/src/test/java/io/crate/execution/dml/IndexerTest.java
+[0m
+The diff matches the validated backport and only the five intended files are modified. I’m staging those files and committing with the original commit subject.
+[0m$ [0mgit add -- server/src/main/java/io/crate/execution/dml/ArrayIndexer.java server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java server/src/main/java/io/crate/expression/predicate/IsNullPredicate.java server/src/main/java/io/crate/expression/scalar/ArrayUpperFunction.java server/src/test/java/io/crate/execution/dml/IndexerTest.java; if ($?) { git commit -m "Do not index array lengths for object arrays within object arrays" }
+warning: in the working copy of 'server/src/main/java/io/crate/execution/dml/ArrayIndexer.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/expression/predicate/IsNullPredicate.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/expression/scalar/ArrayUpperFunction.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/execution/dml/IndexerTest.java', LF will be replaced by CRLF the next time Git touches it
+[detached HEAD 353488aa96] Do not index array lengths for object arrays within object arrays
+ 5 files changed, 59 insertions(+), 15 deletions(-)
+[0m
+The backport commit was created. I’m collecting the final diff from the requested base ref to `HEAD` for the YAML output.
+[0m$ [0mgit diff 140164b93ac4273f65f10a92ef555b6cbce8b2a8 HEAD
+diff --git a/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java b/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java
+index 4f6f6a123f..f84a10955e 100644
+--- a/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java
++++ b/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java
+@@ -46,6 +46,8 @@ import io.crate.types.StorageSupport;
+ 
+ public class ArrayIndexer<T> implements ValueIndexer<List<T>> {
+ 
++    public static final Version ARRAY_LENGTH_FIELD_SUPPORTED_VERSION = Version.V_5_9_0;
++
+     public static Query arrayLengthTermQuery(Reference arrayRef, int length, Function<ColumnIdent, Reference> getRef) {
+         return IntPoint.newExactQuery(toArrayLengthFieldName(arrayRef, getRef), length);
+     }
+@@ -112,14 +114,15 @@ public class ArrayIndexer<T> implements ValueIndexer<List<T>> {
+     @Override
+     public void indexValue(@NotNull List<T> values, IndexDocumentBuilder docBuilder) throws IOException {
+         docBuilder.translogWriter().startArray();
++        var nestedDocBuilder = docBuilder.noArrayLengthField();
+         for (T value : values) {
+             if (value == null) {
+                 docBuilder.translogWriter().writeNull();
+             } else {
+-                innerIndexer.indexValue(value, docBuilder);
++                innerIndexer.indexValue(value, nestedDocBuilder);
+             }
+         }
+-        if (docBuilder.getTableVersionCreated().onOrAfter(Version.V_5_9_0)) {
++        if (docBuilder.maybeAddArrayLengthField()) {
+             // map '[]' to '_array_length_ = 0'
+             // map '[null]' to '_array_length_ = 1'
+             // 'null' is not mapped; can utilize 'FieldExistsQuery' for 'IS NULL' filtering
+diff --git a/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java b/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java
+index 3e44fc353c..b5a68f0dd6 100644
+--- a/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java
++++ b/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java
+@@ -49,6 +49,7 @@ public class IndexDocumentBuilder {
+     private final ValueIndexer.Synthetics synthetics;
+     private final Map<ColumnIdent, Indexer.ColumnConstraint> constraints;
+     private final Version tableVersionCreated;
++    private final boolean addArrayLengthField;
+ 
+     /**
+      * Builds a new IndexDocumentBuilder
+@@ -58,11 +59,23 @@ public class IndexDocumentBuilder {
+         ValueIndexer.Synthetics synthetics,
+         Map<ColumnIdent, Indexer.ColumnConstraint> constraints,
+         Version tableVersionCreated
++    ) {
++        this(translogWriter, synthetics, constraints, tableVersionCreated,
++            tableVersionCreated.onOrAfter(ArrayIndexer.ARRAY_LENGTH_FIELD_SUPPORTED_VERSION));
++    }
++
++    private IndexDocumentBuilder(
++        TranslogWriter translogWriter,
++        ValueIndexer.Synthetics synthetics,
++        Map<ColumnIdent, Indexer.ColumnConstraint> constraints,
++        Version tableVersionCreated,
++        boolean addArrayLengthField
+     ) {
+         this.translogWriter = translogWriter;
+         this.synthetics = synthetics;
+         this.constraints = constraints;
+         this.tableVersionCreated = tableVersionCreated;
++        this.addArrayLengthField = addArrayLengthField;
+     }
+ 
+     /**
+@@ -124,4 +137,19 @@ public class IndexDocumentBuilder {
+     public Version getTableVersionCreated() {
+         return tableVersionCreated;
+     }
++
++    /**
++     * Should the current arrayIndexer index its array length?
++     */
++    public boolean maybeAddArrayLengthField() {
++        return addArrayLengthField;
++    }
++
++    /**
++     * Returns an IndexDocumentBuilder that shares a lucene document and translog with the current one,
++     * but that tells any child indexers they should not add array length fields.
++     */
++    public IndexDocumentBuilder noArrayLengthField() {
++        return new IndexDocumentBuilder(translogWriter, synthetics, constraints, tableVersionCreated, false);
++    }
+ }
+diff --git a/server/src/main/java/io/crate/expression/predicate/IsNullPredicate.java b/server/src/main/java/io/crate/expression/predicate/IsNullPredicate.java
+index 395776c479..7680570e13 100644
+--- a/server/src/main/java/io/crate/expression/predicate/IsNullPredicate.java
++++ b/server/src/main/java/io/crate/expression/predicate/IsNullPredicate.java
+@@ -21,6 +21,7 @@
+ 
+ package io.crate.expression.predicate;
+ 
++import static io.crate.execution.dml.ArrayIndexer.ARRAY_LENGTH_FIELD_SUPPORTED_VERSION;
+ import static io.crate.lucene.LuceneQueryBuilder.genericFunctionFilter;
+ import static io.crate.metadata.functions.TypeVariableConstraint.typeVariable;
+ 
+@@ -35,7 +36,6 @@ import org.apache.lucene.search.FieldExistsQuery;
+ import org.apache.lucene.search.MatchNoDocsQuery;
+ import org.apache.lucene.search.Query;
+ import org.apache.lucene.search.TermQuery;
+-import org.elasticsearch.Version;
+ import org.elasticsearch.common.lucene.search.Queries;
+ import org.jetbrains.annotations.Nullable;
+ 
+@@ -124,7 +124,7 @@ public class IsNullPredicate<T> extends Scalar<Boolean, T> {
+         DataType<?> valueType = ref.valueType();
+         boolean canUseFieldsExist = ref.hasDocValues() || ref.indexType() == IndexType.FULLTEXT;
+         if (valueType instanceof ArrayType<?>) {
+-            if (context.tableInfo().versionCreated().onOrAfter(Version.V_5_9_0)) {
++            if (context.tableInfo().versionCreated().onOrAfter(ARRAY_LENGTH_FIELD_SUPPORTED_VERSION)) {
+                 // Array columns in tables on and after 5.9 indexes _array_length_ fields. For null rows, nothing is indexed
+                 // such that FieldExistsQuery can be used.
+                 return ArrayIndexer.arrayLengthExistsQuery(ref, context.tableInfo()::getReference);
+diff --git a/server/src/main/java/io/crate/expression/scalar/ArrayUpperFunction.java b/server/src/main/java/io/crate/expression/scalar/ArrayUpperFunction.java
+index eb84e7f1c9..b4d48ea36c 100644
+--- a/server/src/main/java/io/crate/expression/scalar/ArrayUpperFunction.java
++++ b/server/src/main/java/io/crate/expression/scalar/ArrayUpperFunction.java
+@@ -21,6 +21,7 @@
+ 
+ package io.crate.expression.scalar;
+ 
++import static io.crate.execution.dml.ArrayIndexer.ARRAY_LENGTH_FIELD_SUPPORTED_VERSION;
+ import static io.crate.expression.scalar.array.ArrayArgumentValidators.ensureInnerTypeIsNotUndefined;
+ import static io.crate.lucene.LuceneQueryBuilder.genericFunctionFilter;
+ import static io.crate.metadata.functions.TypeVariableConstraint.typeVariable;
+@@ -32,7 +33,6 @@ import org.apache.lucene.search.BooleanClause;
+ import org.apache.lucene.search.BooleanQuery;
+ import org.apache.lucene.search.MatchNoDocsQuery;
+ import org.apache.lucene.search.Query;
+-import org.elasticsearch.Version;
+ import org.jetbrains.annotations.Nullable;
+ 
+ import io.crate.data.Input;
+@@ -179,7 +179,7 @@ public class ArrayUpperFunction extends Scalar<Integer, Object> {
+         int cmpVal = cmpNumber.intValue();
+         // If the array col is from a table created on or after 5.9, we can utilize '_array_length_' indexes,
+         // see ArrayIndexer for details
+-        if (context.tableInfo().versionCreated().onOrAfter(Version.V_5_9_0)) {
++        if (context.tableInfo().versionCreated().onOrAfter(ARRAY_LENGTH_FIELD_SUPPORTED_VERSION)) {
+             return toQueryUsingArrayLengthIndex(parentName, arrayRef, cmpVal, context.tableInfo()::getReference);
+         }
+ 
+diff --git a/server/src/test/java/io/crate/execution/dml/IndexerTest.java b/server/src/test/java/io/crate/execution/dml/IndexerTest.java
+index 609398a72c..3248b7b244 100644
+--- a/server/src/test/java/io/crate/execution/dml/IndexerTest.java
++++ b/server/src/test/java/io/crate/execution/dml/IndexerTest.java
+@@ -840,19 +840,32 @@ public class IndexerTest extends CrateDummyClusterServiceUnitTest {
+     }
+ 
+     @Test
+-    public void test_array_length_is_indexed_for_child_arrays() throws Exception {
++    public void test_array_length_is_not_indexed_for_object_arrays_within_object_arrays() throws Exception {
+         SQLExecutor e = SQLExecutor.of(clusterService)
+-            .addTable("create table tbl (o_array array(object as (xs int[], o_array_2 array(object as (xs int[])))))");
++            .addTable("create table tbl (o object as (o2 object as (a int)[])[])");
++        DocTableInfo table = e.resolveTableInfo("tbl");
++
++        var indexer = getIndexer(e, "tbl", "o");
++        ParsedDocument doc = indexer.index(item(List.of(Map.of("o2", List.of(Map.of("a", 1))))));
++
++        var arrayLengthFields = doc.doc().getFields().stream().filter(f -> f.name().startsWith(ARRAY_LENGTH_FIELD_PREFIX)).toList();
++        assertThat(arrayLengthFields).hasSize(1);
++        assertThat(arrayLengthFields.getFirst().toString()).isEqualTo("IntField <_array_length_1:1>");
++
++        assertTranslogParses(doc, table);
++    }
++
++    @Test
++    public void test_array_length_is_not_indexed_for_child_arrays() throws Exception {
++        SQLExecutor e = SQLExecutor.of(clusterService)
++            .addTable("create table tbl (o_array array(object as (xs int[], o_array_2 array(object as (xs2 int[])))))");
+         DocTableInfo table = e.resolveTableInfo("tbl");
+ 
+         var indexer = getIndexer(e, "tbl", "o_array");
+-        ParsedDocument doc = indexer.index(item(List.of(Map.of("xs", List.of(), "o_array_2", List.of(Map.of("xs", List.of()))))));
+-        assertThat(doc.doc().getField(ARRAY_LENGTH_FIELD_PREFIX + ((Reference) e.asSymbol("o_array['xs']")).storageIdentLeafName()).toString())
+-            .isEqualTo("IntField <_array_length_2:0>"); // o_array['xs'] is empty
+-        assertThat(doc.doc().getField(ARRAY_LENGTH_FIELD_PREFIX + ((Reference) e.asSymbol("o_array['o_array_2']")).storageIdentLeafName()).toString())
+-            .isEqualTo("IntField <_array_length_3:1>"); // 1 element of o_array['o_array_2']
+-        assertThat(doc.doc().getField(ARRAY_LENGTH_FIELD_PREFIX + ((Reference) e.asSymbol("o_array['o_array_2']['xs']")).storageIdentLeafName()).toString())
+-            .isEqualTo("IntField <_array_length_4:0>"); // o_array['o_array_2']['xs'] is empty
++        ParsedDocument doc = indexer.index(item(List.of(Map.of("xs", List.of(), "o_array_2", List.of(Map.of("xs2", List.of()))))));
++        var arrayLengthFields = doc.doc().getFields().stream().filter(field -> field.name().startsWith(ARRAY_LENGTH_FIELD_PREFIX)).toList();
++        assertThat(arrayLengthFields.getFirst().toString()).isEqualTo("IntField <_array_length_1:1>"); // for the groot level array
++
+         assertTranslogParses(doc, table);
+     }
+[0m
+[0m$ [0mgit status --short
+(no output)
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch code context
+[✓] Construct adapted unified diff for 5.9 parent
+[✓] Validate hunks and full patch
+[✓] Apply patch and commit result
+[•] Return final YAML with patch
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch code context
+[✓] Construct adapted unified diff for 5.9 parent
+[✓] Validate hunks and full patch
+[✓] Apply patch and commit result
+[✓] Return final YAML with patch
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java b/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java
+    index 4f6f6a123f..f84a10955e 100644
+    --- a/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java
+    +++ b/server/src/main/java/io/crate/execution/dml/ArrayIndexer.java
+    @@ -46,6 +46,8 @@ import io.crate.types.StorageSupport;
+     
+     public class ArrayIndexer<T> implements ValueIndexer<List<T>> {
+     
+    +    public static final Version ARRAY_LENGTH_FIELD_SUPPORTED_VERSION = Version.V_5_9_0;
+    +
+         public static Query arrayLengthTermQuery(Reference arrayRef, int length, Function<ColumnIdent, Reference> getRef) {
+             return IntPoint.newExactQuery(toArrayLengthFieldName(arrayRef, getRef), length);
+         }
+    @@ -112,14 +114,15 @@ public class ArrayIndexer<T> implements ValueIndexer<List<T>> {
+         @Override
+         public void indexValue(@NotNull List<T> values, IndexDocumentBuilder docBuilder) throws IOException {
+             docBuilder.translogWriter().startArray();
+    +        var nestedDocBuilder = docBuilder.noArrayLengthField();
+             for (T value : values) {
+                 if (value == null) {
+                     docBuilder.translogWriter().writeNull();
+                 } else {
+    -                innerIndexer.indexValue(value, docBuilder);
+    +                innerIndexer.indexValue(value, nestedDocBuilder);
+                 }
+             }
+    -        if (docBuilder.getTableVersionCreated().onOrAfter(Version.V_5_9_0)) {
+    +        if (docBuilder.maybeAddArrayLengthField()) {
+                 // map '[]' to '_array_length_ = 0'
+                 // map '[null]' to '_array_length_ = 1'
+                 // 'null' is not mapped; can utilize 'FieldExistsQuery' for 'IS NULL' filtering
+    diff --git a/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java b/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java
+    index 3e44fc353c..b5a68f0dd6 100644
+    --- a/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java
+    +++ b/server/src/main/java/io/crate/execution/dml/IndexDocumentBuilder.java
+    @@ -49,6 +49,7 @@ public class IndexDocumentBuilder {
+         private final ValueIndexer.Synthetics synthetics;
+         private final Map<ColumnIdent, Indexer.ColumnConstraint> constraints;
+         private final Version tableVersionCreated;
+    +    private final boolean addArrayLengthField;
+     
+         /**
+          * Builds a new IndexDocumentBuilder
+    @@ -58,11 +59,23 @@ public class IndexDocumentBuilder {
+             ValueIndexer.Synthetics synthetics,
+             Map<ColumnIdent, Indexer.ColumnConstraint> constraints,
+             Version tableVersionCreated
+    +    ) {
+    +        this(translogWriter, synthetics, constraints, tableVersionCreated,
+    +            tableVersionCreated.onOrAfter(ArrayIndexer.ARRAY_LENGTH_FIELD_SUPPORTED_VERSION));
+    +    }
+    +
+    +    private IndexDocumentBuilder(
+    +        TranslogWriter translogWriter,
+    +        ValueIndexer.Synthetics synthetics,
+    +        Map<ColumnIdent, Indexer.ColumnConstraint> constraints,
+    +        Version tableVersionCreated,
+    +        boolean addArrayLengthField
+         ) {
+             this.translogWriter = translogWriter;
+             this.synthetics = synthetics;
+             this.constraints = constraints;
+             this.tableVersionCreated = tableVersionCreated;
+    +        this.addArrayLengthField = addArrayLengthField;
+         }
+     
+         /**
+    @@ -124,4 +137,19 @@ public class IndexDocumentBuilder {
+         public Version getTableVersionCreated() {
+             return tableVersionCreated;
+         }
+    +
+    +    /**
+    +     * Should the current arrayIndexer index its array length?
+    +     */
+    +    public boolean maybeAddArrayLengthField() {
+    +        return addArrayLengthField;
+    +    }
+    +
+    +    /**
+    +     * Returns an IndexDocumentBuilder that shares a lucene document and translog with the current one,
+    +     * but that tells any child indexers they should not add array length fields.
+    +     */
+    +    public IndexDocumentBuilder noArrayLengthField() {
+    +        return new IndexDocumentBuilder(translogWriter, synthetics, constraints, tableVersionCreated, false);
+    +    }
+     }
+    diff --git a/server/src/main/java/io/crate/expression/predicate/IsNullPredicate.java b/server/src/main/java/io/crate/expression/predicate/IsNullPredicate.java
+    index 395776c479..7680570e13 100644
+    --- a/server/src/main/java/io/crate/expression/predicate/IsNullPredicate.java
+    +++ b/server/src/main/java/io/crate/expression/predicate/IsNullPredicate.java
+    @@ -21,6 +21,7 @@
+     
+     package io.crate.expression.predicate;
+     
+    +import static io.crate.execution.dml.ArrayIndexer.ARRAY_LENGTH_FIELD_SUPPORTED_VERSION;
+     import static io.crate.lucene.LuceneQueryBuilder.genericFunctionFilter;
+     import static io.crate.metadata.functions.TypeVariableConstraint.typeVariable;
+     
+    @@ -35,7 +36,6 @@ import org.apache.lucene.search.FieldExistsQuery;
+     import org.apache.lucene.search.MatchNoDocsQuery;
+     import org.apache.lucene.search.Query;
+     import org.apache.lucene.search.TermQuery;
+    -import org.elasticsearch.Version;
+     import org.elasticsearch.common.lucene.search.Queries;
+     import org.jetbrains.annotations.Nullable;
+     
+    @@ -124,7 +124,7 @@ public class IsNullPredicate<T> extends Scalar<Boolean, T> {
+             DataType<?> valueType = ref.valueType();
+             boolean canUseFieldsExist = ref.hasDocValues() || ref.indexType() == IndexType.FULLTEXT;
+             if (valueType instanceof ArrayType<?>) {
+    -            if (context.tableInfo().versionCreated().onOrAfter(Version.V_5_9_0)) {
+    +            if (context.tableInfo().versionCreated().onOrAfter(ARRAY_LENGTH_FIELD_SUPPORTED_VERSION)) {
+                     // Array columns in tables on and after 5.9 indexes _array_length_ fields. For null rows, nothing is indexed
+                     // such that FieldExistsQuery can be used.
+                     return ArrayIndexer.arrayLengthExistsQuery(ref, context.tableInfo()::getReference);
+    diff --git a/server/src/main/java/io/crate/expression/scalar/ArrayUpperFunction.java b/server/src/main/java/io/crate/expression/scalar/ArrayUpperFunction.java
+    index eb84e7f1c9..b4d48ea36c 100644
+    --- a/server/src/main/java/io/crate/expression/scalar/ArrayUpperFunction.java
+    +++ b/server/src/main/java/io/crate/expression/scalar/ArrayUpperFunction.java
+    @@ -21,6 +21,7 @@
+     
+     package io.crate.expression.scalar;
+     
+    +import static io.crate.execution.dml.ArrayIndexer.ARRAY_LENGTH_FIELD_SUPPORTED_VERSION;
+     import static io.crate.expression.scalar.array.ArrayArgumentValidators.ensureInnerTypeIsNotUndefined;
+     import static io.crate.lucene.LuceneQueryBuilder.genericFunctionFilter;
+     import static io.crate.metadata.functions.TypeVariableConstraint.typeVariable;
+    @@ -32,7 +33,6 @@ import org.apache.lucene.search.BooleanClause;
+     import org.apache.lucene.search.BooleanQuery;
+     import org.apache.lucene.search.MatchNoDocsQuery;
+     import org.apache.lucene.search.Query;
+    -import org.elasticsearch.Version;
+     import org.jetbrains.annotations.Nullable;
+     
+     import io.crate.data.Input;
+    @@ -179,7 +179,7 @@ public class ArrayUpperFunction extends Scalar<Integer, Object> {
+             int cmpVal = cmpNumber.intValue();
+             // If the array col is from a table created on or after 5.9, we can utilize '_array_length_' indexes,
+             // see ArrayIndexer for details
+    -        if (context.tableInfo().versionCreated().onOrAfter(Version.V_5_9_0)) {
+    +        if (context.tableInfo().versionCreated().onOrAfter(ARRAY_LENGTH_FIELD_SUPPORTED_VERSION)) {
+                 return toQueryUsingArrayLengthIndex(parentName, arrayRef, cmpVal, context.tableInfo()::getReference);
+             }
+     
+    diff --git a/server/src/test/java/io/crate/execution/dml/IndexerTest.java b/server/src/test/java/io/crate/execution/dml/IndexerTest.java
+    index 609398a72c..3248b7b244 100644
+    --- a/server/src/test/java/io/crate/execution/dml/IndexerTest.java
+    +++ b/server/src/test/java/io/crate/execution/dml/IndexerTest.java
+    @@ -840,19 +840,32 @@ public class IndexerTest extends CrateDummyClusterServiceUnitTest {
+         }
+     
+         @Test
+    -    public void test_array_length_is_indexed_for_child_arrays() throws Exception {
+    +    public void test_array_length_is_not_indexed_for_object_arrays_within_object_arrays() throws Exception {
+             SQLExecutor e = SQLExecutor.of(clusterService)
+    -            .addTable("create table tbl (o_array array(object as (xs int[], o_array_2 array(object as (xs int[])))))");
+    +            .addTable("create table tbl (o object as (o2 object as (a int)[])[])");
+    +        DocTableInfo table = e.resolveTableInfo("tbl");
+    +
+    +        var indexer = getIndexer(e, "tbl", "o");
+    +        ParsedDocument doc = indexer.index(item(List.of(Map.of("o2", List.of(Map.of("a", 1))))));
+    +
+    +        var arrayLengthFields = doc.doc().getFields().stream().filter(f -> f.name().startsWith(ARRAY_LENGTH_FIELD_PREFIX)).toList();
+    +        assertThat(arrayLengthFields).hasSize(1);
+    +        assertThat(arrayLengthFields.getFirst().toString()).isEqualTo("IntField <_array_length_1:1>");
+    +
+    +        assertTranslogParses(doc, table);
+    +    }
+    +
+    +    @Test
+    +    public void test_array_length_is_not_indexed_for_child_arrays() throws Exception {
+    +        SQLExecutor e = SQLExecutor.of(clusterService)
+    +            .addTable("create table tbl (o_array array(object as (xs int[], o_array_2 array(object as (xs2 int[])))))");
+             DocTableInfo table = e.resolveTableInfo("tbl");
+     
+             var indexer = getIndexer(e, "tbl", "o_array");
+    -        ParsedDocument doc = indexer.index(item(List.of(Map.of("xs", List.of(), "o_array_2", List.of(Map.of("xs", List.of()))))));
+    -        assertThat(doc.doc().getField(ARRAY_LENGTH_FIELD_PREFIX + ((Reference) e.asSymbol("o_array['xs']")).storageIdentLeafName()).toString())
+    -            .isEqualTo("IntField <_array_length_2:0>"); // o_array['xs'] is empty
+    -        assertThat(doc.doc().getField(ARRAY_LENGTH_FIELD_PREFIX + ((Reference) e.asSymbol("o_array['o_array_2']")).storageIdentLeafName()).toString())
+    -            .isEqualTo("IntField <_array_length_3:1>"); // 1 element of o_array['o_array_2']
+    -        assertThat(doc.doc().getField(ARRAY_LENGTH_FIELD_PREFIX + ((Reference) e.asSymbol("o_array['o_array_2']['xs']")).storageIdentLeafName()).toString())
+    -            .isEqualTo("IntField <_array_length_4:0>"); // o_array['o_array_2']['xs'] is empty
+    +        ParsedDocument doc = indexer.index(item(List.of(Map.of("xs", List.of(), "o_array_2", List.of(Map.of("xs2", List.of()))))));
+    +        var arrayLengthFields = doc.doc().getFields().stream().filter(field -> field.name().startsWith(ARRAY_LENGTH_FIELD_PREFIX)).toList();
+    +        assertThat(arrayLengthFields.getFirst().toString()).isEqualTo("IntField <_array_length_1:1>"); // for the groot level array
+    +
+             assertTranslogParses(doc, table);
+         }
+  notes: >
+    Backported the array-length suppression fix to 5.9, adapted for the older IndexDocumentBuilder API, validated hunks and full build/tests, and committed as 353488aa96.
+```
+
+--- END CLI OUTPUT ---
+[05:35:27]   Done in 3404.1s | status=success

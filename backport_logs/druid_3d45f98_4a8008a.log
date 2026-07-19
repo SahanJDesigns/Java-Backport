@@ -1,0 +1,1795 @@
+[12:33:04] === Row 7: druid  3d45f982 -> 4a8008ae  [TYPE-I] ===
+[12:33:04]   Resolving parent of backport commit 4a8008ae...
+[12:33:05]   Backport parent (target ref): 2f2807d3798e651cec0b04cc43aec1a53b9ba7b5
+[12:33:05]   Extracting new-version patch for 3d45f982...
+[12:33:05]   New-version patch size: 25787 chars
+[12:33:05]   Checking out backport parent 2f2807d3...
+[12:33:08]   Invoking OpenCode CLI (29663 chars)...
+[12:33:08]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll map the provided master diff onto the checked-out `31.0.0` parent, inspect the target file contexts, then validate the resulting hunks individually against `2f2807d3798e651cec0b04cc43aec1a53b9ba7b5`.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target branch contexts for all changed files
+[ ] Construct unified diff adapted to 31.0.0 parent
+[ ] Validate each patch hunk with validate mode=hunk
+[ ] Return parseable YAML result
+[0m
+[0m⚙ [0mlocate_symbol {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","symbol":"AppendableMemory"}
+[0m⚙ [0mgit_show {"ref":"3d45f9829c7b80e3b5289aaf5710b3932639349e"}
+[0m⚙ [0mlocate_symbol {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","symbol":"HeapMemoryAllocator"}
+[0m⚙ [0mlocate_symbol {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","symbol":"RowBasedFrameWriter"}
+[0m⚙ [0mlocate_symbol {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","symbol":"MSQWindowTest"}
+[0m⚙ [0mlocate_symbol {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","symbol":"ArenaMemoryAllocator"}
+The parallel symbol lookup hit a stale `.git/index.lock` from concurrent git operations. I’ll verify there is no active git process, clear only that lock if stale, then continue with non-overlapping git-backed lookups.
+[0m
+[0m$ [0mGet-Process git -ErrorAction SilentlyContinue
+(no output)
+[0m
+No active `git` process is running, so the lock is stale. I’ll remove only `.git/index.lock` and avoid parallel git ref tools from here.
+[0m$ [0mRemove-Item -LiteralPath ".git\index.lock"
+Remove-Item : Cannot find path '.git\index.lock' because it does not exist.
+At line:1 char:1
++ Remove-Item -LiteralPath ".git\index.lock"
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (.git\index.lock:String) [Remove-Item], ItemNotFoundException
+    + FullyQualifiedErrorId : PathNotFound,Microsoft.PowerShell.Commands.RemoveItemCommand
+[0m
+The lock was already gone by the time removal ran. I’m continuing with direct context inspection on the target ref.
+[0m⚙ [0mviewcode {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","path":"processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java","startline":1,"endline":380}
+`AppendableMemory` on `31.0.0` already has the allocator-available cap in its allocation request, so the backport needs to combine that local behavior with the master fix rather than blindly replacing the block.
+[0m⚙ [0mviewcode {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","path":"processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java","startline":1,"endline":180}
+[0m⚙ [0mviewcode {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","path":"processing/src/main/java/org/apache/druid/frame/allocation/HeapMemoryAllocator.java","startline":1,"endline":140}
+[0m⚙ [0mviewcode {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","path":"processing/src/main/java/org/apache/druid/frame/write/RowBasedFrameWriter.java","startline":1,"endline":380}
+[0m⚙ [0mviewcode {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","path":"processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java","startline":1,"endline":140}
+[0m⚙ [0mviewcode {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","path":"processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java","startline":1,"endline":180}
+[0m⚙ [0mviewcode {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","path":"extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java","startline":1825,"endline":1860}
+[0m✱ [0mGrep "TooManyRowsInAWindowFault\(15921|select cityName, added, SUM\(added\) OVER"[90m in . · 6 matches[0m
+Most target files line up directly. The notable branch difference is that `AppendableMemory.reserveAdditional` already caps allocation size to allocator availability, so the adapted hunk must retain that cap while adding empty-block reclamation and `availableToReserve`.
+[0m⚙ [0mgit_history {"filepath":"processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java","start_line":120,"end_line":155,"start_commit":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","end_commit":"31.0.0"}
+The repository does not have a local `31.0.0` revision name available for `git_history`; the target ref contexts are available and match the needed source locations, so I’ll proceed using those inspected target files.
+[0m✱ [0mGrep "class DruidException|package org\.apache\.druid\.error"[90m in . · 3 matches[0m
+[0m✱ [0mGrep "class ArenaMemoryAllocatorFactory"[90m in . · 1 match[0m
+[0m✱ [0mGrep "class InitializedNullHandlingTest"[90m in . · 1 match[0m
+[0m✱ [0mGrep "class FrameTestUtil|assertRowsEqual|readRowsFromCursorFactory"[90m in . · 64 matches[0m
+I’m constructing the adapted patch now. It preserves the existing `31.0.0` allocation-size cap in `AppendableMemory` while adding the master behavior for reclaiming empty/last allocations and the row-writer final allocation fallback.
+I’ll validate the patch in hunk mode only, as requested, and adjust any context mismatches before returning the YAML.
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"diff --git a/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java\n--- a/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java\n+++ b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java\n@@ -1803,7 +1803,7 @@ public class MSQWindowTest extends MSQTestBase\n         .setSql(\n             \"select cityName, added, SUM(added) OVER () cc from wikipedia\")\n         .setQueryContext(customContext)\n-        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15921, 200))\n+        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15922, 200))\n         .verifyResults();\n   }\n"}
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java\n+++ b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java\n@@ -1803,7 +1803,7 @@ public class MSQWindowTest extends MSQTestBase\n         .setSql(\n             \"select cityName, added, SUM(added) OVER () cc from wikipedia\")\n         .setQueryContext(customContext)\n-        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15921, 200))\n+        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15922, 200))\n         .verifyResults();\n   }\n"}
+The validator is strict about hunk format and rejected the first attempt as corrupt, likely due to hunk header/context formatting. I’m retrying with minimal standard unified hunks.
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java\n+++ b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java\n@@ -1805,7 +1805,7 @@\n             \"select cityName, added, SUM(added) OVER () cc from wikipedia\")\n         .setQueryContext(customContext)\n-        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15921, 200))\n+        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15922, 200))\n         .verifyResults();\n   }\n"}
+The validator still reports format issues before applying. I’m switching to single raw hunks without file headers, which this tool may expect for `mode=hunk`.
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"@@ -1805,7 +1805,7 @@\n             \"select cityName, added, SUM(added) OVER () cc from wikipedia\")\n         .setQueryContext(customContext)\n-        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15921, 200))\n+        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15922, 200))\n         .verifyResults();\n   }\n"}
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java\n+++ b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java\n@@ -1806,5 +1806,5 @@\n             \"select cityName, added, SUM(added) OVER () cc from wikipedia\")\n         .setQueryContext(customContext)\n-        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15921, 200))\n+        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15922, 200))\n         .verifyResults();\n   }\n"}
+The MSQWindowTest hunk validates. I’m validating the adapted production hunks next, starting with `AppendableMemory`.
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java\n+++ b/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java\n@@ -54,10 +54,10 @@\n   // One holder for every Memory we've allocated.\n   private final List<ResourceHolder<WritableMemory>> blockHolders = new ArrayList<>();\n \n-  // The amount of space that has been used from each Memory block. Same length as \"memoryHolders\".\n+  // The amount of space that has been used from each Memory block. Same length as \"blockHolders\".\n   private final IntList limits = new IntArrayList();\n \n-  // The global starting position for each Memory block (blockNumber -> position). Same length as \"memoryHolders\".\n+  // The global starting position for each Memory block (blockNumber -> position). Same length as \"blockHolders\".\n   private final LongArrayList globalStartPositions = new LongArrayList();\n \n   // Whether the blocks we've allocated are \"packed\"; meaning all non-final block limits equal the allocationSize.\n@@ -100,6 +100,36 @@\n   {\n     return cursor;\n   }\n \n+  /**\n+   * Maximum number that can be successfully passed to {@link #reserveAdditional(int)}.\n+   */\n+  public int availableToReserve()\n+  {\n+    final int currentBlockIdx = currentBlockNumber();\n+    final long availableInCurrentBlock;\n+    final boolean currentBlockIsEmpty;\n+\n+    if (currentBlockIdx < 0) {\n+      availableInCurrentBlock = 0;\n+      currentBlockIsEmpty = false;\n+    } else {\n+      final int usedInCurrentBlock = limits.getInt(currentBlockIdx);\n+      availableInCurrentBlock = blockHolders.get(currentBlockIdx).get().getCapacity() - usedInCurrentBlock;\n+      currentBlockIsEmpty = usedInCurrentBlock == 0;\n+    }\n+\n+    // If currentBlockIsEmpty, add availableInCurrentBlock to account for reclamation in reclaimLastBlockIfEmpty().\n+    final long availableInAllocator = allocator.available() + (currentBlockIsEmpty ? availableInCurrentBlock : 0);\n+\n+    return (int) Math.min(\n+        Integer.MAX_VALUE,\n+        Math.max(\n+            availableInAllocator,\n+            availableInCurrentBlock\n+        )\n+    );\n+  }\n+\n   /**\n    * Ensure that at least \"bytes\" amount of space is available after the cursor. Allocates a new block if needed.\n    * Note: the amount of bytes is guaranteed to be in a *single* block.\n@@ -126,11 +156,13 @@\n       return true;\n     }\n \n+    releaseLastBlockIfEmpty();\n+\n     if (bytes > allocator.available()) {\n       return false;\n     }\n \n-    final int idx = blockHolders.size() - 1;\n+    final int idx = currentBlockNumber();\n \n     if (idx < 0 || bytes + limits.getInt(idx) > blockHolders.get(idx).get().getCapacity()) {\n       // Allocation needed.\n@@ -218,6 +250,9 @@\n     cursor.set(currentBlockMemory, newLimit, currentBlockMemory.getCapacity() - newLimit);\n   }\n \n+  /**\n+   * Current used size, in bytes.\n+   */\n   public long size()\n   {\n     long sz = 0;\n@@ -298,12 +333,21 @@\n     cursor.set(blockMemory, 0, blockMemory.getCapacity());\n   }\n \n-  private int currentBlockNumber()\n+  private void releaseLastBlockIfEmpty()\n   {\n-    if (blockHolders.isEmpty()) {\n-      return NO_BLOCK;\n-    } else {\n-      return blockHolders.size() - 1;\n+    final int lastBlockNumber = currentBlockNumber();\n+    if (lastBlockNumber != NO_BLOCK && limits.getInt(lastBlockNumber) == 0) {\n+      blockHolders.remove(lastBlockNumber).close();\n+      limits.removeInt(lastBlockNumber);\n     }\n   }\n+\n+  /**\n+   * Returns the index into {@link #blockHolders} and {@link #limits} of the current block, or {@link #NO_BLOCK}\n+   * if there are no blocks.\n+   */\n+  private int currentBlockNumber()\n+  {\n+    return blockHolders.size() - 1;\n+  }\n }\n"}
+`validate mode=hunk` accepts one hunk at a time; the combined `AppendableMemory` patch was rejected after the first hunk. I’ll validate each hunk separately.
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java\n+++ b/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java\n@@ -125,11 +125,13 @@\n       return true;\n     }\n \n+    releaseLastBlockIfEmpty();\n+\n     if (bytes > allocator.available()) {\n       return false;\n     }\n \n-    final int idx = blockHolders.size() - 1;\n+    final int idx = currentBlockNumber();\n \n     if (idx < 0 || bytes + limits.getInt(idx) > blockHolders.get(idx).get().getCapacity()) {\n       // Allocation needed.\n"}
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java\n+++ b/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java\n@@ -101,6 +101,36 @@\n   {\n     return cursor;\n   }\n \n+  /**\n+   * Maximum number that can be successfully passed to {@link #reserveAdditional(int)}.\n+   */\n+  public int availableToReserve()\n+  {\n+    final int currentBlockIdx = currentBlockNumber();\n+    final long availableInCurrentBlock;\n+    final boolean currentBlockIsEmpty;\n+\n+    if (currentBlockIdx < 0) {\n+      availableInCurrentBlock = 0;\n+      currentBlockIsEmpty = false;\n+    } else {\n+      final int usedInCurrentBlock = limits.getInt(currentBlockIdx);\n+      availableInCurrentBlock = blockHolders.get(currentBlockIdx).get().getCapacity() - usedInCurrentBlock;\n+      currentBlockIsEmpty = usedInCurrentBlock == 0;\n+    }\n+\n+    // If currentBlockIsEmpty, add availableInCurrentBlock to account for reclamation in reclaimLastBlockIfEmpty().\n+    final long availableInAllocator = allocator.available() + (currentBlockIsEmpty ? availableInCurrentBlock : 0);\n+\n+    return (int) Math.min(\n+        Integer.MAX_VALUE,\n+        Math.max(\n+            availableInAllocator,\n+            availableInCurrentBlock\n+        )\n+    );\n+  }\n+\n   /**\n    * Ensure that at least \"bytes\" amount of space is available after the cursor. Allocates a new block if needed.\n    * Note: the amount of bytes is guaranteed to be in a *single* block.\n"}
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java\n+++ b/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java\n@@ -54,10 +54,10 @@\n   // One holder for every Memory we've allocated.\n   private final List<ResourceHolder<WritableMemory>> blockHolders = new ArrayList<>();\n \n-  // The amount of space that has been used from each Memory block. Same length as \"memoryHolders\".\n+  // The amount of space that has been used from each Memory block. Same length as \"blockHolders\".\n   private final IntList limits = new IntArrayList();\n \n-  // The global starting position for each Memory block (blockNumber -> position). Same length as \"memoryHolders\".\n+  // The global starting position for each Memory block (blockNumber -> position). Same length as \"blockHolders\".\n   private final LongArrayList globalStartPositions = new LongArrayList();\n \n   // Whether the blocks we've allocated are \"packed\"; meaning all non-final block limits equal the allocationSize.\n"}
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java\n+++ b/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java\n@@ -227,6 +227,9 @@\n     final WritableMemory currentBlockMemory = blockHolders.get(blockNumber).get();\n     cursor.set(currentBlockMemory, newLimit, currentBlockMemory.getCapacity() - newLimit);\n   }\n \n+  /**\n+   * Current used size, in bytes.\n+   */\n   public long size()\n   {\n     long sz = 0;\n"}
+The first four `AppendableMemory` hunks validate individually. I’m validating the method replacement hunk and the remaining files.
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java\n+++ b/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java\n@@ -295,12 +295,21 @@\n     cursor.set(blockMemory, 0, blockMemory.getCapacity());\n   }\n \n-  private int currentBlockNumber()\n+  private void releaseLastBlockIfEmpty()\n   {\n-    if (blockHolders.isEmpty()) {\n-      return NO_BLOCK;\n-    } else {\n-      return blockHolders.size() - 1;\n+    final int lastBlockNumber = currentBlockNumber();\n+    if (lastBlockNumber != NO_BLOCK && limits.getInt(lastBlockNumber) == 0) {\n+      blockHolders.remove(lastBlockNumber).close();\n+      limits.removeInt(lastBlockNumber);\n     }\n   }\n+\n+  /**\n+   * Returns the index into {@link #blockHolders} and {@link #limits} of the current block, or {@link #NO_BLOCK}\n+   * if there are no blocks.\n+   */\n+  private int currentBlockNumber()\n+  {\n+    return blockHolders.size() - 1;\n+  }\n }\n"}
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java\n+++ b/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java\n@@ -37,6 +37,7 @@\n   private final WritableMemory arena;\n   private long allocations = 0;\n   private long position = 0;\n+  private WritableMemory lastAllocation;\n \n   private ArenaMemoryAllocator(WritableMemory arena)\n   {\n"}
+The final `AppendableMemory` hunk and the first `ArenaMemoryAllocator` hunk validate. Continuing with allocator close/allocation behavior hunks.
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java\n+++ b/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java\n@@ -64,20 +65,23 @@\n   @Override\n   public Optional<ResourceHolder<WritableMemory>> allocate(final long size)\n   {\n-    if (position + size < arena.getCapacity()) {\n+    if (position + size <= arena.getCapacity()) {\n       final long start = position;\n       allocations++;\n       position += size;\n \n+      final WritableMemory memory = arena.writableRegion(start, size, ByteOrder.LITTLE_ENDIAN);\n+      lastAllocation = memory;\n+\n       return Optional.of(\n           new ResourceHolder<WritableMemory>()\n           {\n-            private WritableMemory memory = arena.writableRegion(start, size, ByteOrder.LITTLE_ENDIAN);\n+            boolean closed;\n \n             @Override\n             public WritableMemory get()\n             {\n-              if (memory == null) {\n+              if (closed) {\n                 throw new ISE(\"Already closed\");\n               }\n"}
+The large `ArenaMemoryAllocator.allocate` hunk had a line-count issue in validator format, so I’m splitting it into smaller hunks with exact local context.
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java\n+++ b/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java\n@@ -68,6 +68,9 @@\n       allocations++;\n       position += size;\n \n+      final WritableMemory memory = arena.writableRegion(start, size, ByteOrder.LITTLE_ENDIAN);\n+      lastAllocation = memory;\n+\n       return Optional.of(\n           new ResourceHolder<WritableMemory>()\n           {\n"}
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java\n+++ b/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java\n@@ -64,7 +64,7 @@\n   @Override\n   public Optional<ResourceHolder<WritableMemory>> allocate(final long size)\n   {\n-    if (position + size < arena.getCapacity()) {\n+    if (position + size <= arena.getCapacity()) {\n       final long start = position;\n       allocations++;\n       position += size;\n"}
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java\n+++ b/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java\n@@ -74,13 +74,13 @@\n           new ResourceHolder<WritableMemory>()\n           {\n-            private WritableMemory memory = arena.writableRegion(start, size, ByteOrder.LITTLE_ENDIAN);\n+            boolean closed;\n \n             @Override\n             public WritableMemory get()\n             {\n-              if (memory == null) {\n+              if (closed) {\n                 throw new ISE(\"Already closed\");\n               }\n \n"}
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java\n+++ b/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java\n@@ -74,12 +77,12 @@\n           new ResourceHolder<WritableMemory>()\n           {\n-            private WritableMemory memory = arena.writableRegion(start, size, ByteOrder.LITTLE_ENDIAN);\n+            boolean closed;\n \n             @Override\n             public WritableMemory get()\n             {\n-              if (memory == null) {\n+              if (closed) {\n                 throw new ISE(\"Already closed\");\n               }\n \n"}
+The field/getter replacement hunk needs tighter line counts. I’m validating it with the exact number of old/new lines included.
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java\n+++ b/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java\n@@ -74,11 +77,11 @@\n           new ResourceHolder<WritableMemory>()\n           {\n-            private WritableMemory memory = arena.writableRegion(start, size, ByteOrder.LITTLE_ENDIAN);\n+            boolean closed;\n \n             @Override\n             public WritableMemory get()\n             {\n-              if (memory == null) {\n+              if (closed) {\n                 throw new ISE(\"Already closed\");\n               }\n \n"}
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java\n+++ b/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java\n@@ -87,10 +90,21 @@\n             @Override\n             public void close()\n             {\n-              memory = null;\n+              if (closed) {\n+                return;\n+              }\n+\n+              closed = true;\n+\n+              //noinspection ObjectEquality\n+              if (memory == lastAllocation) {\n+                // Last allocation closed; decrement position to enable partial arena reuse.\n+                position -= memory.getCapacity();\n+                lastAllocation = null;\n+              }\n \n               if (--allocations == 0) {\n-                // All allocations closed; reset position to enable arena reuse.\n+                // All allocations closed; reset position to enable full arena reuse.\n                 position = 0;\n               }\n             }\n"}
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/main/java/org/apache/druid/frame/allocation/HeapMemoryAllocator.java\n+++ b/processing/src/main/java/org/apache/druid/frame/allocation/HeapMemoryAllocator.java\n@@ -77,8 +77,10 @@\n             @Override\n             public void close()\n             {\n-              memory = null;\n-              bytesAllocated -= size;\n+              if (memory != null) {\n+                memory = null;\n+                bytesAllocated -= size;\n+              }\n             }\n           }\n       );\n"}
+The allocator hunks validate. I’m validating `RowBasedFrameWriter` and the test-file changes now.
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/main/java/org/apache/druid/frame/write/RowBasedFrameWriter.java\n+++ b/processing/src/main/java/org/apache/druid/frame/write/RowBasedFrameWriter.java\n@@ -23,6 +23,7 @@\n import com.google.common.primitives.Ints;\n import org.apache.datasketches.memory.Memory;\n import org.apache.datasketches.memory.WritableMemory;\n+import org.apache.druid.error.DruidException;\n import org.apache.druid.frame.Frame;\n import org.apache.druid.frame.FrameType;\n import org.apache.druid.frame.allocation.AppendableMemory;\n"}
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/main/java/org/apache/druid/frame/write/RowBasedFrameWriter.java\n+++ b/processing/src/main/java/org/apache/druid/frame/write/RowBasedFrameWriter.java\n@@ -313,10 +314,22 @@\n         // Reset to beginning of loop.\n         i = -1;\n \n+        final int priorAllocation = BASE_DATA_ALLOCATION_SIZE * reserveMultiple;\n+\n         // Try again with a bigger allocation.\n         reserveMultiple *= 2;\n \n-        if (!dataMemory.reserveAdditional(Ints.checkedCast((long) BASE_DATA_ALLOCATION_SIZE * reserveMultiple))) {\n+        final int nextAllocation = Math.min(\n+            dataMemory.availableToReserve(),\n+            Ints.checkedCast((long) BASE_DATA_ALLOCATION_SIZE * reserveMultiple)\n+        );\n+\n+        if (nextAllocation > priorAllocation) {\n+          if (!dataMemory.reserveAdditional(nextAllocation)) {\n+            // Shouldn't see this unless availableToReserve lied to us.\n+            throw DruidException.defensive(\"Unexpected failure of dataMemory.reserveAdditional\");\n+          }\n+        } else {\n           return false;\n         }\n \n"}
+`RowBasedFrameWriter` validates. I’m validating the new allocator tests and the refactored existing tests.
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- /dev/null\n+++ b/processing/src/test/java/org/apache/druid/frame/allocation/ArenaMemoryAllocatorTest.java\n@@ -0,0 +1,29 @@\n+/*\n+ * Licensed to the Apache Software Foundation (ASF) under one\n+ * or more contributor license agreements.  See the NOTICE file\n+ * distributed with this work for additional information\n+ * regarding copyright ownership.  The ASF licenses this file\n+ * to you under the Apache License, Version 2.0 (the\n+ * \"License\"); you may not use this file except in compliance\n+ * with the License.  You may obtain a copy of the License at\n+ *\n+ *   http://www.apache.org/licenses/LICENSE-2.0\n+ *\n+ * Unless required by applicable law or agreed to in writing,\n+ * software distributed under the License is distributed on an\n+ * \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY\n+ * KIND, either express or implied.  See the License for the\n+ * specific language governing permissions and limitations\n+ * under the License.\n+ */\n+\n+package org.apache.druid.frame.allocation;\n+\n+public class ArenaMemoryAllocatorTest extends BaseMemoryAllocatorTest\n+{\n+  @Override\n+  protected MemoryAllocator makeAllocator(int capacity)\n+  {\n+    return ArenaMemoryAllocator.createOnHeap(capacity);\n+  }\n+}\n"}
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- /dev/null\n+++ b/processing/src/test/java/org/apache/druid/frame/allocation/BaseMemoryAllocatorTest.java\n@@ -0,0 +1,166 @@\n+/*\n+ * Licensed to the Apache Software Foundation (ASF) under one\n+ * or more contributor license agreements.  See the NOTICE file\n+ * distributed with this work for additional information\n+ * regarding copyright ownership.  The ASF licenses this file\n+ * to you under the Apache License, Version 2.0 (the\n+ * \"License\"); you may not use this file except in compliance\n+ * with the License.  You may obtain a copy of the License at\n+ *\n+ *   http://www.apache.org/licenses/LICENSE-2.0\n+ *\n+ * Unless required by applicable law or agreed to in writing,\n+ * software distributed under the License is distributed on an\n+ * \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY\n+ * KIND, either express or implied.  See the License for the\n+ * specific language governing permissions and limitations\n+ * under the License.\n+ */\n+\n+package org.apache.druid.frame.allocation;\n+\n+import org.apache.datasketches.memory.WritableMemory;\n+import org.apache.druid.collections.ResourceHolder;\n+import org.junit.Assert;\n+import org.junit.Test;\n+\n+import java.util.Optional;\n+\n+/**\n+ * Tests for {@link MemoryAllocator}, subclassed for each concrete implementation.\n+ */\n+public abstract class BaseMemoryAllocatorTest\n+{\n+  private static final int ALLOCATOR_SIZE = 10;\n+\n+  protected abstract MemoryAllocator makeAllocator(int capacity);\n+\n+  @Test\n+  public void testAllocationInSinglePass()\n+  {\n+    MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);\n+    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional = memoryAllocator.allocate(ALLOCATOR_SIZE);\n+    Assert.assertTrue(memoryResourceHolderOptional.isPresent());\n+    ResourceHolder<WritableMemory> memoryResourceHolder = memoryResourceHolderOptional.get();\n+    WritableMemory memory = memoryResourceHolder.get();\n+    for (int i = 0; i < ALLOCATOR_SIZE; ++i) {\n+      memory.putByte(i, (byte) 0xFF);\n+    }\n+  }\n+\n+  @Test\n+  public void testAllocationInMultiplePasses()\n+  {\n+    MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);\n+\n+    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional1 = memoryAllocator.allocate(ALLOCATOR_SIZE\n+                                                                                                      - 4);\n+    Assert.assertTrue(memoryResourceHolderOptional1.isPresent());\n+    ResourceHolder<WritableMemory> memoryResourceHolder1 = memoryResourceHolderOptional1.get();\n+    WritableMemory memory1 = memoryResourceHolder1.get();\n+\n+    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional2 = memoryAllocator.allocate(4);\n+    Assert.assertTrue(memoryResourceHolderOptional2.isPresent());\n+    ResourceHolder<WritableMemory> memoryResourceHolder2 = memoryResourceHolderOptional2.get();\n+    WritableMemory memory2 = memoryResourceHolder2.get();\n+\n+    for (int i = 0; i < ALLOCATOR_SIZE - 4; ++i) {\n+      memory1.putByte(i, (byte) 0xFF);\n+    }\n+    for (int i = 0; i < 4; ++i) {\n+      memory2.putByte(i, (byte) 0xFE);\n+    }\n+    // Readback to ensure that value hasn't been overwritten\n+    for (int i = 0; i < ALLOCATOR_SIZE - 4; ++i) {\n+      Assert.assertEquals((byte) 0xFF, memory1.getByte(i));\n+    }\n+    for (int i = 0; i < 4; ++i) {\n+      Assert.assertEquals((byte) 0xFE, memory2.getByte(i));\n+    }\n+  }\n+\n+  @Test\n+  public void testReleaseAllocationTwice()\n+  {\n+    final MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);\n+    final int allocationSize = 4;\n+\n+    final Optional<ResourceHolder<WritableMemory>> holder1 = memoryAllocator.allocate(allocationSize);\n+    final Optional<ResourceHolder<WritableMemory>> holder2 = memoryAllocator.allocate(allocationSize);\n+    Assert.assertTrue(holder1.isPresent());\n+    Assert.assertTrue(holder2.isPresent());\n+    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize * 2, memoryAllocator.available());\n+\n+    // Release the second allocation.\n+    holder2.get().close();\n+    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize, memoryAllocator.available());\n+\n+    // Release again-- does nothing.\n+    holder2.get().close();\n+    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize, memoryAllocator.available());\n+\n+    // Release the first allocation.\n+    holder1.get().close();\n+    Assert.assertEquals(ALLOCATOR_SIZE, memoryAllocator.available());\n+  }\n+\n+  @Test\n+  public void testReleaseLastAllocationFirst()\n+  {\n+    final MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);\n+    final int allocationSize = 4;\n+\n+    final Optional<ResourceHolder<WritableMemory>> holder1 = memoryAllocator.allocate(allocationSize);\n+    final Optional<ResourceHolder<WritableMemory>> holder2 = memoryAllocator.allocate(allocationSize);\n+    Assert.assertTrue(holder1.isPresent());\n+    Assert.assertTrue(holder2.isPresent());\n+    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize * 2, memoryAllocator.available());\n+\n+    // Release the second allocation.\n+    holder2.get().close();\n+    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize, memoryAllocator.available());\n+\n+    // Release the first allocation.\n+    holder1.get().close();\n+    Assert.assertEquals(ALLOCATOR_SIZE, memoryAllocator.available());\n+  }\n+\n+  @Test\n+  public void testReleaseLastAllocationLast()\n+  {\n+    final MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);\n+    final int allocationSize = 4;\n+\n+    final Optional<ResourceHolder<WritableMemory>> holder1 = memoryAllocator.allocate(allocationSize);\n+    final Optional<ResourceHolder<WritableMemory>> holder2 = memoryAllocator.allocate(allocationSize);\n+    Assert.assertTrue(holder1.isPresent());\n+    Assert.assertTrue(holder2.isPresent());\n+    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize * 2, memoryAllocator.available());\n+\n+    // Don't check memoryAllocator.available() after holder1 is closed; behavior is not consistent between arena\n+    // and heap. Arena won't reclaim this allocation because it wasn't the final one; heap will reclaim it.\n+    // They converge to fully-reclaimed once all allocations are closed.\n+    holder1.get().close();\n+    holder2.get().close();\n+    Assert.assertEquals(ALLOCATOR_SIZE, memoryAllocator.available());\n+  }\n+\n+  @Test\n+  public void testOverallocationInSinglePass()\n+  {\n+    MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);\n+    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional =\n+        memoryAllocator.allocate(ALLOCATOR_SIZE + 1);\n+    Assert.assertFalse(memoryResourceHolderOptional.isPresent());\n+  }\n+\n+  @Test\n+  public void testOverallocationInMultiplePasses()\n+  {\n+    MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);\n+    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional =\n+        memoryAllocator.allocate(ALLOCATOR_SIZE - 4);\n+    Assert.assertTrue(memoryResourceHolderOptional.isPresent());\n+    Assert.assertFalse(memoryAllocator.allocate(5).isPresent());\n+  }\n+}\n"}
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java\n+++ b/processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java\n@@ -19,79 +19,12 @@\n \n package org.apache.druid.frame.allocation;\n \n-import org.apache.datasketches.memory.WritableMemory;\n-import org.apache.druid.collections.ResourceHolder;\n-import org.junit.Assert;\n-import org.junit.Test;\n-\n-import java.util.Optional;\n-\n-public class HeapMemoryAllocatorTest\n+public class HeapMemoryAllocatorTest extends BaseMemoryAllocatorTest\n {\n-  private static final int ALLOCATOR_SIZE = 10;\n-\n-  @Test\n-  public void testAllocationInSinglePass()\n+  @Override\n+  protected MemoryAllocator makeAllocator(int capacity)\n   {\n-    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);\n-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional = heapMemoryAllocator.allocate(ALLOCATOR_SIZE);\n-    Assert.assertTrue(memoryResourceHolderOptional.isPresent());\n-    ResourceHolder<WritableMemory> memoryResourceHolder = memoryResourceHolderOptional.get();\n-    WritableMemory memory = memoryResourceHolder.get();\n-    for (int i = 0; i < ALLOCATOR_SIZE; ++i) {\n-      memory.putByte(i, (byte) 0xFF);\n-    }\n-  }\n-\n-  @Test\n-  public void testAllocationInMultiplePasses()\n-  {\n-    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);\n-\n-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional1 = heapMemoryAllocator.allocate(ALLOCATOR_SIZE\n-                                                                                                          - 4);\n-    Assert.assertTrue(memoryResourceHolderOptional1.isPresent());\n-    ResourceHolder<WritableMemory> memoryResourceHolder1 = memoryResourceHolderOptional1.get();\n-    WritableMemory memory1 = memoryResourceHolder1.get();\n-\n-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional2 = heapMemoryAllocator.allocate(4);\n-    Assert.assertTrue(memoryResourceHolderOptional2.isPresent());\n-    ResourceHolder<WritableMemory> memoryResourceHolder2 = memoryResourceHolderOptional2.get();\n-    WritableMemory memory2 = memoryResourceHolder2.get();\n-\n-    for (int i = 0; i < ALLOCATOR_SIZE - 4; ++i) {\n-      memory1.putByte(i, (byte) 0xFF);\n-    }\n-    for (int i = 0; i < 4; ++i) {\n-      memory2.putByte(i, (byte) 0xFE);\n-    }\n-    // Readback to ensure that value hasn't been overwritten\n-    for (int i = 0; i < ALLOCATOR_SIZE - 4; ++i) {\n-      Assert.assertEquals((byte) 0xFF, memory1.getByte(i));\n-    }\n-    for (int i = 0; i < 4; ++i) {\n-      Assert.assertEquals((byte) 0xFE, memory2.getByte(i));\n-    }\n-  }\n-\n-  @Test\n-  public void testOverallocationInSinglePass()\n-  {\n-    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);\n-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional =\n-        heapMemoryAllocator.allocate(ALLOCATOR_SIZE + 1);\n-    Assert.assertFalse(memoryResourceHolderOptional.isPresent());\n+    return new HeapMemoryAllocator(capacity);\n   }\n-\n-  @Test\n-  public void testOverallocationInMultiplePasses()\n-  {\n-    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);\n-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional =\n-        heapMemoryAllocator.allocate(ALLOCATOR_SIZE - 4);\n-    Assert.assertTrue(memoryResourceHolderOptional.isPresent());\n-    Assert.assertFalse(heapMemoryAllocator.allocate(5).isPresent());\n-  }\n-\n }\n"}
+The large `HeapMemoryAllocatorTest` replacement hunk needs to be split as well; I’ll validate its import/class change and method removals separately.
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java\n+++ b/processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java\n@@ -20,10 +20,3 @@\n package org.apache.druid.frame.allocation;\n \n-import org.apache.datasketches.memory.WritableMemory;\n-import org.apache.druid.collections.ResourceHolder;\n-import org.junit.Assert;\n-import org.junit.Test;\n-\n-import java.util.Optional;\n-\n-public class HeapMemoryAllocatorTest\n+public class HeapMemoryAllocatorTest extends BaseMemoryAllocatorTest\n"}
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java\n+++ b/processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java\n@@ -18,14 +18,7 @@\n  */\n \n package org.apache.druid.frame.allocation;\n \n-import org.apache.datasketches.memory.WritableMemory;\n-import org.apache.druid.collections.ResourceHolder;\n-import org.junit.Assert;\n-import org.junit.Test;\n-\n-import java.util.Optional;\n-\n-public class HeapMemoryAllocatorTest\n+public class HeapMemoryAllocatorTest extends BaseMemoryAllocatorTest\n {\n   private static final int ALLOCATOR_SIZE = 10;\n"}
+The import/class hunk for `HeapMemoryAllocatorTest` validates. To avoid line-count mistakes in the large method-removal hunk, I’m checking the exact file line numbering before validating that final test refactor hunk.
+[0m→ [0mRead processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java[90m [offset=18, limit=90][0m
+`HeapMemoryAllocatorTest` is 96 lines on this target, not 97, so the earlier large hunk count was one line too high. I’m validating the corrected replacement hunk.
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java\n+++ b/processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java\n@@ -19,78 +19,12 @@\n \n package org.apache.druid.frame.allocation;\n \n-import org.apache.datasketches.memory.WritableMemory;\n-import org.apache.druid.collections.ResourceHolder;\n-import org.junit.Assert;\n-import org.junit.Test;\n-\n-import java.util.Optional;\n-\n-public class HeapMemoryAllocatorTest\n+public class HeapMemoryAllocatorTest extends BaseMemoryAllocatorTest\n {\n-  private static final int ALLOCATOR_SIZE = 10;\n-\n-  @Test\n-  public void testAllocationInSinglePass()\n+  @Override\n+  protected MemoryAllocator makeAllocator(int capacity)\n   {\n-    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);\n-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional = heapMemoryAllocator.allocate(ALLOCATOR_SIZE);\n-    Assert.assertTrue(memoryResourceHolderOptional.isPresent());\n-    ResourceHolder<WritableMemory> memoryResourceHolder = memoryResourceHolderOptional.get();\n-    WritableMemory memory = memoryResourceHolder.get();\n-    for (int i = 0; i < ALLOCATOR_SIZE; ++i) {\n-      memory.putByte(i, (byte) 0xFF);\n-    }\n-  }\n-\n-  @Test\n-  public void testAllocationInMultiplePasses()\n-  {\n-    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);\n-\n-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional1 = heapMemoryAllocator.allocate(ALLOCATOR_SIZE\n-                                                                                                          - 4);\n-    Assert.assertTrue(memoryResourceHolderOptional1.isPresent());\n-    ResourceHolder<WritableMemory> memoryResourceHolder1 = memoryResourceHolderOptional1.get();\n-    WritableMemory memory1 = memoryResourceHolder1.get();\n-\n-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional2 = heapMemoryAllocator.allocate(4);\n-    Assert.assertTrue(memoryResourceHolderOptional2.isPresent());\n-    ResourceHolder<WritableMemory> memoryResourceHolder2 = memoryResourceHolderOptional2.get();\n-    WritableMemory memory2 = memoryResourceHolder2.get();\n-\n-    for (int i = 0; i < ALLOCATOR_SIZE - 4; ++i) {\n-      memory1.putByte(i, (byte) 0xFF);\n-    }\n-    for (int i = 0; i < 4; ++i) {\n-      memory2.putByte(i, (byte) 0xFE);\n-    }\n-    // Readback to ensure that value hasn't been overwritten\n-    for (int i = 0; i < ALLOCATOR_SIZE - 4; ++i) {\n-      Assert.assertEquals((byte) 0xFF, memory1.getByte(i));\n-    }\n-    for (int i = 0; i < 4; ++i) {\n-      Assert.assertEquals((byte) 0xFE, memory2.getByte(i));\n-    }\n-  }\n-\n-  @Test\n-  public void testOverallocationInSinglePass()\n-  {\n-    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);\n-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional =\n-        heapMemoryAllocator.allocate(ALLOCATOR_SIZE + 1);\n-    Assert.assertFalse(memoryResourceHolderOptional.isPresent());\n+    return new HeapMemoryAllocator(capacity);\n   }\n-\n-  @Test\n-  public void testOverallocationInMultiplePasses()\n-  {\n-    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);\n-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional =\n-        heapMemoryAllocator.allocate(ALLOCATOR_SIZE - 4);\n-    Assert.assertTrue(memoryResourceHolderOptional.isPresent());\n-    Assert.assertFalse(heapMemoryAllocator.allocate(5).isPresent());\n-  }\n-\n }\n"}
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java\n+++ b/processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java\n@@ -19,78 +19,11 @@\n \n package org.apache.druid.frame.allocation;\n \n-import org.apache.datasketches.memory.WritableMemory;\n-import org.apache.druid.collections.ResourceHolder;\n-import org.junit.Assert;\n-import org.junit.Test;\n-\n-import java.util.Optional;\n-\n-public class HeapMemoryAllocatorTest\n+public class HeapMemoryAllocatorTest extends BaseMemoryAllocatorTest\n {\n-  private static final int ALLOCATOR_SIZE = 10;\n-\n-  @Test\n-  public void testAllocationInSinglePass()\n+  @Override\n+  protected MemoryAllocator makeAllocator(int capacity)\n   {\n-    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);\n-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional = heapMemoryAllocator.allocate(ALLOCATOR_SIZE);\n-    Assert.assertTrue(memoryResourceHolderOptional.isPresent());\n-    ResourceHolder<WritableMemory> memoryResourceHolder = memoryResourceHolderOptional.get();\n-    WritableMemory memory = memoryResourceHolder.get();\n-    for (int i = 0; i < ALLOCATOR_SIZE; ++i) {\n-      memory.putByte(i, (byte) 0xFF);\n-    }\n-  }\n-\n-  @Test\n-  public void testAllocationInMultiplePasses()\n-  {\n-    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);\n-\n-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional1 = heapMemoryAllocator.allocate(ALLOCATOR_SIZE\n-                                                                                                          - 4);\n-    Assert.assertTrue(memoryResourceHolderOptional1.isPresent());\n-    ResourceHolder<WritableMemory> memoryResourceHolder1 = memoryResourceHolderOptional1.get();\n-    WritableMemory memory1 = memoryResourceHolder1.get();\n-\n-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional2 = heapMemoryAllocator.allocate(4);\n-    Assert.assertTrue(memoryResourceHolderOptional2.isPresent());\n-    ResourceHolder<WritableMemory> memoryResourceHolder2 = memoryResourceHolderOptional2.get();\n-    WritableMemory memory2 = memoryResourceHolder2.get();\n-\n-    for (int i = 0; i < ALLOCATOR_SIZE - 4; ++i) {\n-      memory1.putByte(i, (byte) 0xFF);\n-    }\n-    for (int i = 0; i < 4; ++i) {\n-      memory2.putByte(i, (byte) 0xFE);\n-    }\n-    // Readback to ensure that value hasn't been overwritten\n-    for (int i = 0; i < ALLOCATOR_SIZE - 4; ++i) {\n-      Assert.assertEquals((byte) 0xFF, memory1.getByte(i));\n-    }\n-    for (int i = 0; i < 4; ++i) {\n-      Assert.assertEquals((byte) 0xFE, memory2.getByte(i));\n-    }\n-  }\n-\n-  @Test\n-  public void testOverallocationInSinglePass()\n-  {\n-    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);\n-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional =\n-        heapMemoryAllocator.allocate(ALLOCATOR_SIZE + 1);\n-    Assert.assertFalse(memoryResourceHolderOptional.isPresent());\n+    return new HeapMemoryAllocator(capacity);\n   }\n-\n-  @Test\n-  public void testOverallocationInMultiplePasses()\n-  {\n-    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);\n-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional =\n-        heapMemoryAllocator.allocate(ALLOCATOR_SIZE - 4);\n-    Assert.assertTrue(memoryResourceHolderOptional.isPresent());\n-    Assert.assertFalse(heapMemoryAllocator.allocate(5).isPresent());\n-  }\n-\n }\n"}
+[0m→ [0mRead processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java[90m [offset=19, limit=70][0m
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java\n+++ b/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java\n@@ -22,13 +22,27 @@\n import com.google.common.collect.ImmutableList;\n+import com.google.common.collect.ImmutableMap;\n+import org.apache.druid.data.input.MapBasedRow;\n+import org.apache.druid.data.input.Row;\n+import org.apache.druid.frame.Frame;\n import org.apache.druid.frame.allocation.AppendableMemory;\n+import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;\n import org.apache.druid.frame.allocation.HeapMemoryAllocator;\n import org.apache.druid.frame.field.LongFieldWriter;\n+import org.apache.druid.frame.read.FrameReader;\n+import org.apache.druid.frame.testutil.FrameTestUtil;\n+import org.apache.druid.java.util.common.StringUtils;\n+import org.apache.druid.java.util.common.guava.Sequences;\n+import org.apache.druid.segment.ColumnSelectorFactory;\n+import org.apache.druid.segment.RowAdapters;\n+import org.apache.druid.segment.RowBasedColumnSelectorFactory;\n import org.apache.druid.segment.column.ColumnType;\n import org.apache.druid.segment.column.RowSignature;\n+import org.apache.druid.testing.InitializedNullHandlingTest;\n import org.easymock.EasyMock;\n import org.junit.Assert;\n import org.junit.Test;\n \n+import java.util.Arrays;\n import java.util.Collections;\n \n-public class RowBasedFrameWriterTest\n+public class RowBasedFrameWriterTest extends InitializedNullHandlingTest\n"}
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java\n+++ b/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java\n@@ -20,17 +20,31 @@\n package org.apache.druid.frame.write;\n \n import com.google.common.collect.ImmutableList;\n+import com.google.common.collect.ImmutableMap;\n+import org.apache.druid.data.input.MapBasedRow;\n+import org.apache.druid.data.input.Row;\n+import org.apache.druid.frame.Frame;\n import org.apache.druid.frame.allocation.AppendableMemory;\n+import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;\n import org.apache.druid.frame.allocation.HeapMemoryAllocator;\n import org.apache.druid.frame.field.LongFieldWriter;\n+import org.apache.druid.frame.read.FrameReader;\n+import org.apache.druid.frame.testutil.FrameTestUtil;\n+import org.apache.druid.java.util.common.StringUtils;\n+import org.apache.druid.java.util.common.guava.Sequences;\n+import org.apache.druid.segment.ColumnSelectorFactory;\n+import org.apache.druid.segment.RowAdapters;\n+import org.apache.druid.segment.RowBasedColumnSelectorFactory;\n import org.apache.druid.segment.column.ColumnType;\n import org.apache.druid.segment.column.RowSignature;\n+import org.apache.druid.testing.InitializedNullHandlingTest;\n import org.easymock.EasyMock;\n import org.junit.Assert;\n import org.junit.Test;\n \n+import java.util.Arrays;\n import java.util.Collections;\n \n-public class RowBasedFrameWriterTest\n+public class RowBasedFrameWriterTest extends InitializedNullHandlingTest\n {\n   @Test\n"}
+`RowBasedFrameWriterTest` import/class changes validate. I’m validating the inserted large-row test plus the existing test rename.
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java\n+++ b/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java\n@@ -35,6 +35,49 @@\n public class RowBasedFrameWriterTest\n {\n   @Test\n-  public void testAddSelectionWithException()\n+  public void test_addSelection_singleLargeRow()\n+  {\n+    final RowSignature signature =\n+        RowSignature.builder()\n+                    .add(\"n\", ColumnType.LONG)\n+                    .add(\"s\", ColumnType.STRING)\n+                    .build();\n+\n+    final byte[] largeUtf8 = new byte[990000];\n+    Arrays.fill(largeUtf8, (byte) 'F');\n+    final String largeString = StringUtils.fromUtf8(largeUtf8);\n+    final Row largeRow = new MapBasedRow(0L, ImmutableMap.of(\"n\", 3L, \"s\", largeString));\n+\n+    final FrameWriterFactory frameWriterFactory = FrameWriters.makeRowBasedFrameWriterFactory(\n+        new ArenaMemoryAllocatorFactory(1_000_000),\n+        signature,\n+        ImmutableList.of(),\n+        false\n+    );\n+\n+    final ColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(\n+        RowAdapters.standardRow(),\n+        () -> largeRow,\n+        signature,\n+        false,\n+        false\n+    );\n+\n+    final Frame frame;\n+    try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(columnSelectorFactory)) {\n+      Assert.assertTrue(frameWriter.addSelection());\n+      frame = Frame.wrap(frameWriter.toByteArray());\n+    }\n+\n+    FrameTestUtil.assertRowsEqual(\n+        Sequences.simple(Collections.singletonList(ImmutableList.of(3L, largeString))),\n+        FrameTestUtil.readRowsFromCursorFactory(FrameReader.create(signature).makeCursorFactory(frame))\n+    );\n+  }\n+\n+  @Test\n+  public void test_addSelection_withException()\n   {\n     String colName = \"colName\";\n     String errorMsg = \"Frame writer exception\";\n"}
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java\n+++ b/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java\n@@ -35,6 +35,50 @@\n public class RowBasedFrameWriterTest\n {\n   @Test\n-  public void testAddSelectionWithException()\n+  public void test_addSelection_singleLargeRow()\n+  {\n+    final RowSignature signature =\n+        RowSignature.builder()\n+                    .add(\"n\", ColumnType.LONG)\n+                    .add(\"s\", ColumnType.STRING)\n+                    .build();\n+\n+    final byte[] largeUtf8 = new byte[990000];\n+    Arrays.fill(largeUtf8, (byte) 'F');\n+    final String largeString = StringUtils.fromUtf8(largeUtf8);\n+    final Row largeRow = new MapBasedRow(0L, ImmutableMap.of(\"n\", 3L, \"s\", largeString));\n+\n+    final FrameWriterFactory frameWriterFactory = FrameWriters.makeRowBasedFrameWriterFactory(\n+        new ArenaMemoryAllocatorFactory(1_000_000),\n+        signature,\n+        ImmutableList.of(),\n+        false\n+    );\n+\n+    final ColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(\n+        RowAdapters.standardRow(),\n+        () -> largeRow,\n+        signature,\n+        false,\n+        false\n+    );\n+\n+    final Frame frame;\n+    try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(columnSelectorFactory)) {\n+      Assert.assertTrue(frameWriter.addSelection());\n+      frame = Frame.wrap(frameWriter.toByteArray());\n+    }\n+\n+    FrameTestUtil.assertRowsEqual(\n+        Sequences.simple(Collections.singletonList(ImmutableList.of(3L, largeString))),\n+        FrameTestUtil.readRowsFromCursorFactory(FrameReader.create(signature).makeCursorFactory(frame))\n+    );\n+  }\n+\n+  @Test\n+  public void test_addSelection_withException()\n   {\n     String colName = \"colName\";\n     String errorMsg = \"Frame writer exception\";\n"}
+The combined insert-and-rename hunk count is still off, so I’m splitting it into a pure insertion hunk and a one-line rename hunk.
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java\n+++ b/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java\n@@ -35,6 +35,49 @@\n public class RowBasedFrameWriterTest\n {\n+  @Test\n+  public void test_addSelection_singleLargeRow()\n+  {\n+    final RowSignature signature =\n+        RowSignature.builder()\n+                    .add(\"n\", ColumnType.LONG)\n+                    .add(\"s\", ColumnType.STRING)\n+                    .build();\n+\n+    final byte[] largeUtf8 = new byte[990000];\n+    Arrays.fill(largeUtf8, (byte) 'F');\n+    final String largeString = StringUtils.fromUtf8(largeUtf8);\n+    final Row largeRow = new MapBasedRow(0L, ImmutableMap.of(\"n\", 3L, \"s\", largeString));\n+\n+    final FrameWriterFactory frameWriterFactory = FrameWriters.makeRowBasedFrameWriterFactory(\n+        new ArenaMemoryAllocatorFactory(1_000_000),\n+        signature,\n+        ImmutableList.of(),\n+        false\n+    );\n+\n+    final ColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(\n+        RowAdapters.standardRow(),\n+        () -> largeRow,\n+        signature,\n+        false,\n+        false\n+    );\n+\n+    final Frame frame;\n+    try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(columnSelectorFactory)) {\n+      Assert.assertTrue(frameWriter.addSelection());\n+      frame = Frame.wrap(frameWriter.toByteArray());\n+    }\n+\n+    FrameTestUtil.assertRowsEqual(\n+        Sequences.simple(Collections.singletonList(ImmutableList.of(3L, largeString))),\n+        FrameTestUtil.readRowsFromCursorFactory(FrameReader.create(signature).makeCursorFactory(frame))\n+    );\n+  }\n+\n   @Test\n   public void testAddSelectionWithException()\n   {\n"}
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java\n+++ b/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java\n@@ -35,5 +35,48 @@\n public class RowBasedFrameWriterTest\n {\n+  @Test\n+  public void test_addSelection_singleLargeRow()\n+  {\n+    final RowSignature signature =\n+        RowSignature.builder()\n+                    .add(\"n\", ColumnType.LONG)\n+                    .add(\"s\", ColumnType.STRING)\n+                    .build();\n+\n+    final byte[] largeUtf8 = new byte[990000];\n+    Arrays.fill(largeUtf8, (byte) 'F');\n+    final String largeString = StringUtils.fromUtf8(largeUtf8);\n+    final Row largeRow = new MapBasedRow(0L, ImmutableMap.of(\"n\", 3L, \"s\", largeString));\n+\n+    final FrameWriterFactory frameWriterFactory = FrameWriters.makeRowBasedFrameWriterFactory(\n+        new ArenaMemoryAllocatorFactory(1_000_000),\n+        signature,\n+        ImmutableList.of(),\n+        false\n+    );\n+\n+    final ColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(\n+        RowAdapters.standardRow(),\n+        () -> largeRow,\n+        signature,\n+        false,\n+        false\n+    );\n+\n+    final Frame frame;\n+    try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(columnSelectorFactory)) {\n+      Assert.assertTrue(frameWriter.addSelection());\n+      frame = Frame.wrap(frameWriter.toByteArray());\n+    }\n+\n+    FrameTestUtil.assertRowsEqual(\n+        Sequences.simple(Collections.singletonList(ImmutableList.of(3L, largeString))),\n+        FrameTestUtil.readRowsFromCursorFactory(FrameReader.create(signature).makeCursorFactory(frame))\n+    );\n+  }\n+\n   @Test\n   public void testAddSelectionWithException()\n   {\n"}
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java\n+++ b/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java\n@@ -35,7 +35,50 @@\n public class RowBasedFrameWriterTest\n {\n+  @Test\n+  public void test_addSelection_singleLargeRow()\n+  {\n+    final RowSignature signature =\n+        RowSignature.builder()\n+                    .add(\"n\", ColumnType.LONG)\n+                    .add(\"s\", ColumnType.STRING)\n+                    .build();\n+\n+    final byte[] largeUtf8 = new byte[990000];\n+    Arrays.fill(largeUtf8, (byte) 'F');\n+    final String largeString = StringUtils.fromUtf8(largeUtf8);\n+    final Row largeRow = new MapBasedRow(0L, ImmutableMap.of(\"n\", 3L, \"s\", largeString));\n+\n+    final FrameWriterFactory frameWriterFactory = FrameWriters.makeRowBasedFrameWriterFactory(\n+        new ArenaMemoryAllocatorFactory(1_000_000),\n+        signature,\n+        ImmutableList.of(),\n+        false\n+    );\n+\n+    final ColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(\n+        RowAdapters.standardRow(),\n+        () -> largeRow,\n+        signature,\n+        false,\n+        false\n+    );\n+\n+    final Frame frame;\n+    try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(columnSelectorFactory)) {\n+      Assert.assertTrue(frameWriter.addSelection());\n+      frame = Frame.wrap(frameWriter.toByteArray());\n+    }\n+\n+    FrameTestUtil.assertRowsEqual(\n+        Sequences.simple(Collections.singletonList(ImmutableList.of(3L, largeString))),\n+        FrameTestUtil.readRowsFromCursorFactory(FrameReader.create(signature).makeCursorFactory(frame))\n+    );\n+  }\n+\n   @Test\n   public void testAddSelectionWithException()\n   {\n     String colName = \"colName\";\n     String errorMsg = \"Frame writer exception\";\n"}
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java\n+++ b/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java\n@@ -35,7 +35,49 @@\n public class RowBasedFrameWriterTest\n {\n+  @Test\n+  public void test_addSelection_singleLargeRow()\n+  {\n+    final RowSignature signature =\n+        RowSignature.builder()\n+                    .add(\"n\", ColumnType.LONG)\n+                    .add(\"s\", ColumnType.STRING)\n+                    .build();\n+\n+    final byte[] largeUtf8 = new byte[990000];\n+    Arrays.fill(largeUtf8, (byte) 'F');\n+    final String largeString = StringUtils.fromUtf8(largeUtf8);\n+    final Row largeRow = new MapBasedRow(0L, ImmutableMap.of(\"n\", 3L, \"s\", largeString));\n+\n+    final FrameWriterFactory frameWriterFactory = FrameWriters.makeRowBasedFrameWriterFactory(\n+        new ArenaMemoryAllocatorFactory(1_000_000),\n+        signature,\n+        ImmutableList.of(),\n+        false\n+    );\n+\n+    final ColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(\n+        RowAdapters.standardRow(),\n+        () -> largeRow,\n+        signature,\n+        false,\n+        false\n+    );\n+\n+    final Frame frame;\n+    try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(columnSelectorFactory)) {\n+      Assert.assertTrue(frameWriter.addSelection());\n+      frame = Frame.wrap(frameWriter.toByteArray());\n+    }\n+\n+    FrameTestUtil.assertRowsEqual(\n+        Sequences.simple(Collections.singletonList(ImmutableList.of(3L, largeString))),\n+        FrameTestUtil.readRowsFromCursorFactory(FrameReader.create(signature).makeCursorFactory(frame))\n+    );\n+  }\n   @Test\n   public void testAddSelectionWithException()\n   {\n     String colName = \"colName\";\n     String errorMsg = \"Frame writer exception\";\n"}
+The validator continues to reject the large inserted test hunk due to formatting/count parsing, not source context. I’m going to validate a smaller representative insertion shape and keep the final patch in standard unified-diff form.
+To generate exact hunk headers and avoid hand-count errors, I’ll apply the intended changes to the current checkout with `apply_patch`, then use `git diff` as the final patch source.
+[0m% [0mPatch 9 files
+The changes are applied locally so I can generate exact unified diff output. I’ll inspect the resulting diff and validate the generated hunks in hunk mode where not already validated.
+[0m
+[0m$ [0mgit diff -- extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java processing/src/main/java/org/apache/druid/frame/allocation/HeapMemoryAllocator.java processing/src/main/java/org/apache/druid/frame/write/RowBasedFrameWriter.java processing/src/test/java/org/apache/druid/frame/allocation/ArenaMemoryAllocatorTest.java processing/src/test/java/org/apache/druid/frame/allocation/BaseMemoryAllocatorTest.java processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java
+warning: in the working copy of 'extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'processing/src/main/java/org/apache/druid/frame/allocation/HeapMemoryAllocator.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'processing/src/main/java/org/apache/druid/frame/write/RowBasedFrameWriter.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java', LF will be replaced by CRLF the next time Git touches it
+diff --git a/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java
+index 486014101c..5c8adbd89f 100644
+--- a/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java
++++ b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java
+@@ -1805,7 +1805,7 @@ public class MSQWindowTest extends MSQTestBase
+         .setSql(
+             "select cityName, added, SUM(added) OVER () cc from wikipedia")
+         .setQueryContext(customContext)
+-        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15921, 200))
++        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15922, 200))
+         .verifyResults();
+   }
+ 
+diff --git a/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java b/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java
+index 11edf396c9..045610f49e 100644
+--- a/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java
++++ b/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java
+@@ -54,10 +54,10 @@ public class AppendableMemory implements Closeable
+   // One holder for every Memory we've allocated.
+   private final List<ResourceHolder<WritableMemory>> blockHolders = new ArrayList<>();
+ 
+-  // The amount of space that has been used from each Memory block. Same length as "memoryHolders".
++  // The amount of space that has been used from each Memory block. Same length as "blockHolders".
+   private final IntList limits = new IntArrayList();
+ 
+-  // The global starting position for each Memory block (blockNumber -> position). Same length as "memoryHolders".
++  // The global starting position for each Memory block (blockNumber -> position). Same length as "blockHolders".
+   private final LongArrayList globalStartPositions = new LongArrayList();
+ 
+   // Whether the blocks we've allocated are "packed"; meaning all non-final block limits equal the allocationSize.
+@@ -104,6 +104,36 @@ public class AppendableMemory implements Closeable
+     return cursor;
+   }
+ 
++  /**
++   * Maximum number that can be successfully passed to {@link #reserveAdditional(int)}.
++   */
++  public int availableToReserve()
++  {
++    final int currentBlockIdx = currentBlockNumber();
++    final long availableInCurrentBlock;
++    final boolean currentBlockIsEmpty;
++
++    if (currentBlockIdx < 0) {
++      availableInCurrentBlock = 0;
++      currentBlockIsEmpty = false;
++    } else {
++      final int usedInCurrentBlock = limits.getInt(currentBlockIdx);
++      availableInCurrentBlock = blockHolders.get(currentBlockIdx).get().getCapacity() - usedInCurrentBlock;
++      currentBlockIsEmpty = usedInCurrentBlock == 0;
++    }
++
++    // If currentBlockIsEmpty, add availableInCurrentBlock to account for reclamation in reclaimLastBlockIfEmpty().
++    final long availableInAllocator = allocator.available() + (currentBlockIsEmpty ? availableInCurrentBlock : 0);
++
++    return (int) Math.min(
++        Integer.MAX_VALUE,
++        Math.max(
++            availableInAllocator,
++            availableInCurrentBlock
++        )
++    );
++  }
++
+   /**
+    * Ensure that at least "bytes" amount of space is available after the cursor. Allocates a new block if needed.
+    * Note: the amount of bytes is guaranteed to be in a *single* block.
+@@ -126,11 +156,13 @@ public class AppendableMemory implements Closeable
+       return true;
+     }
+ 
++    releaseLastBlockIfEmpty();
++
+     if (bytes > allocator.available()) {
+       return false;
+     }
+ 
+-    final int idx = blockHolders.size() - 1;
++    final int idx = currentBlockNumber();
+ 
+     if (idx < 0 || bytes + limits.getInt(idx) > blockHolders.get(idx).get().getCapacity()) {
+       // Allocation needed.
+@@ -228,6 +260,10 @@ public class AppendableMemory implements Closeable
+     cursor.set(currentBlockMemory, newLimit, currentBlockMemory.getCapacity() - newLimit);
+   }
+ 
++  /**
++   * Current used size, in bytes.
++   */
++
+   public long size()
+   {
+     long sz = 0;
+@@ -295,12 +331,21 @@ public class AppendableMemory implements Closeable
+     cursor.set(blockMemory, 0, blockMemory.getCapacity());
+   }
+ 
+-  private int currentBlockNumber()
++  private void releaseLastBlockIfEmpty()
+   {
+-    if (blockHolders.isEmpty()) {
+-      return NO_BLOCK;
+-    } else {
+-      return blockHolders.size() - 1;
++    final int lastBlockNumber = currentBlockNumber();
++    if (lastBlockNumber != NO_BLOCK && limits.getInt(lastBlockNumber) == 0) {
++      blockHolders.remove(lastBlockNumber).close();
++      limits.removeInt(lastBlockNumber);
+     }
+   }
++
++  /**
++   * Returns the index into {@link #blockHolders} and {@link #limits} of the current block, or {@link #NO_BLOCK}
++   * if there are no blocks.
++   */
++  private int currentBlockNumber()
++  {
++    return blockHolders.size() - 1;
++  }
+ }
+diff --git a/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java b/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java
+index 7b8c23e293..ebc4933355 100644
+--- a/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java
++++ b/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java
+@@ -37,6 +37,7 @@ public class ArenaMemoryAllocator implements MemoryAllocator
+   private final WritableMemory arena;
+   private long allocations = 0;
+   private long position = 0;
++  private WritableMemory lastAllocation;
+ 
+   private ArenaMemoryAllocator(WritableMemory arena)
+   {
+@@ -64,20 +65,23 @@ public class ArenaMemoryAllocator implements MemoryAllocator
+   @Override
+   public Optional<ResourceHolder<WritableMemory>> allocate(final long size)
+   {
+-    if (position + size < arena.getCapacity()) {
++    if (position + size <= arena.getCapacity()) {
+       final long start = position;
+       allocations++;
+       position += size;
+ 
++      final WritableMemory memory = arena.writableRegion(start, size, ByteOrder.LITTLE_ENDIAN);
++      lastAllocation = memory;
++
+       return Optional.of(
+           new ResourceHolder<WritableMemory>()
+           {
+-            private WritableMemory memory = arena.writableRegion(start, size, ByteOrder.LITTLE_ENDIAN);
++            boolean closed;
+ 
+             @Override
+             public WritableMemory get()
+             {
+-              if (memory == null) {
++              if (closed) {
+                 throw new ISE("Already closed");
+               }
+ 
+@@ -87,10 +91,21 @@ public class ArenaMemoryAllocator implements MemoryAllocator
+             @Override
+             public void close()
+             {
+-              memory = null;
++              if (closed) {
++                return;
++              }
++
++              closed = true;
++
++              //noinspection ObjectEquality
++              if (memory == lastAllocation) {
++                // Last allocation closed; decrement position to enable partial arena reuse.
++                position -= memory.getCapacity();
++                lastAllocation = null;
++              }
+ 
+               if (--allocations == 0) {
+-                // All allocations closed; reset position to enable arena reuse.
++                // All allocations closed; reset position to enable full arena reuse.
+                 position = 0;
+               }
+             }
+diff --git a/processing/src/main/java/org/apache/druid/frame/allocation/HeapMemoryAllocator.java b/processing/src/main/java/org/apache/druid/frame/allocation/HeapMemoryAllocator.java
+index ee3af073f8..a78c53c4a3 100644
+--- a/processing/src/main/java/org/apache/druid/frame/allocation/HeapMemoryAllocator.java
++++ b/processing/src/main/java/org/apache/druid/frame/allocation/HeapMemoryAllocator.java
+@@ -77,8 +77,10 @@ public class HeapMemoryAllocator implements MemoryAllocator
+             @Override
+             public void close()
+             {
+-              memory = null;
+-              bytesAllocated -= size;
++              if (memory != null) {
++                memory = null;
++                bytesAllocated -= size;
++              }
+             }
+           }
+       );
+diff --git a/processing/src/main/java/org/apache/druid/frame/write/RowBasedFrameWriter.java b/processing/src/main/java/org/apache/druid/frame/write/RowBasedFrameWriter.java
+index beae50dca9..c33b4c32b8 100644
+--- a/processing/src/main/java/org/apache/druid/frame/write/RowBasedFrameWriter.java
++++ b/processing/src/main/java/org/apache/druid/frame/write/RowBasedFrameWriter.java
+@@ -23,6 +23,7 @@ import com.google.common.base.Throwables;
+ import com.google.common.primitives.Ints;
+ import org.apache.datasketches.memory.Memory;
+ import org.apache.datasketches.memory.WritableMemory;
++import org.apache.druid.error.DruidException;
+ import org.apache.druid.frame.Frame;
+ import org.apache.druid.frame.FrameType;
+ import org.apache.druid.frame.allocation.AppendableMemory;
+@@ -313,10 +314,22 @@ public class RowBasedFrameWriter implements FrameWriter
+         // Reset to beginning of loop.
+         i = -1;
+ 
++        final int priorAllocation = BASE_DATA_ALLOCATION_SIZE * reserveMultiple;
++
+         // Try again with a bigger allocation.
+         reserveMultiple *= 2;
+ 
+-        if (!dataMemory.reserveAdditional(Ints.checkedCast((long) BASE_DATA_ALLOCATION_SIZE * reserveMultiple))) {
++        final int nextAllocation = Math.min(
++            dataMemory.availableToReserve(),
++            Ints.checkedCast((long) BASE_DATA_ALLOCATION_SIZE * reserveMultiple)
++        );
++
++        if (nextAllocation > priorAllocation) {
++          if (!dataMemory.reserveAdditional(nextAllocation)) {
++            // Shouldn't see this unless availableToReserve lied to us.
++            throw DruidException.defensive("Unexpected failure of dataMemory.reserveAdditional");
++          }
++        } else {
+           return false;
+         }
+ 
+diff --git a/processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java b/processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java
+index ac69eaee8a..67f63d312f 100644
+--- a/processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java
++++ b/processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java
+@@ -19,78 +19,11 @@
+ 
+ package org.apache.druid.frame.allocation;
+ 
+-import org.apache.datasketches.memory.WritableMemory;
+-import org.apache.druid.collections.ResourceHolder;
+-import org.junit.Assert;
+-import org.junit.Test;
+-
+-import java.util.Optional;
+-
+-public class HeapMemoryAllocatorTest
++public class HeapMemoryAllocatorTest extends BaseMemoryAllocatorTest
+ {
+-  private static final int ALLOCATOR_SIZE = 10;
+-
+-  @Test
+-  public void testAllocationInSinglePass()
+-  {
+-    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);
+-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional = heapMemoryAllocator.allocate(ALLOCATOR_SIZE);
+-    Assert.assertTrue(memoryResourceHolderOptional.isPresent());
+-    ResourceHolder<WritableMemory> memoryResourceHolder = memoryResourceHolderOptional.get();
+-    WritableMemory memory = memoryResourceHolder.get();
+-    for (int i = 0; i < ALLOCATOR_SIZE; ++i) {
+-      memory.putByte(i, (byte) 0xFF);
+-    }
+-  }
+-
+-  @Test
+-  public void testAllocationInMultiplePasses()
+-  {
+-    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);
+-
+-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional1 = heapMemoryAllocator.allocate(ALLOCATOR_SIZE
+-                                                                                                          - 4);
+-    Assert.assertTrue(memoryResourceHolderOptional1.isPresent());
+-    ResourceHolder<WritableMemory> memoryResourceHolder1 = memoryResourceHolderOptional1.get();
+-    WritableMemory memory1 = memoryResourceHolder1.get();
+-
+-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional2 = heapMemoryAllocator.allocate(4);
+-    Assert.assertTrue(memoryResourceHolderOptional2.isPresent());
+-    ResourceHolder<WritableMemory> memoryResourceHolder2 = memoryResourceHolderOptional2.get();
+-    WritableMemory memory2 = memoryResourceHolder2.get();
+-
+-    for (int i = 0; i < ALLOCATOR_SIZE - 4; ++i) {
+-      memory1.putByte(i, (byte) 0xFF);
+-    }
+-    for (int i = 0; i < 4; ++i) {
+-      memory2.putByte(i, (byte) 0xFE);
+-    }
+-    // Readback to ensure that value hasn't been overwritten
+-    for (int i = 0; i < ALLOCATOR_SIZE - 4; ++i) {
+-      Assert.assertEquals((byte) 0xFF, memory1.getByte(i));
+-    }
+-    for (int i = 0; i < 4; ++i) {
+-      Assert.assertEquals((byte) 0xFE, memory2.getByte(i));
+-    }
+-  }
+-
+-  @Test
+-  public void testOverallocationInSinglePass()
++  @Override
++  protected MemoryAllocator makeAllocator(int capacity)
+   {
+-    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);
+-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional =
+-        heapMemoryAllocator.allocate(ALLOCATOR_SIZE + 1);
+-    Assert.assertFalse(memoryResourceHolderOptional.isPresent());
++    return new HeapMemoryAllocator(capacity);
+   }
+-
+-  @Test
+-  public void testOverallocationInMultiplePasses()
+-  {
+-    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);
+-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional =
+-        heapMemoryAllocator.allocate(ALLOCATOR_SIZE - 4);
+-    Assert.assertTrue(memoryResourceHolderOptional.isPresent());
+-    Assert.assertFalse(heapMemoryAllocator.allocate(5).isPresent());
+-  }
+-
+ }
+diff --git a/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java b/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java
+index bb7f9e5587..593004abb6 100644
+--- a/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java
++++ b/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java
+@@ -20,21 +20,76 @@
+ package org.apache.druid.frame.write;
+ 
+ import com.google.common.collect.ImmutableList;
++import com.google.common.collect.ImmutableMap;
++import org.apache.druid.data.input.MapBasedRow;
++import org.apache.druid.data.input.Row;
++import org.apache.druid.frame.Frame;
+ import org.apache.druid.frame.allocation.AppendableMemory;
++import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
+ import org.apache.druid.frame.allocation.HeapMemoryAllocator;
+ import org.apache.druid.frame.field.LongFieldWriter;
++import org.apache.druid.frame.read.FrameReader;
++import org.apache.druid.frame.testutil.FrameTestUtil;
++import org.apache.druid.java.util.common.StringUtils;
++import org.apache.druid.java.util.common.guava.Sequences;
++import org.apache.druid.segment.ColumnSelectorFactory;
++import org.apache.druid.segment.RowAdapters;
++import org.apache.druid.segment.RowBasedColumnSelectorFactory;
+ import org.apache.druid.segment.column.ColumnType;
+ import org.apache.druid.segment.column.RowSignature;
++import org.apache.druid.testing.InitializedNullHandlingTest;
+ import org.easymock.EasyMock;
+ import org.junit.Assert;
+ import org.junit.Test;
+ 
++import java.util.Arrays;
+ import java.util.Collections;
+ 
+-public class RowBasedFrameWriterTest
++public class RowBasedFrameWriterTest extends InitializedNullHandlingTest
+ {
+   @Test
+-  public void testAddSelectionWithException()
++  public void test_addSelection_singleLargeRow()
++  {
++    final RowSignature signature =
++        RowSignature.builder()
++                    .add("n", ColumnType.LONG)
++                    .add("s", ColumnType.STRING)
++                    .build();
++
++    final byte[] largeUtf8 = new byte[990000];
++    Arrays.fill(largeUtf8, (byte) 'F');
++    final String largeString = StringUtils.fromUtf8(largeUtf8);
++    final Row largeRow = new MapBasedRow(0L, ImmutableMap.of("n", 3L, "s", largeString));
++
++    final FrameWriterFactory frameWriterFactory = FrameWriters.makeRowBasedFrameWriterFactory(
++        new ArenaMemoryAllocatorFactory(1_000_000),
++        signature,
++        ImmutableList.of(),
++        false
++    );
++
++    final ColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(
++        RowAdapters.standardRow(),
++        () -> largeRow,
++        signature,
++        false,
++        false
++    );
++
++    final Frame frame;
++    try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(columnSelectorFactory)) {
++      Assert.assertTrue(frameWriter.addSelection());
++      frame = Frame.wrap(frameWriter.toByteArray());
++    }
++
++    FrameTestUtil.assertRowsEqual(
++        Sequences.simple(Collections.singletonList(ImmutableList.of(3L, largeString))),
++        FrameTestUtil.readRowsFromCursorFactory(FrameReader.create(signature).makeCursorFactory(frame))
++    );
++  }
++
++  @Test
++  public void test_addSelection_withException()
+   {
+     String colName = "colName";
+     String errorMsg = "Frame writer exception";
+[0m
+The generated diff shows one minor formatting drift in `AppendableMemory` (an extra blank line after the new `size` Javadoc). I’ll remove that to match the original change intent, then capture the final patch including untracked new test files.
+[0m% [0mPatch 1 file
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java\n+++ b/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java\n@@ -20,21 +20,76 @@\n package org.apache.druid.frame.write;\n \n import com.google.common.collect.ImmutableList;\n+import com.google.common.collect.ImmutableMap;\n+import org.apache.druid.data.input.MapBasedRow;\n+import org.apache.druid.data.input.Row;\n+import org.apache.druid.frame.Frame;\n import org.apache.druid.frame.allocation.AppendableMemory;\n+import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;\n import org.apache.druid.frame.allocation.HeapMemoryAllocator;\n import org.apache.druid.frame.field.LongFieldWriter;\n+import org.apache.druid.frame.read.FrameReader;\n+import org.apache.druid.frame.testutil.FrameTestUtil;\n+import org.apache.druid.java.util.common.StringUtils;\n+import org.apache.druid.java.util.common.guava.Sequences;\n+import org.apache.druid.segment.ColumnSelectorFactory;\n+import org.apache.druid.segment.RowAdapters;\n+import org.apache.druid.segment.RowBasedColumnSelectorFactory;\n import org.apache.druid.segment.column.ColumnType;\n import org.apache.druid.segment.column.RowSignature;\n+import org.apache.druid.testing.InitializedNullHandlingTest;\n import org.easymock.EasyMock;\n import org.junit.Assert;\n import org.junit.Test;\n \n+import java.util.Arrays;\n import java.util.Collections;\n \n-public class RowBasedFrameWriterTest\n+public class RowBasedFrameWriterTest extends InitializedNullHandlingTest\n {\n   @Test\n-  public void testAddSelectionWithException()\n+  public void test_addSelection_singleLargeRow()\n+  {\n+    final RowSignature signature =\n+        RowSignature.builder()\n+                    .add(\"n\", ColumnType.LONG)\n+                    .add(\"s\", ColumnType.STRING)\n+                    .build();\n+\n+    final byte[] largeUtf8 = new byte[990000];\n+    Arrays.fill(largeUtf8, (byte) 'F');\n+    final String largeString = StringUtils.fromUtf8(largeUtf8);\n+    final Row largeRow = new MapBasedRow(0L, ImmutableMap.of(\"n\", 3L, \"s\", largeString));\n+\n+    final FrameWriterFactory frameWriterFactory = FrameWriters.makeRowBasedFrameWriterFactory(\n+        new ArenaMemoryAllocatorFactory(1_000_000),\n+        signature,\n+        ImmutableList.of(),\n+        false\n+    );\n+\n+    final ColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(\n+        RowAdapters.standardRow(),\n+        () -> largeRow,\n+        signature,\n+        false,\n+        false\n+    );\n+\n+    final Frame frame;\n+    try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(columnSelectorFactory)) {\n+      Assert.assertTrue(frameWriter.addSelection());\n+      frame = Frame.wrap(frameWriter.toByteArray());\n+    }\n+\n+    FrameTestUtil.assertRowsEqual(\n+        Sequences.simple(Collections.singletonList(ImmutableList.of(3L, largeString))),\n+        FrameTestUtil.readRowsFromCursorFactory(FrameReader.create(signature).makeCursorFactory(frame))\n+    );\n+  }\n+\n+  @Test\n+  public void test_addSelection_withException()\n   {\n     String colName = \"colName\";\n     String errorMsg = \"Frame writer exception\";\n"}
+The full generated `RowBasedFrameWriterTest` hunk context matches but the validator wants additional trailing context. I’ll validate an equivalent hunk with two more unchanged lines after the renamed method.
+[0m⚙ [0mvalidate {"ref":"2f2807d3798e651cec0b04cc43aec1a53b9ba7b5","mode":"hunk","patch":"--- a/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java\n+++ b/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java\n@@ -20,23 +20,78 @@\n package org.apache.druid.frame.write;\n \n import com.google.common.collect.ImmutableList;\n+import com.google.common.collect.ImmutableMap;\n+import org.apache.druid.data.input.MapBasedRow;\n+import org.apache.druid.data.input.Row;\n+import org.apache.druid.frame.Frame;\n import org.apache.druid.frame.allocation.AppendableMemory;\n+import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;\n import org.apache.druid.frame.allocation.HeapMemoryAllocator;\n import org.apache.druid.frame.field.LongFieldWriter;\n+import org.apache.druid.frame.read.FrameReader;\n+import org.apache.druid.frame.testutil.FrameTestUtil;\n+import org.apache.druid.java.util.common.StringUtils;\n+import org.apache.druid.java.util.common.guava.Sequences;\n+import org.apache.druid.segment.ColumnSelectorFactory;\n+import org.apache.druid.segment.RowAdapters;\n+import org.apache.druid.segment.RowBasedColumnSelectorFactory;\n import org.apache.druid.segment.column.ColumnType;\n import org.apache.druid.segment.column.RowSignature;\n+import org.apache.druid.testing.InitializedNullHandlingTest;\n import org.easymock.EasyMock;\n import org.junit.Assert;\n import org.junit.Test;\n \n+import java.util.Arrays;\n import java.util.Collections;\n \n-public class RowBasedFrameWriterTest\n+public class RowBasedFrameWriterTest extends InitializedNullHandlingTest\n {\n   @Test\n-  public void testAddSelectionWithException()\n+  public void test_addSelection_singleLargeRow()\n+  {\n+    final RowSignature signature =\n+        RowSignature.builder()\n+                    .add(\"n\", ColumnType.LONG)\n+                    .add(\"s\", ColumnType.STRING)\n+                    .build();\n+\n+    final byte[] largeUtf8 = new byte[990000];\n+    Arrays.fill(largeUtf8, (byte) 'F');\n+    final String largeString = StringUtils.fromUtf8(largeUtf8);\n+    final Row largeRow = new MapBasedRow(0L, ImmutableMap.of(\"n\", 3L, \"s\", largeString));\n+\n+    final FrameWriterFactory frameWriterFactory = FrameWriters.makeRowBasedFrameWriterFactory(\n+        new ArenaMemoryAllocatorFactory(1_000_000),\n+        signature,\n+        ImmutableList.of(),\n+        false\n+    );\n+\n+    final ColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(\n+        RowAdapters.standardRow(),\n+        () -> largeRow,\n+        signature,\n+        false,\n+        false\n+    );\n+\n+    final Frame frame;\n+    try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(columnSelectorFactory)) {\n+      Assert.assertTrue(frameWriter.addSelection());\n+      frame = Frame.wrap(frameWriter.toByteArray());\n+    }\n+\n+    FrameTestUtil.assertRowsEqual(\n+        Sequences.simple(Collections.singletonList(ImmutableList.of(3L, largeString))),\n+        FrameTestUtil.readRowsFromCursorFactory(FrameReader.create(signature).makeCursorFactory(frame))\n+    );\n+  }\n+\n+  @Test\n+  public void test_addSelection_withException()\n   {\n     String colName = \"colName\";\n     String errorMsg = \"Frame writer exception\";\n \n     final RowSignature signature = RowSignature.builder().add(colName, ColumnType.LONG).build();\n"}
+[0m
+[0m$ [0mgit diff -- extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java processing/src/main/java/org/apache/druid/frame/allocation/HeapMemoryAllocator.java processing/src/main/java/org/apache/druid/frame/write/RowBasedFrameWriter.java processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java
+warning: in the working copy of 'extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'processing/src/main/java/org/apache/druid/frame/allocation/HeapMemoryAllocator.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'processing/src/main/java/org/apache/druid/frame/write/RowBasedFrameWriter.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java', LF will be replaced by CRLF the next time Git touches it
+diff --git a/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java
+index 486014101c..5c8adbd89f 100644
+--- a/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java
++++ b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java
+@@ -1805,7 +1805,7 @@ public class MSQWindowTest extends MSQTestBase
+         .setSql(
+             "select cityName, added, SUM(added) OVER () cc from wikipedia")
+         .setQueryContext(customContext)
+-        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15921, 200))
++        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15922, 200))
+         .verifyResults();
+   }
+ 
+diff --git a/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java b/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java
+index 11edf396c9..8d961f298c 100644
+--- a/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java
++++ b/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java
+@@ -54,10 +54,10 @@ public class AppendableMemory implements Closeable
+   // One holder for every Memory we've allocated.
+   private final List<ResourceHolder<WritableMemory>> blockHolders = new ArrayList<>();
+ 
+-  // The amount of space that has been used from each Memory block. Same length as "memoryHolders".
++  // The amount of space that has been used from each Memory block. Same length as "blockHolders".
+   private final IntList limits = new IntArrayList();
+ 
+-  // The global starting position for each Memory block (blockNumber -> position). Same length as "memoryHolders".
++  // The global starting position for each Memory block (blockNumber -> position). Same length as "blockHolders".
+   private final LongArrayList globalStartPositions = new LongArrayList();
+ 
+   // Whether the blocks we've allocated are "packed"; meaning all non-final block limits equal the allocationSize.
+@@ -104,6 +104,36 @@ public class AppendableMemory implements Closeable
+     return cursor;
+   }
+ 
++  /**
++   * Maximum number that can be successfully passed to {@link #reserveAdditional(int)}.
++   */
++  public int availableToReserve()
++  {
++    final int currentBlockIdx = currentBlockNumber();
++    final long availableInCurrentBlock;
++    final boolean currentBlockIsEmpty;
++
++    if (currentBlockIdx < 0) {
++      availableInCurrentBlock = 0;
++      currentBlockIsEmpty = false;
++    } else {
++      final int usedInCurrentBlock = limits.getInt(currentBlockIdx);
++      availableInCurrentBlock = blockHolders.get(currentBlockIdx).get().getCapacity() - usedInCurrentBlock;
++      currentBlockIsEmpty = usedInCurrentBlock == 0;
++    }
++
++    // If currentBlockIsEmpty, add availableInCurrentBlock to account for reclamation in reclaimLastBlockIfEmpty().
++    final long availableInAllocator = allocator.available() + (currentBlockIsEmpty ? availableInCurrentBlock : 0);
++
++    return (int) Math.min(
++        Integer.MAX_VALUE,
++        Math.max(
++            availableInAllocator,
++            availableInCurrentBlock
++        )
++    );
++  }
++
+   /**
+    * Ensure that at least "bytes" amount of space is available after the cursor. Allocates a new block if needed.
+    * Note: the amount of bytes is guaranteed to be in a *single* block.
+@@ -126,11 +156,13 @@ public class AppendableMemory implements Closeable
+       return true;
+     }
+ 
++    releaseLastBlockIfEmpty();
++
+     if (bytes > allocator.available()) {
+       return false;
+     }
+ 
+-    final int idx = blockHolders.size() - 1;
++    final int idx = currentBlockNumber();
+ 
+     if (idx < 0 || bytes + limits.getInt(idx) > blockHolders.get(idx).get().getCapacity()) {
+       // Allocation needed.
+@@ -228,6 +260,9 @@ public class AppendableMemory implements Closeable
+     cursor.set(currentBlockMemory, newLimit, currentBlockMemory.getCapacity() - newLimit);
+   }
+ 
++  /**
++   * Current used size, in bytes.
++   */
+   public long size()
+   {
+     long sz = 0;
+@@ -295,12 +330,21 @@ public class AppendableMemory implements Closeable
+     cursor.set(blockMemory, 0, blockMemory.getCapacity());
+   }
+ 
+-  private int currentBlockNumber()
++  private void releaseLastBlockIfEmpty()
+   {
+-    if (blockHolders.isEmpty()) {
+-      return NO_BLOCK;
+-    } else {
+-      return blockHolders.size() - 1;
++    final int lastBlockNumber = currentBlockNumber();
++    if (lastBlockNumber != NO_BLOCK && limits.getInt(lastBlockNumber) == 0) {
++      blockHolders.remove(lastBlockNumber).close();
++      limits.removeInt(lastBlockNumber);
+     }
+   }
++
++  /**
++   * Returns the index into {@link #blockHolders} and {@link #limits} of the current block, or {@link #NO_BLOCK}
++   * if there are no blocks.
++   */
++  private int currentBlockNumber()
++  {
++    return blockHolders.size() - 1;
++  }
+ }
+diff --git a/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java b/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java
+index 7b8c23e293..ebc4933355 100644
+--- a/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java
++++ b/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java
+@@ -37,6 +37,7 @@ public class ArenaMemoryAllocator implements MemoryAllocator
+   private final WritableMemory arena;
+   private long allocations = 0;
+   private long position = 0;
++  private WritableMemory lastAllocation;
+ 
+   private ArenaMemoryAllocator(WritableMemory arena)
+   {
+@@ -64,20 +65,23 @@ public class ArenaMemoryAllocator implements MemoryAllocator
+   @Override
+   public Optional<ResourceHolder<WritableMemory>> allocate(final long size)
+   {
+-    if (position + size < arena.getCapacity()) {
++    if (position + size <= arena.getCapacity()) {
+       final long start = position;
+       allocations++;
+       position += size;
+ 
++      final WritableMemory memory = arena.writableRegion(start, size, ByteOrder.LITTLE_ENDIAN);
++      lastAllocation = memory;
++
+       return Optional.of(
+           new ResourceHolder<WritableMemory>()
+           {
+-            private WritableMemory memory = arena.writableRegion(start, size, ByteOrder.LITTLE_ENDIAN);
++            boolean closed;
+ 
+             @Override
+             public WritableMemory get()
+             {
+-              if (memory == null) {
++              if (closed) {
+                 throw new ISE("Already closed");
+               }
+ 
+@@ -87,10 +91,21 @@ public class ArenaMemoryAllocator implements MemoryAllocator
+             @Override
+             public void close()
+             {
+-              memory = null;
++              if (closed) {
++                return;
++              }
++
++              closed = true;
++
++              //noinspection ObjectEquality
++              if (memory == lastAllocation) {
++                // Last allocation closed; decrement position to enable partial arena reuse.
++                position -= memory.getCapacity();
++                lastAllocation = null;
++              }
+ 
+               if (--allocations == 0) {
+-                // All allocations closed; reset position to enable arena reuse.
++                // All allocations closed; reset position to enable full arena reuse.
+                 position = 0;
+               }
+             }
+diff --git a/processing/src/main/java/org/apache/druid/frame/allocation/HeapMemoryAllocator.java b/processing/src/main/java/org/apache/druid/frame/allocation/HeapMemoryAllocator.java
+index ee3af073f8..a78c53c4a3 100644
+--- a/processing/src/main/java/org/apache/druid/frame/allocation/HeapMemoryAllocator.java
++++ b/processing/src/main/java/org/apache/druid/frame/allocation/HeapMemoryAllocator.java
+@@ -77,8 +77,10 @@ public class HeapMemoryAllocator implements MemoryAllocator
+             @Override
+             public void close()
+             {
+-              memory = null;
+-              bytesAllocated -= size;
++              if (memory != null) {
++                memory = null;
++                bytesAllocated -= size;
++              }
+             }
+           }
+       );
+diff --git a/processing/src/main/java/org/apache/druid/frame/write/RowBasedFrameWriter.java b/processing/src/main/java/org/apache/druid/frame/write/RowBasedFrameWriter.java
+index beae50dca9..c33b4c32b8 100644
+--- a/processing/src/main/java/org/apache/druid/frame/write/RowBasedFrameWriter.java
++++ b/processing/src/main/java/org/apache/druid/frame/write/RowBasedFrameWriter.java
+@@ -23,6 +23,7 @@ import com.google.common.base.Throwables;
+ import com.google.common.primitives.Ints;
+ import org.apache.datasketches.memory.Memory;
+ import org.apache.datasketches.memory.WritableMemory;
++import org.apache.druid.error.DruidException;
+ import org.apache.druid.frame.Frame;
+ import org.apache.druid.frame.FrameType;
+ import org.apache.druid.frame.allocation.AppendableMemory;
+@@ -313,10 +314,22 @@ public class RowBasedFrameWriter implements FrameWriter
+         // Reset to beginning of loop.
+         i = -1;
+ 
++        final int priorAllocation = BASE_DATA_ALLOCATION_SIZE * reserveMultiple;
++
+         // Try again with a bigger allocation.
+         reserveMultiple *= 2;
+ 
+-        if (!dataMemory.reserveAdditional(Ints.checkedCast((long) BASE_DATA_ALLOCATION_SIZE * reserveMultiple))) {
++        final int nextAllocation = Math.min(
++            dataMemory.availableToReserve(),
++            Ints.checkedCast((long) BASE_DATA_ALLOCATION_SIZE * reserveMultiple)
++        );
++
++        if (nextAllocation > priorAllocation) {
++          if (!dataMemory.reserveAdditional(nextAllocation)) {
++            // Shouldn't see this unless availableToReserve lied to us.
++            throw DruidException.defensive("Unexpected failure of dataMemory.reserveAdditional");
++          }
++        } else {
+           return false;
+         }
+ 
+diff --git a/processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java b/processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java
+index ac69eaee8a..67f63d312f 100644
+--- a/processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java
++++ b/processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java
+@@ -19,78 +19,11 @@
+ 
+ package org.apache.druid.frame.allocation;
+ 
+-import org.apache.datasketches.memory.WritableMemory;
+-import org.apache.druid.collections.ResourceHolder;
+-import org.junit.Assert;
+-import org.junit.Test;
+-
+-import java.util.Optional;
+-
+-public class HeapMemoryAllocatorTest
++public class HeapMemoryAllocatorTest extends BaseMemoryAllocatorTest
+ {
+-  private static final int ALLOCATOR_SIZE = 10;
+-
+-  @Test
+-  public void testAllocationInSinglePass()
+-  {
+-    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);
+-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional = heapMemoryAllocator.allocate(ALLOCATOR_SIZE);
+-    Assert.assertTrue(memoryResourceHolderOptional.isPresent());
+-    ResourceHolder<WritableMemory> memoryResourceHolder = memoryResourceHolderOptional.get();
+-    WritableMemory memory = memoryResourceHolder.get();
+-    for (int i = 0; i < ALLOCATOR_SIZE; ++i) {
+-      memory.putByte(i, (byte) 0xFF);
+-    }
+-  }
+-
+-  @Test
+-  public void testAllocationInMultiplePasses()
+-  {
+-    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);
+-
+-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional1 = heapMemoryAllocator.allocate(ALLOCATOR_SIZE
+-                                                                                                          - 4);
+-    Assert.assertTrue(memoryResourceHolderOptional1.isPresent());
+-    ResourceHolder<WritableMemory> memoryResourceHolder1 = memoryResourceHolderOptional1.get();
+-    WritableMemory memory1 = memoryResourceHolder1.get();
+-
+-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional2 = heapMemoryAllocator.allocate(4);
+-    Assert.assertTrue(memoryResourceHolderOptional2.isPresent());
+-    ResourceHolder<WritableMemory> memoryResourceHolder2 = memoryResourceHolderOptional2.get();
+-    WritableMemory memory2 = memoryResourceHolder2.get();
+-
+-    for (int i = 0; i < ALLOCATOR_SIZE - 4; ++i) {
+-      memory1.putByte(i, (byte) 0xFF);
+-    }
+-    for (int i = 0; i < 4; ++i) {
+-      memory2.putByte(i, (byte) 0xFE);
+-    }
+-    // Readback to ensure that value hasn't been overwritten
+-    for (int i = 0; i < ALLOCATOR_SIZE - 4; ++i) {
+-      Assert.assertEquals((byte) 0xFF, memory1.getByte(i));
+-    }
+-    for (int i = 0; i < 4; ++i) {
+-      Assert.assertEquals((byte) 0xFE, memory2.getByte(i));
+-    }
+-  }
+-
+-  @Test
+-  public void testOverallocationInSinglePass()
++  @Override
++  protected MemoryAllocator makeAllocator(int capacity)
+   {
+-    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);
+-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional =
+-        heapMemoryAllocator.allocate(ALLOCATOR_SIZE + 1);
+-    Assert.assertFalse(memoryResourceHolderOptional.isPresent());
++    return new HeapMemoryAllocator(capacity);
+   }
+-
+-  @Test
+-  public void testOverallocationInMultiplePasses()
+-  {
+-    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);
+-    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional =
+-        heapMemoryAllocator.allocate(ALLOCATOR_SIZE - 4);
+-    Assert.assertTrue(memoryResourceHolderOptional.isPresent());
+-    Assert.assertFalse(heapMemoryAllocator.allocate(5).isPresent());
+-  }
+-
+ }
+diff --git a/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java b/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java
+index bb7f9e5587..593004abb6 100644
+--- a/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java
++++ b/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java
+@@ -20,21 +20,76 @@
+ package org.apache.druid.frame.write;
+ 
+ import com.google.common.collect.ImmutableList;
++import com.google.common.collect.ImmutableMap;
++import org.apache.druid.data.input.MapBasedRow;
++import org.apache.druid.data.input.Row;
++import org.apache.druid.frame.Frame;
+ import org.apache.druid.frame.allocation.AppendableMemory;
++import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
+ import org.apache.druid.frame.allocation.HeapMemoryAllocator;
+ import org.apache.druid.frame.field.LongFieldWriter;
++import org.apache.druid.frame.read.FrameReader;
++import org.apache.druid.frame.testutil.FrameTestUtil;
++import org.apache.druid.java.util.common.StringUtils;
++import org.apache.druid.java.util.common.guava.Sequences;
++import org.apache.druid.segment.ColumnSelectorFactory;
++import org.apache.druid.segment.RowAdapters;
++import org.apache.druid.segment.RowBasedColumnSelectorFactory;
+ import org.apache.druid.segment.column.ColumnType;
+ import org.apache.druid.segment.column.RowSignature;
++import org.apache.druid.testing.InitializedNullHandlingTest;
+ import org.easymock.EasyMock;
+ import org.junit.Assert;
+ import org.junit.Test;
+ 
++import java.util.Arrays;
+ import java.util.Collections;
+ 
+-public class RowBasedFrameWriterTest
++public class RowBasedFrameWriterTest extends InitializedNullHandlingTest
+ {
+   @Test
+-  public void testAddSelectionWithException()
++  public void test_addSelection_singleLargeRow()
++  {
++    final RowSignature signature =
++        RowSignature.builder()
++                    .add("n", ColumnType.LONG)
++                    .add("s", ColumnType.STRING)
++                    .build();
++
++    final byte[] largeUtf8 = new byte[990000];
++    Arrays.fill(largeUtf8, (byte) 'F');
++    final String largeString = StringUtils.fromUtf8(largeUtf8);
++    final Row largeRow = new MapBasedRow(0L, ImmutableMap.of("n", 3L, "s", largeString));
++
++    final FrameWriterFactory frameWriterFactory = FrameWriters.makeRowBasedFrameWriterFactory(
++        new ArenaMemoryAllocatorFactory(1_000_000),
++        signature,
++        ImmutableList.of(),
++        false
++    );
++
++    final ColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(
++        RowAdapters.standardRow(),
++        () -> largeRow,
++        signature,
++        false,
++        false
++    );
++
++    final Frame frame;
++    try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(columnSelectorFactory)) {
++      Assert.assertTrue(frameWriter.addSelection());
++      frame = Frame.wrap(frameWriter.toByteArray());
++    }
++
++    FrameTestUtil.assertRowsEqual(
++        Sequences.simple(Collections.singletonList(ImmutableList.of(3L, largeString))),
++        FrameTestUtil.readRowsFromCursorFactory(FrameReader.create(signature).makeCursorFactory(frame))
++    );
++  }
++
++  @Test
++  public void test_addSelection_withException()
+   {
+     String colName = "colName";
+     String errorMsg = "Frame writer exception";
+[0m
+All production hunks and most test hunks validated in hunk mode; the full `RowBasedFrameWriterTest` hunk is standard `git diff` output but the custom hunk validator rejects it despite reporting 100% matching context. I’m now collecting the new-file diffs for the final YAML patch.
+[0m$ [0mgit diff --no-index -- /dev/null "processing/src/test/java/org/apache/druid/frame/allocation/ArenaMemoryAllocatorTest.java"
+warning: in the working copy of 'processing/src/test/java/org/apache/druid/frame/allocation/ArenaMemoryAllocatorTest.java', LF will be replaced by CRLF the next time Git touches it
+diff --git a/processing/src/test/java/org/apache/druid/frame/allocation/ArenaMemoryAllocatorTest.java b/processing/src/test/java/org/apache/druid/frame/allocation/ArenaMemoryAllocatorTest.java
+new file mode 100644
+index 0000000000..e1a637ea04
+--- /dev/null
++++ b/processing/src/test/java/org/apache/druid/frame/allocation/ArenaMemoryAllocatorTest.java
+@@ -0,0 +1,29 @@
++/*
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *   http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing,
++ * software distributed under the License is distributed on an
++ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
++ * KIND, either express or implied.  See the License for the
++ * specific language governing permissions and limitations
++ * under the License.
++ */
++
++package org.apache.druid.frame.allocation;
++
++public class ArenaMemoryAllocatorTest extends BaseMemoryAllocatorTest
++{
++  @Override
++  protected MemoryAllocator makeAllocator(int capacity)
++  {
++    return ArenaMemoryAllocator.createOnHeap(capacity);
++  }
++}
+[0m
+[0m$ [0mgit diff --no-index -- /dev/null "processing/src/test/java/org/apache/druid/frame/allocation/BaseMemoryAllocatorTest.java"
+warning: in the working copy of 'processing/src/test/java/org/apache/druid/frame/allocation/BaseMemoryAllocatorTest.java', LF will be replaced by CRLF the next time Git touches it
+diff --git a/processing/src/test/java/org/apache/druid/frame/allocation/BaseMemoryAllocatorTest.java b/processing/src/test/java/org/apache/druid/frame/allocation/BaseMemoryAllocatorTest.java
+new file mode 100644
+index 0000000000..cd3952accd
+--- /dev/null
++++ b/processing/src/test/java/org/apache/druid/frame/allocation/BaseMemoryAllocatorTest.java
+@@ -0,0 +1,166 @@
++/*
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *   http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing,
++ * software distributed under the License is distributed on an
++ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
++ * KIND, either express or implied.  See the License for the
++ * specific language governing permissions and limitations
++ * under the License.
++ */
++
++package org.apache.druid.frame.allocation;
++
++import org.apache.datasketches.memory.WritableMemory;
++import org.apache.druid.collections.ResourceHolder;
++import org.junit.Assert;
++import org.junit.Test;
++
++import java.util.Optional;
++
++/**
++ * Tests for {@link MemoryAllocator}, subclassed for each concrete implementation.
++ */
++public abstract class BaseMemoryAllocatorTest
++{
++  private static final int ALLOCATOR_SIZE = 10;
++
++  protected abstract MemoryAllocator makeAllocator(int capacity);
++
++  @Test
++  public void testAllocationInSinglePass()
++  {
++    MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);
++    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional = memoryAllocator.allocate(ALLOCATOR_SIZE);
++    Assert.assertTrue(memoryResourceHolderOptional.isPresent());
++    ResourceHolder<WritableMemory> memoryResourceHolder = memoryResourceHolderOptional.get();
++    WritableMemory memory = memoryResourceHolder.get();
++    for (int i = 0; i < ALLOCATOR_SIZE; ++i) {
++      memory.putByte(i, (byte) 0xFF);
++    }
++  }
++
++  @Test
++  public void testAllocationInMultiplePasses()
++  {
++    MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);
++
++    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional1 = memoryAllocator.allocate(ALLOCATOR_SIZE
++                                                                                                      - 4);
++    Assert.assertTrue(memoryResourceHolderOptional1.isPresent());
++    ResourceHolder<WritableMemory> memoryResourceHolder1 = memoryResourceHolderOptional1.get();
++    WritableMemory memory1 = memoryResourceHolder1.get();
++
++    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional2 = memoryAllocator.allocate(4);
++    Assert.assertTrue(memoryResourceHolderOptional2.isPresent());
++    ResourceHolder<WritableMemory> memoryResourceHolder2 = memoryResourceHolderOptional2.get();
++    WritableMemory memory2 = memoryResourceHolder2.get();
++
++    for (int i = 0; i < ALLOCATOR_SIZE - 4; ++i) {
++      memory1.putByte(i, (byte) 0xFF);
++    }
++    for (int i = 0; i < 4; ++i) {
++      memory2.putByte(i, (byte) 0xFE);
++    }
++    // Readback to ensure that value hasn't been overwritten
++    for (int i = 0; i < ALLOCATOR_SIZE - 4; ++i) {
++      Assert.assertEquals((byte) 0xFF, memory1.getByte(i));
++    }
++    for (int i = 0; i < 4; ++i) {
++      Assert.assertEquals((byte) 0xFE, memory2.getByte(i));
++    }
++  }
++
++  @Test
++  public void testReleaseAllocationTwice()
++  {
++    final MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);
++    final int allocationSize = 4;
++
++    final Optional<ResourceHolder<WritableMemory>> holder1 = memoryAllocator.allocate(allocationSize);
++    final Optional<ResourceHolder<WritableMemory>> holder2 = memoryAllocator.allocate(allocationSize);
++    Assert.assertTrue(holder1.isPresent());
++    Assert.assertTrue(holder2.isPresent());
++    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize * 2, memoryAllocator.available());
++
++    // Release the second allocation.
++    holder2.get().close();
++    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize, memoryAllocator.available());
++
++    // Release again-- does nothing.
++    holder2.get().close();
++    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize, memoryAllocator.available());
++
++    // Release the first allocation.
++    holder1.get().close();
++    Assert.assertEquals(ALLOCATOR_SIZE, memoryAllocator.available());
++  }
++
++  @Test
++  public void testReleaseLastAllocationFirst()
++  {
++    final MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);
++    final int allocationSize = 4;
++
++    final Optional<ResourceHolder<WritableMemory>> holder1 = memoryAllocator.allocate(allocationSize);
++    final Optional<ResourceHolder<WritableMemory>> holder2 = memoryAllocator.allocate(allocationSize);
++    Assert.assertTrue(holder1.isPresent());
++    Assert.assertTrue(holder2.isPresent());
++    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize * 2, memoryAllocator.available());
++
++    // Release the second allocation.
++    holder2.get().close();
++    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize, memoryAllocator.available());
++
++    // Release the first allocation.
++    holder1.get().close();
++    Assert.assertEquals(ALLOCATOR_SIZE, memoryAllocator.available());
++  }
++
++  @Test
++  public void testReleaseLastAllocationLast()
++  {
++    final MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);
++    final int allocationSize = 4;
++
++    final Optional<ResourceHolder<WritableMemory>> holder1 = memoryAllocator.allocate(allocationSize);
++    final Optional<ResourceHolder<WritableMemory>> holder2 = memoryAllocator.allocate(allocationSize);
++    Assert.assertTrue(holder1.isPresent());
++    Assert.assertTrue(holder2.isPresent());
++    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize * 2, memoryAllocator.available());
++
++    // Don't check memoryAllocator.available() after holder1 is closed; behavior is not consistent between arena
++    // and heap. Arena won't reclaim this allocation because it wasn't the final one; heap will reclaim it.
++    // They converge to fully-reclaimed once all allocations are closed.
++    holder1.get().close();
++    holder2.get().close();
++    Assert.assertEquals(ALLOCATOR_SIZE, memoryAllocator.available());
++  }
++
++  @Test
++  public void testOverallocationInSinglePass()
++  {
++    MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);
++    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional =
++        memoryAllocator.allocate(ALLOCATOR_SIZE + 1);
++    Assert.assertFalse(memoryResourceHolderOptional.isPresent());
++  }
++
++  @Test
++  public void testOverallocationInMultiplePasses()
++  {
++    MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);
++    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional =
++        memoryAllocator.allocate(ALLOCATOR_SIZE - 4);
++    Assert.assertTrue(memoryResourceHolderOptional.isPresent());
++    Assert.assertFalse(memoryAllocator.allocate(5).isPresent());
++  }
++}
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch contexts for all changed files
+[✓] Construct unified diff adapted to 31.0.0 parent
+[✓] Validate each patch hunk with validate mode=hunk
+[•] Return parseable YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java
+    index 486014101c..5c8adbd89f 100644
+    --- a/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java
+    +++ b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java
+    @@ -1805,7 +1805,7 @@ public class MSQWindowTest extends MSQTestBase
+             .setSql(
+                 "select cityName, added, SUM(added) OVER () cc from wikipedia")
+             .setQueryContext(customContext)
+    -        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15921, 200))
+    +        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15922, 200))
+             .verifyResults();
+       }
+     
+    diff --git a/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java b/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java
+    index 11edf396c9..8d961f298c 100644
+    --- a/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java
+    +++ b/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java
+    @@ -54,10 +54,10 @@ public class AppendableMemory implements Closeable
+       // One holder for every Memory we've allocated.
+       private final List<ResourceHolder<WritableMemory>> blockHolders = new ArrayList<>();
+     
+    -  // The amount of space that has been used from each Memory block. Same length as "memoryHolders".
+    +  // The amount of space that has been used from each Memory block. Same length as "blockHolders".
+       private final IntList limits = new IntArrayList();
+     
+    -  // The global starting position for each Memory block (blockNumber -> position). Same length as "memoryHolders".
+    +  // The global starting position for each Memory block (blockNumber -> position). Same length as "blockHolders".
+       private final LongArrayList globalStartPositions = new LongArrayList();
+     
+       // Whether the blocks we've allocated are "packed"; meaning all non-final block limits equal the allocationSize.
+    @@ -104,6 +104,36 @@ public class AppendableMemory implements Closeable
+         return cursor;
+       }
+     
+    +  /**
+    +   * Maximum number that can be successfully passed to {@link #reserveAdditional(int)}.
+    +   */
+    +  public int availableToReserve()
+    +  {
+    +    final int currentBlockIdx = currentBlockNumber();
+    +    final long availableInCurrentBlock;
+    +    final boolean currentBlockIsEmpty;
+    +
+    +    if (currentBlockIdx < 0) {
+    +      availableInCurrentBlock = 0;
+    +      currentBlockIsEmpty = false;
+    +    } else {
+    +      final int usedInCurrentBlock = limits.getInt(currentBlockIdx);
+    +      availableInCurrentBlock = blockHolders.get(currentBlockIdx).get().getCapacity() - usedInCurrentBlock;
+    +      currentBlockIsEmpty = usedInCurrentBlock == 0;
+    +    }
+    +
+    +    // If currentBlockIsEmpty, add availableInCurrentBlock to account for reclamation in reclaimLastBlockIfEmpty().
+    +    final long availableInAllocator = allocator.available() + (currentBlockIsEmpty ? availableInCurrentBlock : 0);
+    +
+    +    return (int) Math.min(
+    +        Integer.MAX_VALUE,
+    +        Math.max(
+    +            availableInAllocator,
+    +            availableInCurrentBlock
+    +        )
+    +    );
+    +  }
+    +
+       /**
+        * Ensure that at least "bytes" amount of space is available after the cursor. Allocates a new block if needed.
+        * Note: the amount of bytes is guaranteed to be in a *single* block.
+    @@ -126,11 +156,13 @@ public class AppendableMemory implements Closeable
+           return true;
+         }
+     
+    +    releaseLastBlockIfEmpty();
+    +
+         if (bytes > allocator.available()) {
+           return false;
+         }
+     
+    -    final int idx = blockHolders.size() - 1;
+    +    final int idx = currentBlockNumber();
+     
+         if (idx < 0 || bytes + limits.getInt(idx) > blockHolders.get(idx).get().getCapacity()) {
+           // Allocation needed.
+    @@ -228,6 +260,9 @@ public class AppendableMemory implements Closeable
+         cursor.set(currentBlockMemory, newLimit, currentBlockMemory.getCapacity() - newLimit);
+       }
+     
+    +  /**
+    +   * Current used size, in bytes.
+    +   */
+       public long size()
+       {
+         long sz = 0;
+    @@ -295,12 +330,21 @@ public class AppendableMemory implements Closeable
+         cursor.set(blockMemory, 0, blockMemory.getCapacity());
+       }
+     
+    -  private int currentBlockNumber()
+    +  private void releaseLastBlockIfEmpty()
+       {
+    -    if (blockHolders.isEmpty()) {
+    -      return NO_BLOCK;
+    -    } else {
+    -      return blockHolders.size() - 1;
+    +    final int lastBlockNumber = currentBlockNumber();
+    +    if (lastBlockNumber != NO_BLOCK && limits.getInt(lastBlockNumber) == 0) {
+    +      blockHolders.remove(lastBlockNumber).close();
+    +      limits.removeInt(lastBlockNumber);
+         }
+       }
+    +
+    +  /**
+    +   * Returns the index into {@link #blockHolders} and {@link #limits} of the current block, or {@link #NO_BLOCK}
+    +   * if there are no blocks.
+    +   */
+    +  private int currentBlockNumber()
+    +  {
+    +    return blockHolders.size() - 1;
+    +  }
+     }
+    diff --git a/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java b/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java
+    index 7b8c23e293..ebc4933355 100644
+    --- a/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java
+    +++ b/processing/src/main/java/org/apache/druid/frame/allocation/ArenaMemoryAllocator.java
+    @@ -37,6 +37,7 @@ public class ArenaMemoryAllocator implements MemoryAllocator
+       private final WritableMemory arena;
+       private long allocations = 0;
+       private long position = 0;
+    +  private WritableMemory lastAllocation;
+     
+       private ArenaMemoryAllocator(WritableMemory arena)
+       {
+    @@ -64,20 +65,23 @@ public class ArenaMemoryAllocator implements MemoryAllocator
+       @Override
+       public Optional<ResourceHolder<WritableMemory>> allocate(final long size)
+       {
+    -    if (position + size < arena.getCapacity()) {
+    +    if (position + size <= arena.getCapacity()) {
+           final long start = position;
+           allocations++;
+           position += size;
+     
+    +      final WritableMemory memory = arena.writableRegion(start, size, ByteOrder.LITTLE_ENDIAN);
+    +      lastAllocation = memory;
+    +
+           return Optional.of(
+               new ResourceHolder<WritableMemory>()
+               {
+    -            private WritableMemory memory = arena.writableRegion(start, size, ByteOrder.LITTLE_ENDIAN);
+    +            boolean closed;
+     
+                 @Override
+                 public WritableMemory get()
+                 {
+    -              if (memory == null) {
+    +              if (closed) {
+                     throw new ISE("Already closed");
+                   }
+     
+    @@ -87,10 +91,21 @@ public class ArenaMemoryAllocator implements MemoryAllocator
+                 @Override
+                 public void close()
+                 {
+    -              memory = null;
+    +              if (closed) {
+    +                return;
+    +              }
+    +
+    +              closed = true;
+    +
+    +              //noinspection ObjectEquality
+    +              if (memory == lastAllocation) {
+    +                // Last allocation closed; decrement position to enable partial arena reuse.
+    +                position -= memory.getCapacity();
+    +                lastAllocation = null;
+    +              }
+     
+                   if (--allocations == 0) {
+    -                // All allocations closed; reset position to enable arena reuse.
+    +                // All allocations closed; reset position to enable full arena reuse.
+                     position = 0;
+                   }
+                 }
+    diff --git a/processing/src/main/java/org/apache/druid/frame/allocation/HeapMemoryAllocator.java b/processing/src/main/java/org/apache/druid/frame/allocation/HeapMemoryAllocator.java
+    index ee3af073f8..a78c53c4a3 100644
+    --- a/processing/src/main/java/org/apache/druid/frame/allocation/HeapMemoryAllocator.java
+    +++ b/processing/src/main/java/org/apache/druid/frame/allocation/HeapMemoryAllocator.java
+    @@ -77,8 +77,10 @@ public class HeapMemoryAllocator implements MemoryAllocator
+                 @Override
+                 public void close()
+                 {
+    -              memory = null;
+    -              bytesAllocated -= size;
+    +              if (memory != null) {
+    +                memory = null;
+    +                bytesAllocated -= size;
+    +              }
+                 }
+               }
+           );
+    diff --git a/processing/src/main/java/org/apache/druid/frame/write/RowBasedFrameWriter.java b/processing/src/main/java/org/apache/druid/frame/write/RowBasedFrameWriter.java
+    index beae50dca9..c33b4c32b8 100644
+    --- a/processing/src/main/java/org/apache/druid/frame/write/RowBasedFrameWriter.java
+    +++ b/processing/src/main/java/org/apache/druid/frame/write/RowBasedFrameWriter.java
+    @@ -23,6 +23,7 @@ import com.google.common.base.Throwables;
+     import com.google.common.primitives.Ints;
+     import org.apache.datasketches.memory.Memory;
+     import org.apache.datasketches.memory.WritableMemory;
+    +import org.apache.druid.error.DruidException;
+     import org.apache.druid.frame.Frame;
+     import org.apache.druid.frame.FrameType;
+     import org.apache.druid.frame.allocation.AppendableMemory;
+    @@ -313,10 +314,22 @@ public class RowBasedFrameWriter implements FrameWriter
+             // Reset to beginning of loop.
+             i = -1;
+     
+    +        final int priorAllocation = BASE_DATA_ALLOCATION_SIZE * reserveMultiple;
+    +
+             // Try again with a bigger allocation.
+             reserveMultiple *= 2;
+     
+    -        if (!dataMemory.reserveAdditional(Ints.checkedCast((long) BASE_DATA_ALLOCATION_SIZE * reserveMultiple))) {
+    +        final int nextAllocation = Math.min(
+    +            dataMemory.availableToReserve(),
+    +            Ints.checkedCast((long) BASE_DATA_ALLOCATION_SIZE * reserveMultiple)
+    +        );
+    +
+    +        if (nextAllocation > priorAllocation) {
+    +          if (!dataMemory.reserveAdditional(nextAllocation)) {
+    +            // Shouldn't see this unless availableToReserve lied to us.
+    +            throw DruidException.defensive("Unexpected failure of dataMemory.reserveAdditional");
+    +          }
+    +        } else {
+               return false;
+             }
+     
+    diff --git a/processing/src/test/java/org/apache/druid/frame/allocation/ArenaMemoryAllocatorTest.java b/processing/src/test/java/org/apache/druid/frame/allocation/ArenaMemoryAllocatorTest.java
+    new file mode 100644
+    index 0000000000..e1a637ea04
+    --- /dev/null
+    +++ b/processing/src/test/java/org/apache/druid/frame/allocation/ArenaMemoryAllocatorTest.java
+    @@ -0,0 +1,29 @@
+    +/*
+    + * Licensed to the Apache Software Foundation (ASF) under one
+    + * or more contributor license agreements.  See the NOTICE file
+    + * distributed with this work for additional information
+    + * regarding copyright ownership.  The ASF licenses this file
+    + * to you under the Apache License, Version 2.0 (the
+    + * "License"); you may not use this file except in compliance
+    + * with the License.  You may obtain a copy of the License at
+    + *
+    + *   http://www.apache.org/licenses/LICENSE-2.0
+    + *
+    + * Unless required by applicable law or agreed to in writing,
+    + * software distributed under the License is distributed on an
+    + * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    + * KIND, either express or implied.  See the License for the
+    + * specific language governing permissions and limitations
+    + * under the License.
+    + */
+    +
+    +package org.apache.druid.frame.allocation;
+    +
+    +public class ArenaMemoryAllocatorTest extends BaseMemoryAllocatorTest
+    +{
+    +  @Override
+    +  protected MemoryAllocator makeAllocator(int capacity)
+    +  {
+    +    return ArenaMemoryAllocator.createOnHeap(capacity);
+    +  }
+    +}
+    diff --git a/processing/src/test/java/org/apache/druid/frame/allocation/BaseMemoryAllocatorTest.java b/processing/src/test/java/org/apache/druid/frame/allocation/BaseMemoryAllocatorTest.java
+    new file mode 100644
+    index 0000000000..cd3952accd
+    --- /dev/null
+    +++ b/processing/src/test/java/org/apache/druid/frame/allocation/BaseMemoryAllocatorTest.java
+    @@ -0,0 +1,166 @@
+    +/*
+    + * Licensed to the Apache Software Foundation (ASF) under one
+    + * or more contributor license agreements.  See the NOTICE file
+    + * distributed with this work for additional information
+    + * regarding copyright ownership.  The ASF licenses this file
+    + * to you under the Apache License, Version 2.0 (the
+    + * "License"); you may not use this file except in compliance
+    + * with the License.  You may obtain a copy of the License at
+    + *
+    + *   http://www.apache.org/licenses/LICENSE-2.0
+    + *
+    + * Unless required by applicable law or agreed to in writing,
+    + * software distributed under the License is distributed on an
+    + * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    + * KIND, either express or implied.  See the License for the
+    + * specific language governing permissions and limitations
+    + * under the License.
+    + */
+    +
+    +package org.apache.druid.frame.allocation;
+    +
+    +import org.apache.datasketches.memory.WritableMemory;
+    +import org.apache.druid.collections.ResourceHolder;
+    +import org.junit.Assert;
+    +import org.junit.Test;
+    +
+    +import java.util.Optional;
+    +
+    +/**
+    + * Tests for {@link MemoryAllocator}, subclassed for each concrete implementation.
+    + */
+    +public abstract class BaseMemoryAllocatorTest
+    +{
+    +  private static final int ALLOCATOR_SIZE = 10;
+    +
+    +  protected abstract MemoryAllocator makeAllocator(int capacity);
+    +
+    +  @Test
+    +  public void testAllocationInSinglePass()
+    +  {
+    +    MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);
+    +    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional = memoryAllocator.allocate(ALLOCATOR_SIZE);
+    +    Assert.assertTrue(memoryResourceHolderOptional.isPresent());
+    +    ResourceHolder<WritableMemory> memoryResourceHolder = memoryResourceHolderOptional.get();
+    +    WritableMemory memory = memoryResourceHolder.get();
+    +    for (int i = 0; i < ALLOCATOR_SIZE; ++i) {
+    +      memory.putByte(i, (byte) 0xFF);
+    +    }
+    +  }
+    +
+    +  @Test
+    +  public void testAllocationInMultiplePasses()
+    +  {
+    +    MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);
+    +
+    +    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional1 = memoryAllocator.allocate(ALLOCATOR_SIZE
+    +                                                                                                      - 4);
+    +    Assert.assertTrue(memoryResourceHolderOptional1.isPresent());
+    +    ResourceHolder<WritableMemory> memoryResourceHolder1 = memoryResourceHolderOptional1.get();
+    +    WritableMemory memory1 = memoryResourceHolder1.get();
+    +
+    +    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional2 = memoryAllocator.allocate(4);
+    +    Assert.assertTrue(memoryResourceHolderOptional2.isPresent());
+    +    ResourceHolder<WritableMemory> memoryResourceHolder2 = memoryResourceHolderOptional2.get();
+    +    WritableMemory memory2 = memoryResourceHolder2.get();
+    +
+    +    for (int i = 0; i < ALLOCATOR_SIZE - 4; ++i) {
+    +      memory1.putByte(i, (byte) 0xFF);
+    +    }
+    +    for (int i = 0; i < 4; ++i) {
+    +      memory2.putByte(i, (byte) 0xFE);
+    +    }
+    +    // Readback to ensure that value hasn't been overwritten
+    +    for (int i = 0; i < ALLOCATOR_SIZE - 4; ++i) {
+    +      Assert.assertEquals((byte) 0xFF, memory1.getByte(i));
+    +    }
+    +    for (int i = 0; i < 4; ++i) {
+    +      Assert.assertEquals((byte) 0xFE, memory2.getByte(i));
+    +    }
+    +  }
+    +
+    +  @Test
+    +  public void testReleaseAllocationTwice()
+    +  {
+    +    final MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);
+    +    final int allocationSize = 4;
+    +
+    +    final Optional<ResourceHolder<WritableMemory>> holder1 = memoryAllocator.allocate(allocationSize);
+    +    final Optional<ResourceHolder<WritableMemory>> holder2 = memoryAllocator.allocate(allocationSize);
+    +    Assert.assertTrue(holder1.isPresent());
+    +    Assert.assertTrue(holder2.isPresent());
+    +    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize * 2, memoryAllocator.available());
+    +
+    +    // Release the second allocation.
+    +    holder2.get().close();
+    +    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize, memoryAllocator.available());
+    +
+    +    // Release again-- does nothing.
+    +    holder2.get().close();
+    +    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize, memoryAllocator.available());
+    +
+    +    // Release the first allocation.
+    +    holder1.get().close();
+    +    Assert.assertEquals(ALLOCATOR_SIZE, memoryAllocator.available());
+    +  }
+    +
+    +  @Test
+    +  public void testReleaseLastAllocationFirst()
+    +  {
+    +    final MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);
+    +    final int allocationSize = 4;
+    +
+    +    final Optional<ResourceHolder<WritableMemory>> holder1 = memoryAllocator.allocate(allocationSize);
+    +    final Optional<ResourceHolder<WritableMemory>> holder2 = memoryAllocator.allocate(allocationSize);
+    +    Assert.assertTrue(holder1.isPresent());
+    +    Assert.assertTrue(holder2.isPresent());
+    +    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize * 2, memoryAllocator.available());
+    +
+    +    // Release the second allocation.
+    +    holder2.get().close();
+    +    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize, memoryAllocator.available());
+    +
+    +    // Release the first allocation.
+    +    holder1.get().close();
+    +    Assert.assertEquals(ALLOCATOR_SIZE, memoryAllocator.available());
+    +  }
+    +
+    +  @Test
+    +  public void testReleaseLastAllocationLast()
+    +  {
+    +    final MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);
+    +    final int allocationSize = 4;
+    +
+    +    final Optional<ResourceHolder<WritableMemory>> holder1 = memoryAllocator.allocate(allocationSize);
+    +    final Optional<ResourceHolder<WritableMemory>> holder2 = memoryAllocator.allocate(allocationSize);
+    +    Assert.assertTrue(holder1.isPresent());
+    +    Assert.assertTrue(holder2.isPresent());
+    +    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize * 2, memoryAllocator.available());
+    +
+    +    // Don't check memoryAllocator.available() after holder1 is closed; behavior is not consistent between arena
+    +    // and heap. Arena won't reclaim this allocation because it wasn't the final one; heap will reclaim it.
+    +    // They converge to fully-reclaimed once all allocations are closed.
+    +    holder1.get().close();
+    +    holder2.get().close();
+    +    Assert.assertEquals(ALLOCATOR_SIZE, memoryAllocator.available());
+    +  }
+    +
+    +  @Test
+    +  public void testOverallocationInSinglePass()
+    +  {
+    +    MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);
+    +    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional =
+    +        memoryAllocator.allocate(ALLOCATOR_SIZE + 1);
+    +    Assert.assertFalse(memoryResourceHolderOptional.isPresent());
+    +  }
+    +
+    +  @Test
+    +  public void testOverallocationInMultiplePasses()
+    +  {
+    +    MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);
+    +    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional =
+    +        memoryAllocator.allocate(ALLOCATOR_SIZE - 4);
+    +    Assert.assertTrue(memoryResourceHolderOptional.isPresent());
+    +    Assert.assertFalse(memoryAllocator.allocate(5).isPresent());
+    +  }
+    +}
+    diff --git a/processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java b/processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java
+    index ac69eaee8a..67f63d312f 100644
+    --- a/processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java
+    +++ b/processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java
+    @@ -19,78 +19,11 @@
+     
+     package org.apache.druid.frame.allocation;
+     
+    -import org.apache.datasketches.memory.WritableMemory;
+    -import org.apache.druid.collections.ResourceHolder;
+    -import org.junit.Assert;
+    -import org.junit.Test;
+    -
+    -import java.util.Optional;
+    -
+    -public class HeapMemoryAllocatorTest
+    +public class HeapMemoryAllocatorTest extends BaseMemoryAllocatorTest
+     {
+    -  private static final int ALLOCATOR_SIZE = 10;
+    -
+    -  @Test
+    -  public void testAllocationInSinglePass()
+    -  {
+    -    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);
+    -    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional = heapMemoryAllocator.allocate(ALLOCATOR_SIZE);
+    -    Assert.assertTrue(memoryResourceHolderOptional.isPresent());
+    -    ResourceHolder<WritableMemory> memoryResourceHolder = memoryResourceHolderOptional.get();
+    -    WritableMemory memory = memoryResourceHolder.get();
+    -    for (int i = 0; i < ALLOCATOR_SIZE; ++i) {
+    -      memory.putByte(i, (byte) 0xFF);
+    -    }
+    -  }
+    -
+    -  @Test
+    -  public void testAllocationInMultiplePasses()
+    -  {
+    -    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);
+    -
+    -    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional1 = heapMemoryAllocator.allocate(ALLOCATOR_SIZE
+    -                                                                                                          - 4);
+    -    Assert.assertTrue(memoryResourceHolderOptional1.isPresent());
+    -    ResourceHolder<WritableMemory> memoryResourceHolder1 = memoryResourceHolderOptional1.get();
+    -    WritableMemory memory1 = memoryResourceHolder1.get();
+    -
+    -    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional2 = heapMemoryAllocator.allocate(4);
+    -    Assert.assertTrue(memoryResourceHolderOptional2.isPresent());
+    -    ResourceHolder<WritableMemory> memoryResourceHolder2 = memoryResourceHolderOptional2.get();
+    -    WritableMemory memory2 = memoryResourceHolder2.get();
+    -
+    -    for (int i = 0; i < ALLOCATOR_SIZE - 4; ++i) {
+    -      memory1.putByte(i, (byte) 0xFF);
+    -    }
+    -    for (int i = 0; i < 4; ++i) {
+    -      memory2.putByte(i, (byte) 0xFE);
+    -    }
+    -    // Readback to ensure that value hasn't been overwritten
+    -    for (int i = 0; i < ALLOCATOR_SIZE - 4; ++i) {
+    -      Assert.assertEquals((byte) 0xFF, memory1.getByte(i));
+    -    }
+    -    for (int i = 0; i < 4; ++i) {
+    -      Assert.assertEquals((byte) 0xFE, memory2.getByte(i));
+    -    }
+    -  }
+    -
+    -  @Test
+    -  public void testOverallocationInSinglePass()
+    +  @Override
+    +  protected MemoryAllocator makeAllocator(int capacity)
+       {
+    -    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);
+    -    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional =
+    -        heapMemoryAllocator.allocate(ALLOCATOR_SIZE + 1);
+    -    Assert.assertFalse(memoryResourceHolderOptional.isPresent());
+    +    return new HeapMemoryAllocator(capacity);
+       }
+    -
+    -  @Test
+    -  public void testOverallocationInMultiplePasses()
+    -  {
+    -    MemoryAllocator heapMemoryAllocator = new HeapMemoryAllocator(ALLOCATOR_SIZE);
+    -    Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional =
+    -        heapMemoryAllocator.allocate(ALLOCATOR_SIZE - 4);
+    -    Assert.assertTrue(memoryResourceHolderOptional.isPresent());
+    -    Assert.assertFalse(heapMemoryAllocator.allocate(5).isPresent());
+    -  }
+    -
+     }
+    diff --git a/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java b/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java
+    index bb7f9e5587..593004abb6 100644
+    --- a/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java
+    +++ b/processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java
+    @@ -20,21 +20,76 @@
+     package org.apache.druid.frame.write;
+     
+     import com.google.common.collect.ImmutableList;
+    +import com.google.common.collect.ImmutableMap;
+    +import org.apache.druid.data.input.MapBasedRow;
+    +import org.apache.druid.data.input.Row;
+    +import org.apache.druid.frame.Frame;
+     import org.apache.druid.frame.allocation.AppendableMemory;
+    +import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
+     import org.apache.druid.frame.allocation.HeapMemoryAllocator;
+     import org.apache.druid.frame.field.LongFieldWriter;
+    +import org.apache.druid.frame.read.FrameReader;
+    +import org.apache.druid.frame.testutil.FrameTestUtil;
+    +import org.apache.druid.java.util.common.StringUtils;
+    +import org.apache.druid.java.util.common.guava.Sequences;
+    +import org.apache.druid.segment.ColumnSelectorFactory;
+    +import org.apache.druid.segment.RowAdapters;
+    +import org.apache.druid.segment.RowBasedColumnSelectorFactory;
+     import org.apache.druid.segment.column.ColumnType;
+     import org.apache.druid.segment.column.RowSignature;
+    +import org.apache.druid.testing.InitializedNullHandlingTest;
+     import org.easymock.EasyMock;
+     import org.junit.Assert;
+     import org.junit.Test;
+     
+    +import java.util.Arrays;
+     import java.util.Collections;
+     
+    -public class RowBasedFrameWriterTest
+    +public class RowBasedFrameWriterTest extends InitializedNullHandlingTest
+     {
+       @Test
+    -  public void testAddSelectionWithException()
+    +  public void test_addSelection_singleLargeRow()
+    +  {
+    +    final RowSignature signature =
+    +        RowSignature.builder()
+    +                    .add("n", ColumnType.LONG)
+    +                    .add("s", ColumnType.STRING)
+    +                    .build();
+    +
+    +    final byte[] largeUtf8 = new byte[990000];
+    +    Arrays.fill(largeUtf8, (byte) 'F');
+    +    final String largeString = StringUtils.fromUtf8(largeUtf8);
+    +    final Row largeRow = new MapBasedRow(0L, ImmutableMap.of("n", 3L, "s", largeString));
+    +
+    +    final FrameWriterFactory frameWriterFactory = FrameWriters.makeRowBasedFrameWriterFactory(
+    +        new ArenaMemoryAllocatorFactory(1_000_000),
+    +        signature,
+    +        ImmutableList.of(),
+    +        false
+    +    );
+    +
+    +    final ColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(
+    +        RowAdapters.standardRow(),
+    +        () -> largeRow,
+    +        signature,
+    +        false,
+    +        false
+    +    );
+    +
+    +    final Frame frame;
+    +    try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(columnSelectorFactory)) {
+    +      Assert.assertTrue(frameWriter.addSelection());
+    +      frame = Frame.wrap(frameWriter.toByteArray());
+    +    }
+    +
+    +    FrameTestUtil.assertRowsEqual(
+    +        Sequences.simple(Collections.singletonList(ImmutableList.of(3L, largeString))),
+    +        FrameTestUtil.readRowsFromCursorFactory(FrameReader.create(signature).makeCursorFactory(frame))
+    +    );
+    +  }
+    +
+    +  @Test
+    +  public void test_addSelection_withException()
+       {
+         String colName = "colName";
+         String errorMsg = "Frame writer exception";
+  notes: >
+    Backported the frame writer/allocation reuse fix to the 31.0.0 parent, preserving the existing 31.0.0 allocator-available cap in AppendableMemory and adding the associated tests.
+```
+
+--- END CLI OUTPUT ---
+[12:52:55]   Done in 1190.5s | status=success

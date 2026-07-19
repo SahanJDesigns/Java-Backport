@@ -1,0 +1,343 @@
+[14:54:08] === Row 34: grpc-java  a13fca2b -> 86817865  [TYPE-II] ===
+[14:54:08]   Resolving parent of backport commit 86817865...
+[14:54:08]   Backport parent (target ref): 666136b4b85529600cc0d2482a8084ce2fcba92f
+[14:54:08]   Extracting new-version patch for a13fca2b...
+[14:54:08]   New-version patch size: 16120 chars
+[14:54:08]   Checking out backport parent 666136b4...
+[14:54:08]   Invoking OpenCode CLI (20012 chars)...
+[14:54:08]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the target branch context and map the changed listener/error-handling code and tests before constructing the backport diff.
+[0m⚙ [0mgit_show {"ref":"a13fca2bf2cddd58d917865bc0bb24036c5eb873"}
+[0m⚙ [0mviewcode {"ref":"666136b4b85529600cc0d2482a8084ce2fcba92f","path":"xds/src/main/java/io/grpc/xds/ClusterResolverLoadBalancer.java","startline":630,"endline":750}
+[0m⚙ [0mviewcode {"ref":"666136b4b85529600cc0d2482a8084ce2fcba92f","path":"xds/src/main/java/io/grpc/xds/ClusterResolverLoadBalancer.java","startline":1,"endline":80}
+[0m⚙ [0mviewcode {"ref":"666136b4b85529600cc0d2482a8084ce2fcba92f","path":"xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java","startline":180,"endline":235}
+[0m⚙ [0mviewcode {"ref":"666136b4b85529600cc0d2482a8084ce2fcba92f","path":"xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java","startline":1300,"endline":1395}
+[0m⚙ [0mviewcode {"ref":"666136b4b85529600cc0d2482a8084ce2fcba92f","path":"xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java","startline":810,"endline":930}
+The target branch has the same logical DNS listener structure as the source patch, so the production hunk ports directly with only context adjustments. I’m checking the test imports and symbols before composing the unified diff.
+[0m⚙ [0mviewcode {"ref":"666136b4b85529600cc0d2482a8084ce2fcba92f","path":"xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java","startline":1,"endline":80}
+[0m⚙ [0mlocate_symbol {"ref":"666136b4b85529600cc0d2482a8084ce2fcba92f","symbol":"NameResolverListener"}
+[0m⚙ [0mgit_history {"filepath":"xds/src/main/java/io/grpc/xds/ClusterResolverLoadBalancer.java","start_line":650,"end_line":725,"start_commit":"666136b4b85529600cc0d2482a8084ce2fcba92f","end_commit":"666136b4b85529600cc0d2482a8084ce2fcba92f"}
+[0m⚙ [0mlocate_symbol {"ref":"666136b4b85529600cc0d2482a8084ce2fcba92f","symbol":"FakeNameResolverProvider"}
+[0m✱ [0mGrep "import org.mockito.Mockito|Mockito\.inOrder|InOrder"[90m in xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java · 68 matches[0m
+I found `StatusOr` is already imported in the test file, but the production file needs the new import. The test provider currently always uses the legacy callback, so I’ll add the provider toggle and direct `onResult2` fake path to cover both APIs.
+[0m⚙ [0mvalidate {"ref":"666136b4b85529600cc0d2482a8084ce2fcba92f","mode":"hunk","patch":"diff --git a/xds/src/main/java/io/grpc/xds/ClusterResolverLoadBalancer.java b/xds/src/main/java/io/grpc/xds/ClusterResolverLoadBalancer.java\n--- a/xds/src/main/java/io/grpc/xds/ClusterResolverLoadBalancer.java\n+++ b/xds/src/main/java/io/grpc/xds/ClusterResolverLoadBalancer.java\n@@ -33,6 +33,7 @@ import io.grpc.LoadBalancerRegistry;\n import io.grpc.NameResolver;\n import io.grpc.NameResolver.ResolutionResult;\n import io.grpc.Status;\n+import io.grpc.StatusOr;\n import io.grpc.SynchronizationContext;\n import io.grpc.SynchronizationContext.ScheduledHandle;\n import io.grpc.internal.BackoffPolicy;\n"}
+The production import hunk applies cleanly. I’m validating the main listener hunk next, since that is the behavioral change.
+[0m⚙ [0mvalidate {"ref":"666136b4b85529600cc0d2482a8084ce2fcba92f","mode":"hunk","patch":"diff --git a/xds/src/main/java/io/grpc/xds/ClusterResolverLoadBalancer.java b/xds/src/main/java/io/grpc/xds/ClusterResolverLoadBalancer.java\n--- a/xds/src/main/java/io/grpc/xds/ClusterResolverLoadBalancer.java\n+++ b/xds/src/main/java/io/grpc/xds/ClusterResolverLoadBalancer.java\n@@ -657,79 +657,84 @@ final class ClusterResolverLoadBalancer extends LoadBalancer {\n \n         @Override\n         public void onResult(final ResolutionResult resolutionResult) {\n-          class NameResolved implements Runnable {\n-            @Override\n-            public void run() {\n-              if (shutdown) {\n-                return;\n-              }\n-              backoffPolicy = null;  // reset backoff sequence if succeeded\n-              // Arbitrary priority notation for all DNS-resolved endpoints.\n-              String priorityName = priorityName(name, 0);  // value doesn't matter\n-              List<EquivalentAddressGroup> addresses = new ArrayList<>();\n-              for (EquivalentAddressGroup eag : resolutionResult.getAddresses()) {\n-                // No weight attribute is attached, all endpoint-level LB policy should be able\n-                // to handle such it.\n-                String localityName = localityName(LOGICAL_DNS_CLUSTER_LOCALITY);\n-                Attributes attr = eag.getAttributes().toBuilder()\n-                    .set(XdsAttributes.ATTR_LOCALITY, LOGICAL_DNS_CLUSTER_LOCALITY)\n-                    .set(XdsAttributes.ATTR_LOCALITY_NAME, localityName)\n-                    .set(XdsAttributes.ATTR_ADDRESS_NAME, dnsHostName)\n-                    .build();\n-                eag = new EquivalentAddressGroup(eag.getAddresses(), attr);\n-                eag = AddressFilter.setPathFilter(eag, Arrays.asList(priorityName, localityName));\n-                addresses.add(eag);\n-              }\n-              PriorityChildConfig priorityChildConfig = generateDnsBasedPriorityChildConfig(\n-                  name, lrsServerInfo, maxConcurrentRequests, tlsContext, filterMetadata,\n-                  lbRegistry, Collections.<DropOverload>emptyList());\n-              status = Status.OK;\n-              resolved = true;\n-              result = new ClusterResolutionResult(addresses, priorityName, priorityChildConfig);\n-              handleEndpointResourceUpdate();\n+          syncContext.execute(() -> onResult2(resolutionResult));\n+        }\n+\n+        @Override\n+        public Status onResult2(final ResolutionResult resolutionResult) {\n+          if (shutdown) {\n+            return Status.OK;\n+          }\n+          // Arbitrary priority notation for all DNS-resolved endpoints.\n+          String priorityName = priorityName(name, 0);  // value doesn't matter\n+          List<EquivalentAddressGroup> addresses = new ArrayList<>();\n+          StatusOr<List<EquivalentAddressGroup>> addressesOrError =\n+              resolutionResult.getAddressesOrError();\n+          if (addressesOrError.hasValue()) {\n+            backoffPolicy = null;  // reset backoff sequence if succeeded\n+            for (EquivalentAddressGroup eag : resolutionResult.getAddresses()) {\n+              // No weight attribute is attached, all endpoint-level LB policy should be able\n+              // to handle such it.\n+              String localityName = localityName(LOGICAL_DNS_CLUSTER_LOCALITY);\n+              Attributes attr = eag.getAttributes().toBuilder()\n+                  .set(XdsAttributes.ATTR_LOCALITY, LOGICAL_DNS_CLUSTER_LOCALITY)\n+                  .set(XdsAttributes.ATTR_LOCALITY_NAME, localityName)\n+                  .set(XdsAttributes.ATTR_ADDRESS_NAME, dnsHostName)\n+                  .build();\n+              eag = new EquivalentAddressGroup(eag.getAddresses(), attr);\n+              eag = AddressFilter.setPathFilter(eag, Arrays.asList(priorityName, localityName));\n+              addresses.add(eag);\n             }\n+            PriorityChildConfig priorityChildConfig = generateDnsBasedPriorityChildConfig(\n+                name, lrsServerInfo, maxConcurrentRequests, tlsContext, filterMetadata,\n+                lbRegistry, Collections.<DropOverload>emptyList());\n+            status = Status.OK;\n+            resolved = true;\n+            result = new ClusterResolutionResult(addresses, priorityName, priorityChildConfig);\n+            handleEndpointResourceUpdate();\n+            return Status.OK;\n+          } else {\n+            handleErrorInSyncContext(addressesOrError.getStatus());\n+            return addressesOrError.getStatus();\n           }\n-\n-          syncContext.execute(new NameResolved());\n         }\n \n         @Override\n         public void onError(final Status error) {\n-          syncContext.execute(new Runnable() {\n-            @Override\n-            public void run() {\n-              if (shutdown) {\n-                return;\n-              }\n-              status = error;\n-              // NameResolver.Listener API cannot distinguish between address-not-found and\n-              // transient errors. If the error occurs in the first resolution, treat it as\n-              // address not found. Otherwise, either there is previously resolved addresses\n-              // previously encountered error, propagate the error to downstream/upstream and\n-              // let downstream/upstream handle it.\n-              if (!resolved) {\n-                resolved = true;\n-                handleEndpointResourceUpdate();\n-              } else {\n-                handleEndpointResolutionError();\n-              }\n-              if (scheduledRefresh != null && scheduledRefresh.isPending()) {\n-                return;\n-              }\n-              if (backoffPolicy == null) {\n-                backoffPolicy = backoffPolicyProvider.get();\n-              }\n-              long delayNanos = backoffPolicy.nextBackoffNanos();\n-              logger.log(XdsLogLevel.DEBUG,\n+          syncContext.execute(() -> handleErrorInSyncContext(error));\n+        }\n+\n+        private void handleErrorInSyncContext(final Status error) {\n+          if (shutdown) {\n+            return;\n+          }\n+          status = error;\n+          // NameResolver.Listener API cannot distinguish between address-not-found and\n+          // transient errors. If the error occurs in the first resolution, treat it as\n+          // address not found. Otherwise, either there is previously resolved addresses\n+          // previously encountered error, propagate the error to downstream/upstream and\n+          // let downstream/upstream handle it.\n+          if (!resolved) {\n+            resolved = true;\n+            handleEndpointResourceUpdate();\n+          } else {\n+            handleEndpointResolutionError();\n+          }\n+          if (scheduledRefresh != null && scheduledRefresh.isPending()) {\n+            return;\n+          }\n+          if (backoffPolicy == null) {\n+            backoffPolicy = backoffPolicyProvider.get();\n+          }\n+          long delayNanos = backoffPolicy.nextBackoffNanos();\n+          logger.log(XdsLogLevel.DEBUG,\n                   \"Logical DNS resolver for cluster {0} encountered name resolution \"\n-                      + \"error: {1}, scheduling DNS resolution backoff for {2} ns\",\n+                      + \"error: {1}, scheduling DNS resolution backoff for {2} ns\",\n                   name, error, delayNanos);\n-              scheduledRefresh =\n+          scheduledRefresh =\n                   syncContext.schedule(\n                       new DelayedNameResolverRefresh(), delayNanos, TimeUnit.NANOSECONDS,\n                       timeService);\n-            }\n-          });\n         }\n       }\n     }\n"}
+The main listener hunk applies cleanly. I’m validating the test hunks in smaller pieces to isolate any branch-specific context differences.
+[0m⚙ [0mvalidate {"ref":"666136b4b85529600cc0d2482a8084ce2fcba92f","mode":"hunk","patch":"diff --git a/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java b/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n--- a/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n+++ b/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n@@ -200,6 +200,7 @@ public class ClusterResolverLoadBalancerTest {\n   @Captor\n   private ArgumentCaptor<SubchannelPicker> pickerCaptor;\n   private int xdsClientRefs;\n   private ClusterResolverLoadBalancer loadBalancer;\n+  private NameResolverProvider fakeNameResolverProvider;\n \n   @Before\n   public void setUp() throws URISyntaxException {\n@@ -216,7 +217,8 @@ public class ClusterResolverLoadBalancerTest {\n         .setServiceConfigParser(mock(ServiceConfigParser.class))\n         .setChannelLogger(mock(ChannelLogger.class))\n         .build();\n-    nsRegistry.register(new FakeNameResolverProvider());\n+    fakeNameResolverProvider = new FakeNameResolverProvider(false);\n+    nsRegistry.register(fakeNameResolverProvider);\n     when(helper.getNameResolverRegistry()).thenReturn(nsRegistry);\n     when(helper.getNameResolverArgs()).thenReturn(args);\n     when(helper.getSynchronizationContext()).thenReturn(syncContext);\n"}
+[0m⚙ [0mvalidate {"ref":"666136b4b85529600cc0d2482a8084ce2fcba92f","mode":"hunk","patch":"diff --git a/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java b/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n--- a/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n+++ b/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n@@ -199,7 +199,8 @@ public class ClusterResolverLoadBalancerTest {\n   @Captor\n   private ArgumentCaptor<SubchannelPicker> pickerCaptor;\n   private int xdsClientRefs;\n   private ClusterResolverLoadBalancer loadBalancer;\n+  private NameResolverProvider fakeNameResolverProvider;\n \n   @Before\n   public void setUp() throws URISyntaxException {\n"}
+[0m⚙ [0mvalidate {"ref":"666136b4b85529600cc0d2482a8084ce2fcba92f","mode":"hunk","patch":"diff --git a/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java b/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n--- a/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n+++ b/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n@@ -216,7 +216,8 @@ public class ClusterResolverLoadBalancerTest {\n         .setServiceConfigParser(mock(ServiceConfigParser.class))\n         .setChannelLogger(mock(ChannelLogger.class))\n         .build();\n-    nsRegistry.register(new FakeNameResolverProvider());\n+    fakeNameResolverProvider = new FakeNameResolverProvider(false);\n+    nsRegistry.register(fakeNameResolverProvider);\n     when(helper.getNameResolverRegistry()).thenReturn(nsRegistry);\n     when(helper.getNameResolverArgs()).thenReturn(args);\n     when(helper.getSynchronizationContext()).thenReturn(syncContext);\n"}
+The field and setup hunks apply when validated individually. Next I’m validating the expanded logical DNS tests and fake resolver implementation hunks.
+[0m⚙ [0mvalidate {"ref":"666136b4b85529600cc0d2482a8084ce2fcba92f","mode":"hunk","patch":"diff --git a/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java b/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n--- a/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n+++ b/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n@@ -826,6 +826,17 @@ public class ClusterResolverLoadBalancerTest {\n \n   @Test\n   public void onlyLogicalDnsCluster_endpointsResolved() {\n+    do_onlyLogicalDnsCluster_endpointsResolved();\n+  }\n+\n+  @Test\n+  public void oldListenerCallback_onlyLogicalDnsCluster_endpointsResolved() {\n+    nsRegistry.deregister(fakeNameResolverProvider);\n+    nsRegistry.register(new FakeNameResolverProvider(true));\n+    do_onlyLogicalDnsCluster_endpointsResolved();\n+  }\n+\n+  void do_onlyLogicalDnsCluster_endpointsResolved() {\n     ClusterResolverConfig config = new ClusterResolverConfig(\n         Collections.singletonList(logicalDnsDiscoveryMechanism), roundRobin, false);\n     deliverLbConfig(config);\n@@ -854,7 +865,6 @@ public class ClusterResolverLoadBalancerTest {\n         .get(XdsAttributes.ATTR_ADDRESS_NAME)).isEqualTo(DNS_HOST_NAME);\n     assertThat(childBalancer.addresses.get(1).getAttributes()\n         .get(XdsAttributes.ATTR_ADDRESS_NAME)).isEqualTo(DNS_HOST_NAME);\n-\n   }\n \n   @Test\n"}
+[0m⚙ [0mvalidate {"ref":"666136b4b85529600cc0d2482a8084ce2fcba92f","mode":"hunk","patch":"diff --git a/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java b/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n--- a/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n+++ b/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n@@ -876,8 +876,19 @@ public class ClusterResolverLoadBalancerTest {\n   }\n \n   @Test\n-  public void onlyLogicalDnsCluster_resolutionError_backoffAndRefresh() {\n+  public void resolutionError_backoffAndRefresh() {\n+    do_onlyLogicalDnsCluster_resolutionError_backoffAndRefresh();\n+  }\n+\n+  @Test\n+  public void oldListenerCallback_resolutionError_backoffAndRefresh() {\n+    nsRegistry.deregister(fakeNameResolverProvider);\n+    nsRegistry.register(new FakeNameResolverProvider(true));\n+    do_onlyLogicalDnsCluster_resolutionError_backoffAndRefresh();\n+  }\n+\n+  void do_onlyLogicalDnsCluster_resolutionError_backoffAndRefresh() {\n     InOrder inOrder = Mockito.inOrder(helper, backoffPolicyProvider,\n         backoffPolicy1, backoffPolicy2);\n     ClusterResolverConfig config = new ClusterResolverConfig(\n         Collections.singletonList(logicalDnsDiscoveryMechanism), roundRobin, false);\n"}
+The test method additions apply cleanly. I’m keeping purely cosmetic indentation-only changes out of the backport patch where possible, while preserving all behavioral coverage.
+[0m⚙ [0mvalidate {"ref":"666136b4b85529600cc0d2482a8084ce2fcba92f","mode":"hunk","patch":"diff --git a/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java b/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n--- a/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n+++ b/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n@@ -1319,10 +1319,18 @@ public class ClusterResolverLoadBalancerTest {\n   }\n \n   private class FakeNameResolverProvider extends NameResolverProvider {\n+    private final boolean useOldListenerCallback;\n+\n+    private FakeNameResolverProvider(boolean useOldListenerCallback) {\n+      this.useOldListenerCallback = useOldListenerCallback;\n+    }\n+\n     @Override\n     public NameResolver newNameResolver(URI targetUri, NameResolver.Args args) {\n       assertThat(targetUri.getScheme()).isEqualTo(\"dns\");\n-      FakeNameResolver resolver = new FakeNameResolver(targetUri);\n+      FakeNameResolver resolver = useOldListenerCallback\n+          ? new FakeNameResolverUsingOldListenerCallback(targetUri)\n+          : new FakeNameResolver(targetUri);\n       resolvers.add(resolver);\n       return resolver;\n     }\n"}
+[0m⚙ [0mvalidate {"ref":"666136b4b85529600cc0d2482a8084ce2fcba92f","mode":"hunk","patch":"diff --git a/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java b/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n--- a/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n+++ b/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n@@ -1343,7 +1351,7 @@ public class ClusterResolverLoadBalancerTest {\n \n   private class FakeNameResolver extends NameResolver {\n     private final URI targetUri;\n-    private Listener2 listener;\n+    protected Listener2 listener;\n     private int refreshCount;\n \n     private FakeNameResolver(URI targetUri) {\n"}
+The provider toggle and listener visibility hunks apply cleanly. I’m validating the final fake resolver delivery hunk now.
+[0m⚙ [0mvalidate {"ref":"666136b4b85529600cc0d2482a8084ce2fcba92f","mode":"hunk","patch":"diff --git a/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java b/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n--- a/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n+++ b/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java\n@@ -1372,12 +1380,33 @@ public class ClusterResolverLoadBalancerTest {\n       resolvers.remove(this);\n     }\n \n-    private void deliverEndpointAddresses(List<EquivalentAddressGroup> addresses) {\n+    protected void deliverEndpointAddresses(List<EquivalentAddressGroup> addresses) {\n+      syncContext.execute(() -> {\n+        Status ret = listener.onResult2(ResolutionResult.newBuilder()\n+            .setAddressesOrError(StatusOr.fromValue(addresses)).build());\n+        assertThat(ret.getCode()).isEqualTo(Status.Code.OK);\n+      });\n+    }\n+\n+    protected void deliverError(Status error) {\n+      syncContext.execute(() -> listener.onResult2(ResolutionResult.newBuilder()\n+          .setAddressesOrError(StatusOr.fromStatus(error)).build()));\n+    }\n+  }\n+\n+  private class FakeNameResolverUsingOldListenerCallback extends FakeNameResolver {\n+    private FakeNameResolverUsingOldListenerCallback(URI targetUri) {\n+      super(targetUri);\n+    }\n+\n+    @Override\n+    protected void deliverEndpointAddresses(List<EquivalentAddressGroup> addresses) {\n       listener.onResult(ResolutionResult.newBuilder()\n           .setAddressesOrError(StatusOr.fromValue(addresses)).build());\n     }\n \n-    private void deliverError(Status error) {\n+    @Override\n+    protected void deliverError(Status error) {\n       listener.onError(error);\n     }\n   }\n"}
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/xds/src/main/java/io/grpc/xds/ClusterResolverLoadBalancer.java b/xds/src/main/java/io/grpc/xds/ClusterResolverLoadBalancer.java
+    --- a/xds/src/main/java/io/grpc/xds/ClusterResolverLoadBalancer.java
+    +++ b/xds/src/main/java/io/grpc/xds/ClusterResolverLoadBalancer.java
+    @@ -33,6 +33,7 @@ import io.grpc.LoadBalancerRegistry;
+     import io.grpc.NameResolver;
+     import io.grpc.NameResolver.ResolutionResult;
+     import io.grpc.Status;
+    +import io.grpc.StatusOr;
+     import io.grpc.SynchronizationContext;
+     import io.grpc.SynchronizationContext.ScheduledHandle;
+     import io.grpc.internal.BackoffPolicy;
+    @@ -657,79 +658,84 @@ final class ClusterResolverLoadBalancer extends LoadBalancer {
+     
+             @Override
+             public void onResult(final ResolutionResult resolutionResult) {
+    -          class NameResolved implements Runnable {
+    -            @Override
+    -            public void run() {
+    -              if (shutdown) {
+    -                return;
+    -              }
+    -              backoffPolicy = null;  // reset backoff sequence if succeeded
+    -              // Arbitrary priority notation for all DNS-resolved endpoints.
+    -              String priorityName = priorityName(name, 0);  // value doesn't matter
+    -              List<EquivalentAddressGroup> addresses = new ArrayList<>();
+    -              for (EquivalentAddressGroup eag : resolutionResult.getAddresses()) {
+    -                // No weight attribute is attached, all endpoint-level LB policy should be able
+    -                // to handle such it.
+    -                String localityName = localityName(LOGICAL_DNS_CLUSTER_LOCALITY);
+    -                Attributes attr = eag.getAttributes().toBuilder()
+    -                    .set(XdsAttributes.ATTR_LOCALITY, LOGICAL_DNS_CLUSTER_LOCALITY)
+    -                    .set(XdsAttributes.ATTR_LOCALITY_NAME, localityName)
+    -                    .set(XdsAttributes.ATTR_ADDRESS_NAME, dnsHostName)
+    -                    .build();
+    -                eag = new EquivalentAddressGroup(eag.getAddresses(), attr);
+    -                eag = AddressFilter.setPathFilter(eag, Arrays.asList(priorityName, localityName));
+    -                addresses.add(eag);
+    -              }
+    -              PriorityChildConfig priorityChildConfig = generateDnsBasedPriorityChildConfig(
+    -                  name, lrsServerInfo, maxConcurrentRequests, tlsContext, filterMetadata,
+    -                  lbRegistry, Collections.<DropOverload>emptyList());
+    -              status = Status.OK;
+    -              resolved = true;
+    -              result = new ClusterResolutionResult(addresses, priorityName, priorityChildConfig);
+    -              handleEndpointResourceUpdate();
+    +          syncContext.execute(() -> onResult2(resolutionResult));
+    +        }
+    +
+    +        @Override
+    +        public Status onResult2(final ResolutionResult resolutionResult) {
+    +          if (shutdown) {
+    +            return Status.OK;
+    +          }
+    +          // Arbitrary priority notation for all DNS-resolved endpoints.
+    +          String priorityName = priorityName(name, 0);  // value doesn't matter
+    +          List<EquivalentAddressGroup> addresses = new ArrayList<>();
+    +          StatusOr<List<EquivalentAddressGroup>> addressesOrError =
+    +              resolutionResult.getAddressesOrError();
+    +          if (addressesOrError.hasValue()) {
+    +            backoffPolicy = null;  // reset backoff sequence if succeeded
+    +            for (EquivalentAddressGroup eag : resolutionResult.getAddresses()) {
+    +              // No weight attribute is attached, all endpoint-level LB policy should be able
+    +              // to handle such it.
+    +              String localityName = localityName(LOGICAL_DNS_CLUSTER_LOCALITY);
+    +              Attributes attr = eag.getAttributes().toBuilder()
+    +                  .set(XdsAttributes.ATTR_LOCALITY, LOGICAL_DNS_CLUSTER_LOCALITY)
+    +                  .set(XdsAttributes.ATTR_LOCALITY_NAME, localityName)
+    +                  .set(XdsAttributes.ATTR_ADDRESS_NAME, dnsHostName)
+    +                  .build();
+    +              eag = new EquivalentAddressGroup(eag.getAddresses(), attr);
+    +              eag = AddressFilter.setPathFilter(eag, Arrays.asList(priorityName, localityName));
+    +              addresses.add(eag);
+                 }
+    +            PriorityChildConfig priorityChildConfig = generateDnsBasedPriorityChildConfig(
+    +                name, lrsServerInfo, maxConcurrentRequests, tlsContext, filterMetadata,
+    +                lbRegistry, Collections.<DropOverload>emptyList());
+    +            status = Status.OK;
+    +            resolved = true;
+    +            result = new ClusterResolutionResult(addresses, priorityName, priorityChildConfig);
+    +            handleEndpointResourceUpdate();
+    +            return Status.OK;
+    +          } else {
+    +            handleErrorInSyncContext(addressesOrError.getStatus());
+    +            return addressesOrError.getStatus();
+               }
+    -
+    -          syncContext.execute(new NameResolved());
+             }
+     
+             @Override
+             public void onError(final Status error) {
+    -          syncContext.execute(new Runnable() {
+    -            @Override
+    -            public void run() {
+    -              if (shutdown) {
+    -                return;
+    -              }
+    -              status = error;
+    -              // NameResolver.Listener API cannot distinguish between address-not-found and
+    -              // transient errors. If the error occurs in the first resolution, treat it as
+    -              // address not found. Otherwise, either there is previously resolved addresses
+    -              // previously encountered error, propagate the error to downstream/upstream and
+    -              // let downstream/upstream handle it.
+    -              if (!resolved) {
+    -                resolved = true;
+    -                handleEndpointResourceUpdate();
+    -              } else {
+    -                handleEndpointResolutionError();
+    -              }
+    -              if (scheduledRefresh != null && scheduledRefresh.isPending()) {
+    -                return;
+    -              }
+    -              if (backoffPolicy == null) {
+    -                backoffPolicy = backoffPolicyProvider.get();
+    -              }
+    -              long delayNanos = backoffPolicy.nextBackoffNanos();
+    -              logger.log(XdsLogLevel.DEBUG,
+    +          syncContext.execute(() -> handleErrorInSyncContext(error));
+    +        }
+    +
+    +        private void handleErrorInSyncContext(final Status error) {
+    +          if (shutdown) {
+    +            return;
+    +          }
+    +          status = error;
+    +          // NameResolver.Listener API cannot distinguish between address-not-found and
+    +          // transient errors. If the error occurs in the first resolution, treat it as
+    +          // address not found. Otherwise, either there is previously resolved addresses
+    +          // previously encountered error, propagate the error to downstream/upstream and
+    +          // let downstream/upstream handle it.
+    +          if (!resolved) {
+    +            resolved = true;
+    +            handleEndpointResourceUpdate();
+    +          } else {
+    +            handleEndpointResolutionError();
+    +          }
+    +          if (scheduledRefresh != null && scheduledRefresh.isPending()) {
+    +            return;
+    +          }
+    +          if (backoffPolicy == null) {
+    +            backoffPolicy = backoffPolicyProvider.get();
+    +          }
+    +          long delayNanos = backoffPolicy.nextBackoffNanos();
+    +          logger.log(XdsLogLevel.DEBUG,
+                   "Logical DNS resolver for cluster {0} encountered name resolution "
+                       + "error: {1}, scheduling DNS resolution backoff for {2} ns",
+                   name, error, delayNanos);
+    -              scheduledRefresh =
+    +          scheduledRefresh =
+                   syncContext.schedule(
+                       new DelayedNameResolverRefresh(), delayNanos, TimeUnit.NANOSECONDS,
+                       timeService);
+    -            }
+    -          });
+             }
+           }
+         }
+    diff --git a/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java b/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java
+    --- a/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java
+    +++ b/xds/src/test/java/io/grpc/xds/ClusterResolverLoadBalancerTest.java
+    @@ -199,7 +199,8 @@ public class ClusterResolverLoadBalancerTest {
+       @Captor
+       private ArgumentCaptor<SubchannelPicker> pickerCaptor;
+       private int xdsClientRefs;
+       private ClusterResolverLoadBalancer loadBalancer;
+    +  private NameResolverProvider fakeNameResolverProvider;
+     
+       @Before
+       public void setUp() throws URISyntaxException {
+    @@ -216,7 +217,8 @@ public class ClusterResolverLoadBalancerTest {
+             .setServiceConfigParser(mock(ServiceConfigParser.class))
+             .setChannelLogger(mock(ChannelLogger.class))
+             .build();
+    -    nsRegistry.register(new FakeNameResolverProvider());
+    +    fakeNameResolverProvider = new FakeNameResolverProvider(false);
+    +    nsRegistry.register(fakeNameResolverProvider);
+         when(helper.getNameResolverRegistry()).thenReturn(nsRegistry);
+         when(helper.getNameResolverArgs()).thenReturn(args);
+         when(helper.getSynchronizationContext()).thenReturn(syncContext);
+    @@ -826,6 +828,17 @@ public class ClusterResolverLoadBalancerTest {
+     
+       @Test
+       public void onlyLogicalDnsCluster_endpointsResolved() {
+    +    do_onlyLogicalDnsCluster_endpointsResolved();
+    +  }
+    +
+    +  @Test
+    +  public void oldListenerCallback_onlyLogicalDnsCluster_endpointsResolved() {
+    +    nsRegistry.deregister(fakeNameResolverProvider);
+    +    nsRegistry.register(new FakeNameResolverProvider(true));
+    +    do_onlyLogicalDnsCluster_endpointsResolved();
+    +  }
+    +
+    +  void do_onlyLogicalDnsCluster_endpointsResolved() {
+         ClusterResolverConfig config = new ClusterResolverConfig(
+             Collections.singletonList(logicalDnsDiscoveryMechanism), roundRobin, false);
+         deliverLbConfig(config);
+    @@ -854,7 +867,6 @@ public class ClusterResolverLoadBalancerTest {
+             .get(XdsAttributes.ATTR_ADDRESS_NAME)).isEqualTo(DNS_HOST_NAME);
+         assertThat(childBalancer.addresses.get(1).getAttributes()
+             .get(XdsAttributes.ATTR_ADDRESS_NAME)).isEqualTo(DNS_HOST_NAME);
+    -
+       }
+     
+       @Test
+    @@ -876,8 +888,19 @@ public class ClusterResolverLoadBalancerTest {
+       }
+     
+       @Test
+    -  public void onlyLogicalDnsCluster_resolutionError_backoffAndRefresh() {
+    +  public void resolutionError_backoffAndRefresh() {
+    +    do_onlyLogicalDnsCluster_resolutionError_backoffAndRefresh();
+    +  }
+    +
+    +  @Test
+    +  public void oldListenerCallback_resolutionError_backoffAndRefresh() {
+    +    nsRegistry.deregister(fakeNameResolverProvider);
+    +    nsRegistry.register(new FakeNameResolverProvider(true));
+    +    do_onlyLogicalDnsCluster_resolutionError_backoffAndRefresh();
+    +  }
+    +
+    +  void do_onlyLogicalDnsCluster_resolutionError_backoffAndRefresh() {
+         InOrder inOrder = Mockito.inOrder(helper, backoffPolicyProvider,
+             backoffPolicy1, backoffPolicy2);
+         ClusterResolverConfig config = new ClusterResolverConfig(
+             Collections.singletonList(logicalDnsDiscoveryMechanism), roundRobin, false);
+    @@ -1319,10 +1342,18 @@ public class ClusterResolverLoadBalancerTest {
+       }
+     
+       private class FakeNameResolverProvider extends NameResolverProvider {
+    +    private final boolean useOldListenerCallback;
+    +
+    +    private FakeNameResolverProvider(boolean useOldListenerCallback) {
+    +      this.useOldListenerCallback = useOldListenerCallback;
+    +    }
+    +
+         @Override
+         public NameResolver newNameResolver(URI targetUri, NameResolver.Args args) {
+           assertThat(targetUri.getScheme()).isEqualTo("dns");
+    -      FakeNameResolver resolver = new FakeNameResolver(targetUri);
+    +      FakeNameResolver resolver = useOldListenerCallback
+    +          ? new FakeNameResolverUsingOldListenerCallback(targetUri)
+    +          : new FakeNameResolver(targetUri);
+           resolvers.add(resolver);
+           return resolver;
+         }
+    @@ -1343,7 +1374,7 @@ public class ClusterResolverLoadBalancerTest {
+     
+       private class FakeNameResolver extends NameResolver {
+         private final URI targetUri;
+    -    private Listener2 listener;
+    +    protected Listener2 listener;
+         private int refreshCount;
+     
+         private FakeNameResolver(URI targetUri) {
+    @@ -1372,12 +1403,33 @@ public class ClusterResolverLoadBalancerTest {
+           resolvers.remove(this);
+         }
+     
+    -    private void deliverEndpointAddresses(List<EquivalentAddressGroup> addresses) {
+    +    protected void deliverEndpointAddresses(List<EquivalentAddressGroup> addresses) {
+    +      syncContext.execute(() -> {
+    +        Status ret = listener.onResult2(ResolutionResult.newBuilder()
+    +            .setAddressesOrError(StatusOr.fromValue(addresses)).build());
+    +        assertThat(ret.getCode()).isEqualTo(Status.Code.OK);
+    +      });
+    +    }
+    +
+    +    protected void deliverError(Status error) {
+    +      syncContext.execute(() -> listener.onResult2(ResolutionResult.newBuilder()
+    +          .setAddressesOrError(StatusOr.fromStatus(error)).build()));
+    +    }
+    +  }
+    +
+    +  private class FakeNameResolverUsingOldListenerCallback extends FakeNameResolver {
+    +    private FakeNameResolverUsingOldListenerCallback(URI targetUri) {
+    +      super(targetUri);
+    +    }
+    +
+    +    @Override
+    +    protected void deliverEndpointAddresses(List<EquivalentAddressGroup> addresses) {
+           listener.onResult(ResolutionResult.newBuilder()
+               .setAddressesOrError(StatusOr.fromValue(addresses)).build());
+         }
+     
+    -    private void deliverError(Status error) {
+    +    @Override
+    +    protected void deliverError(Status error) {
+           listener.onError(error);
+         }
+       }
+  notes: >
+    Backported logical DNS handling to process address values and errors through ResolutionResult/onResult2, with tests covering both new and legacy listener callbacks; each hunk was validated with mode=hunk.
+```
+
+--- END CLI OUTPUT ---
+[14:58:28]   Done in 260.7s | status=success

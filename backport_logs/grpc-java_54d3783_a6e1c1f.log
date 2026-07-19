@@ -1,0 +1,140 @@
+[14:51:22] === Row 33: grpc-java  54d37839 -> a6e1c1f0  [TYPE-I] ===
+[14:51:22]   Resolving parent of backport commit a6e1c1f0...
+[14:51:22]   Backport parent (target ref): 868178651f6ae0dcef5bc0048c1e94ed1a8c13cc
+[14:51:22]   Extracting new-version patch for 54d37839...
+[14:51:23]   New-version patch size: 3018 chars
+[14:51:23]   Checking out backport parent 86817865...
+[14:51:23]   Invoking OpenCode CLI (6909 chars)...
+[14:51:23]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the target ref context and validate an adapted patch hunk-by-hunk, without switching branches or using later master history.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target code context
+[ ] Construct backport diff for v1.72.x parent ref
+[ ] Validate each hunk applies cleanly
+[ ] Return YAML result
+[0m
+[0m⚙ [0mlocate_symbol {"ref":"868178651f6ae0dcef5bc0048c1e94ed1a8c13cc","symbol":"ServerCalls"}
+[0m⚙ [0mviewcode {"ref":"868178651f6ae0dcef5bc0048c1e94ed1a8c13cc","path":"stub/src/main/java/io/grpc/stub/ServerCalls.java","startline":360,"endline":395}
+[0m⚙ [0mviewcode {"ref":"868178651f6ae0dcef5bc0048c1e94ed1a8c13cc","path":"stub/src/test/java/io/grpc/stub/ServerCallsTest.java","startline":535,"endline":715}
+[0m⚙ [0mgit_show {"ref":"54d37839a39defddf59665962e05d863a490cfc9"}
+[0m⚙ [0mlocate_symbol {"ref":"868178651f6ae0dcef5bc0048c1e94ed1a8c13cc","symbol":"ServerCallRecorder"}
+The target branch has the same production logic and a slightly shorter test file, so this is a direct TYPE-I port with adjusted test line numbers. I’m adding the metadata copy behavior and the regression test recorder field.
+[0m⚙ [0mgit_history {"filepath":"stub/src/main/java/io/grpc/stub/ServerCalls.java","start_line":382,"end_line":389,"start_commit":"868178651f6ae0dcef5bc0048c1e94ed1a8c13cc","end_commit":"868178651f6ae0dcef5bc0048c1e94ed1a8c13cc"}
+[0m⚙ [0mgit_history {"filepath":"stub/src/test/java/io/grpc/stub/ServerCallsTest.java","start_line":535,"end_line":555,"start_commit":"868178651f6ae0dcef5bc0048c1e94ed1a8c13cc","end_commit":"868178651f6ae0dcef5bc0048c1e94ed1a8c13cc"}
+[0m⚙ [0mviewcode {"ref":"868178651f6ae0dcef5bc0048c1e94ed1a8c13cc","path":"stub/src/test/java/io/grpc/stub/ServerCallsTest.java","startline":1,"endline":80}
+`git_history` could not run a same-ref range, but symbol/context lookup confirmed the relevant code is present in the target files. I’m validating the resulting hunks now.
+[0m→ [0mRead stub/src/test/java/io/grpc/stub/ServerCallsTest.java[90m [offset=535, limit=140][0m
+[0m→ [0mRead stub/src/test/java/io/grpc/stub/ServerCallsTest.java[90m [offset=675, limit=40][0m
+[0m→ [0mRead stub/src/main/java/io/grpc/stub/ServerCalls.java[90m [offset=378, limit=16][0m
+The backport patch is direct: copy trailers into a fresh `Metadata` object to avoid sharing exception-owned metadata across RPCs, then assert trailers are preserved in server-streaming error handling.
+[0m⚙ [0mvalidate {"ref":"868178651f6ae0dcef5bc0048c1e94ed1a8c13cc","mode":"hunk","patch":"--- a/stub/src/test/java/io/grpc/stub/ServerCallsTest.java\n+++ b/stub/src/test/java/io/grpc/stub/ServerCallsTest.java\n@@ -555,6 +555,35 @@ public class ServerCallsTest {\n     listener.onHalfClose();\n   }\n \n+  @Test\n+  public void clientSendsOne_serverOnErrorWithTrailers_serverStreaming() {\n+    Metadata trailers = new Metadata();\n+    Metadata.Key<String> key = Metadata.Key.of(\"trailers-test-key1\",\n+            Metadata.ASCII_STRING_MARSHALLER);\n+    trailers.put(key, \"trailers-test-value1\");\n+\n+    ServerCallRecorder serverCall = new ServerCallRecorder(SERVER_STREAMING_METHOD);\n+    ServerCallHandler<Integer, Integer> callHandler = ServerCalls.asyncServerStreamingCall(\n+        new ServerCalls.ServerStreamingMethod<Integer, Integer>() {\n+          @Override\n+          public void invoke(Integer req, StreamObserver<Integer> responseObserver) {\n+            responseObserver.onError(\n+                    Status.fromCode(Status.Code.INTERNAL)\n+                            .asRuntimeException(trailers)\n+            );\n+          }\n+        });\n+    ServerCall.Listener<Integer> listener = callHandler.startCall(serverCall, new Metadata());\n+    serverCall.isReady = true;\n+    serverCall.isCancelled = false;\n+    listener.onReady();\n+    listener.onMessage(1);\n+    listener.onHalfClose();\n+    // verify trailers key is set\n+    assertTrue(serverCall.trailers.containsKey(key));\n+    assertTrue(serverCall.status.equals(Status.INTERNAL));\n+  }\n+\n   @Test\n   public void inprocessTransportManualFlow() throws Exception {\n     final Semaphore semaphore = new Semaphore(1);\n"}
+[0m⚙ [0mvalidate {"ref":"868178651f6ae0dcef5bc0048c1e94ed1a8c13cc","mode":"hunk","patch":"--- a/stub/src/main/java/io/grpc/stub/ServerCalls.java\n+++ b/stub/src/main/java/io/grpc/stub/ServerCalls.java\n@@ -382,9 +382,10 @@ public final class ServerCalls {\n \n     @Override\n     public void onError(Throwable t) {\n-      Metadata metadata = Status.trailersFromThrowable(t);\n-      if (metadata == null) {\n-        metadata = new Metadata();\n+      Metadata metadata = new Metadata();\n+      Metadata trailers = Status.trailersFromThrowable(t);\n+      if (trailers != null) {\n+        metadata.merge(trailers);\n       }\n       call.close(Status.fromThrowable(t), metadata);\n       aborted = true;\n"}
+[0m⚙ [0mvalidate {"ref":"868178651f6ae0dcef5bc0048c1e94ed1a8c13cc","mode":"hunk","patch":"--- a/stub/src/test/java/io/grpc/stub/ServerCallsTest.java\n+++ b/stub/src/test/java/io/grpc/stub/ServerCallsTest.java\n@@ -675,6 +705,7 @@ public class ServerCallsTest {\n     @Override\n     public void close(Status status, Metadata trailers) {\n       this.status = status;\n+      this.trailers = trailers;\n     }\n \n     @Override\n"}
+[0m⚙ [0mvalidate {"ref":"868178651f6ae0dcef5bc0048c1e94ed1a8c13cc","mode":"hunk","patch":"--- a/stub/src/test/java/io/grpc/stub/ServerCallsTest.java\n+++ b/stub/src/test/java/io/grpc/stub/ServerCallsTest.java\n@@ -650,6 +679,7 @@ public class ServerCallsTest {\n     private List<Integer> responses = new ArrayList<>();\n     private Status status;\n     private boolean isCancelled;\n     private boolean isReady;\n     private int onReadyThreshold;\n+    private Metadata trailers;\n \n     public ServerCallRecorder(MethodDescriptor<Integer, Integer> methodDescriptor) {\n       this.methodDescriptor = methodDescriptor;\n"}
+[0m⚙ [0mvalidate {"ref":"868178651f6ae0dcef5bc0048c1e94ed1a8c13cc","mode":"hunk","patch":"--- a/stub/src/test/java/io/grpc/stub/ServerCallsTest.java\n+++ b/stub/src/test/java/io/grpc/stub/ServerCallsTest.java\n@@ -650,6 +679,7 @@ public class ServerCallsTest {\n     private final List<Integer> responses = new ArrayList<>();\n     private Status status;\n     private boolean isCancelled;\n     private boolean isReady;\n     private int onReadyThreshold;\n+    private Metadata trailers;\n \n     public ServerCallRecorder(MethodDescriptor<Integer, Integer> methodDescriptor) {\n       this.methodDescriptor = methodDescriptor;\n"}
+All individual hunks now apply cleanly after correcting target-branch context for the existing `final` list field. Final full validation is intentionally skipped per instructions.
+[0m⚙ [0mvalidate {"ref":"868178651f6ae0dcef5bc0048c1e94ed1a8c13cc","mode":"hunk","patch":"diff --git a/stub/src/main/java/io/grpc/stub/ServerCalls.java b/stub/src/main/java/io/grpc/stub/ServerCalls.java\n--- a/stub/src/main/java/io/grpc/stub/ServerCalls.java\n+++ b/stub/src/main/java/io/grpc/stub/ServerCalls.java\n@@ -382,9 +382,10 @@ public final class ServerCalls {\n \n     @Override\n     public void onError(Throwable t) {\n-      Metadata metadata = Status.trailersFromThrowable(t);\n-      if (metadata == null) {\n-        metadata = new Metadata();\n+      Metadata metadata = new Metadata();\n+      Metadata trailers = Status.trailersFromThrowable(t);\n+      if (trailers != null) {\n+        metadata.merge(trailers);\n       }\n       call.close(Status.fromThrowable(t), metadata);\n       aborted = true;\ndiff --git a/stub/src/test/java/io/grpc/stub/ServerCallsTest.java b/stub/src/test/java/io/grpc/stub/ServerCallsTest.java\n--- a/stub/src/test/java/io/grpc/stub/ServerCallsTest.java\n+++ b/stub/src/test/java/io/grpc/stub/ServerCallsTest.java\n@@ -555,6 +555,35 @@ public class ServerCallsTest {\n     listener.onHalfClose();\n   }\n \n+  @Test\n+  public void clientSendsOne_serverOnErrorWithTrailers_serverStreaming() {\n+    Metadata trailers = new Metadata();\n+    Metadata.Key<String> key = Metadata.Key.of(\"trailers-test-key1\",\n+            Metadata.ASCII_STRING_MARSHALLER);\n+    trailers.put(key, \"trailers-test-value1\");\n+\n+    ServerCallRecorder serverCall = new ServerCallRecorder(SERVER_STREAMING_METHOD);\n+    ServerCallHandler<Integer, Integer> callHandler = ServerCalls.asyncServerStreamingCall(\n+        new ServerCalls.ServerStreamingMethod<Integer, Integer>() {\n+          @Override\n+          public void invoke(Integer req, StreamObserver<Integer> responseObserver) {\n+            responseObserver.onError(\n+                    Status.fromCode(Status.Code.INTERNAL)\n+                            .asRuntimeException(trailers)\n+            );\n+          }\n+        });\n+    ServerCall.Listener<Integer> listener = callHandler.startCall(serverCall, new Metadata());\n+    serverCall.isReady = true;\n+    serverCall.isCancelled = false;\n+    listener.onReady();\n+    listener.onMessage(1);\n+    listener.onHalfClose();\n+    // verify trailers key is set\n+    assertTrue(serverCall.trailers.containsKey(key));\n+    assertTrue(serverCall.status.equals(Status.INTERNAL));\n+  }\n+\n   @Test\n   public void inprocessTransportManualFlow() throws Exception {\n     final Semaphore semaphore = new Semaphore(1);\n@@ -650,6 +679,7 @@ public class ServerCallsTest {\n     private final List<Integer> responses = new ArrayList<>();\n     private Status status;\n     private boolean isCancelled;\n     private boolean isReady;\n     private int onReadyThreshold;\n+    private Metadata trailers;\n \n     public ServerCallRecorder(MethodDescriptor<Integer, Integer> methodDescriptor) {\n       this.methodDescriptor = methodDescriptor;\n@@ -675,6 +705,7 @@ public class ServerCallsTest {\n     @Override\n     public void close(Status status, Metadata trailers) {\n       this.status = status;\n+      this.trailers = trailers;\n     }\n \n     @Override\n"}
+[0m⚙ [0mvalidate {"ref":"868178651f6ae0dcef5bc0048c1e94ed1a8c13cc","mode":"hunk","patch":"--- a/stub/src/main/java/io/grpc/stub/ServerCalls.java\n+++ b/stub/src/main/java/io/grpc/stub/ServerCalls.java\n@@ -380,11 +380,12 @@ public final class ServerCalls {\n       call.sendMessage(response);\n     }\n \n     @Override\n     public void onError(Throwable t) {\n-      Metadata metadata = Status.trailersFromThrowable(t);\n-      if (metadata == null) {\n-        metadata = new Metadata();\n+      Metadata metadata = new Metadata();\n+      Metadata trailers = Status.trailersFromThrowable(t);\n+      if (trailers != null) {\n+        metadata.merge(trailers);\n       }\n       call.close(Status.fromThrowable(t), metadata);\n       aborted = true;\n     }\n--- a/stub/src/test/java/io/grpc/stub/ServerCallsTest.java\n+++ b/stub/src/test/java/io/grpc/stub/ServerCallsTest.java\n@@ -553,8 +553,37 @@ public class ServerCallsTest {\n     assertEquals(ServerCalls.TOO_MANY_REQUESTS, serverCall.status.getDescription());\n     // ensure onHalfClose does not invoke\n     listener.onHalfClose();\n   }\n \n+  @Test\n+  public void clientSendsOne_serverOnErrorWithTrailers_serverStreaming() {\n+    Metadata trailers = new Metadata();\n+    Metadata.Key<String> key = Metadata.Key.of(\"trailers-test-key1\",\n+            Metadata.ASCII_STRING_MARSHALLER);\n+    trailers.put(key, \"trailers-test-value1\");\n+\n+    ServerCallRecorder serverCall = new ServerCallRecorder(SERVER_STREAMING_METHOD);\n+    ServerCallHandler<Integer, Integer> callHandler = ServerCalls.asyncServerStreamingCall(\n+        new ServerCalls.ServerStreamingMethod<Integer, Integer>() {\n+          @Override\n+          public void invoke(Integer req, StreamObserver<Integer> responseObserver) {\n+            responseObserver.onError(\n+                    Status.fromCode(Status.Code.INTERNAL)\n+                            .asRuntimeException(trailers)\n+            );\n+          }\n+        });\n+    ServerCall.Listener<Integer> listener = callHandler.startCall(serverCall, new Metadata());\n+    serverCall.isReady = true;\n+    serverCall.isCancelled = false;\n+    listener.onReady();\n+    listener.onMessage(1);\n+    listener.onHalfClose();\n+    // verify trailers key is set\n+    assertTrue(serverCall.trailers.containsKey(key));\n+    assertTrue(serverCall.status.equals(Status.INTERNAL));\n+  }\n+\n   @Test\n   public void inprocessTransportManualFlow() throws Exception {\n     final Semaphore semaphore = new Semaphore(1);\n@@ -648,10 +677,11 @@ public class ServerCallsTest {\n     private final MethodDescriptor<Integer, Integer> methodDescriptor;\n     private final List<Integer> requestCalls = new ArrayList<>();\n     private final List<Integer> responses = new ArrayList<>();\n     private Status status;\n     private boolean isCancelled;\n     private boolean isReady;\n     private int onReadyThreshold;\n+    private Metadata trailers;\n \n     public ServerCallRecorder(MethodDescriptor<Integer, Integer> methodDescriptor) {\n       this.methodDescriptor = methodDescriptor;\n@@ -674,8 +704,9 @@ public class ServerCallsTest {\n \n     @Override\n     public void close(Status status, Metadata trailers) {\n       this.status = status;\n+      this.trailers = trailers;\n     }\n \n     @Override\n     public boolean isCancelled() {\n"}
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target code context
+[✓] Construct backport diff for v1.72.x parent ref
+[✓] Validate each hunk applies cleanly
+[•] Return YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    --- a/stub/src/main/java/io/grpc/stub/ServerCalls.java
+    +++ b/stub/src/main/java/io/grpc/stub/ServerCalls.java
+    @@ -380,11 +380,12 @@ public final class ServerCalls {
+           call.sendMessage(response);
+         }
+     
+         @Override
+         public void onError(Throwable t) {
+    -      Metadata metadata = Status.trailersFromThrowable(t);
+    -      if (metadata == null) {
+    -        metadata = new Metadata();
+    +      Metadata metadata = new Metadata();
+    +      Metadata trailers = Status.trailersFromThrowable(t);
+    +      if (trailers != null) {
+    +        metadata.merge(trailers);
+           }
+           call.close(Status.fromThrowable(t), metadata);
+           aborted = true;
+         }
+    --- a/stub/src/test/java/io/grpc/stub/ServerCallsTest.java
+    +++ b/stub/src/test/java/io/grpc/stub/ServerCallsTest.java
+    @@ -553,8 +553,37 @@ public class ServerCallsTest {
+         assertEquals(ServerCalls.TOO_MANY_REQUESTS, serverCall.status.getDescription());
+         // ensure onHalfClose does not invoke
+         listener.onHalfClose();
+       }
+     
+    +  @Test
+    +  public void clientSendsOne_serverOnErrorWithTrailers_serverStreaming() {
+    +    Metadata trailers = new Metadata();
+    +    Metadata.Key<String> key = Metadata.Key.of("trailers-test-key1",
+    +            Metadata.ASCII_STRING_MARSHALLER);
+    +    trailers.put(key, "trailers-test-value1");
+    +
+    +    ServerCallRecorder serverCall = new ServerCallRecorder(SERVER_STREAMING_METHOD);
+    +    ServerCallHandler<Integer, Integer> callHandler = ServerCalls.asyncServerStreamingCall(
+    +        new ServerCalls.ServerStreamingMethod<Integer, Integer>() {
+    +          @Override
+    +          public void invoke(Integer req, StreamObserver<Integer> responseObserver) {
+    +            responseObserver.onError(
+    +                    Status.fromCode(Status.Code.INTERNAL)
+    +                            .asRuntimeException(trailers)
+    +            );
+    +          }
+    +        });
+    +    ServerCall.Listener<Integer> listener = callHandler.startCall(serverCall, new Metadata());
+    +    serverCall.isReady = true;
+    +    serverCall.isCancelled = false;
+    +    listener.onReady();
+    +    listener.onMessage(1);
+    +    listener.onHalfClose();
+    +    // verify trailers key is set
+    +    assertTrue(serverCall.trailers.containsKey(key));
+    +    assertTrue(serverCall.status.equals(Status.INTERNAL));
+    +  }
+    +
+       @Test
+       public void inprocessTransportManualFlow() throws Exception {
+         final Semaphore semaphore = new Semaphore(1);
+    @@ -648,10 +677,11 @@ public class ServerCallsTest {
+         private final MethodDescriptor<Integer, Integer> methodDescriptor;
+         private final List<Integer> requestCalls = new ArrayList<>();
+         private final List<Integer> responses = new ArrayList<>();
+         private Status status;
+         private boolean isCancelled;
+         private boolean isReady;
+         private int onReadyThreshold;
+    +    private Metadata trailers;
+     
+         public ServerCallRecorder(MethodDescriptor<Integer, Integer> methodDescriptor) {
+           this.methodDescriptor = methodDescriptor;
+    @@ -674,8 +704,9 @@ public class ServerCallsTest {
+     
+         @Override
+         public void close(Status status, Metadata trailers) {
+           this.status = status;
+    +      this.trailers = trailers;
+         }
+     
+         @Override
+         public boolean isCancelled() {
+  notes: >
+    Backported the metadata-copy fix and regression test to v1.72.x target context; all hunks were validated with mode=hunk and full validation was skipped as requested.
+```
+
+--- END CLI OUTPUT ---
+[14:54:06]   Done in 163.7s | status=success

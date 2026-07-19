@@ -1,0 +1,17 @@
+[15:13:17] === Row 44: grpc-java  354b028c -> b6f7b693  [TYPE-I] ===
+[15:13:17]   Resolving parent of backport commit b6f7b693...
+[15:13:17]   Backport parent (target ref): 1994125c78be3099f41da0e89b9c402de7041b72
+[15:13:17]   Extracting new-version patch for 354b028c...
+[15:13:17]   New-version patch size: 24585 chars
+[15:13:17]   Checking out backport parent 1994125c...
+[15:13:17]   ERROR: Could not checkout backport parent 1994125c78be3099f41da0e89b9c402de7041b72: error: Your local changes to the following files would be overwritten by checkout:
+	api/src/main/java/io/grpc/NameResolver.java
+	core/src/main/java/io/grpc/internal/DnsNameResolver.java
+	core/src/main/java/io/grpc/internal/ManagedChannelImpl.java
+	core/src/main/java/io/grpc/internal/RetryingNameResolver.java
+	core/src/test/java/io/grpc/internal/DnsNameResolverTest.java
+	core/src/test/java/io/grpc/internal/ManagedChannelImplTest.java
+	core/src/test/java/io/grpc/internal/RetryingNameResolverTest.java
+	grpclb/src/test/java/io/grpc/grpclb/GrpclbNameResolverTest.java
+Please commit your changes or stash them before you switch branches.
+Aborting

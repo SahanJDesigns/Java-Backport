@@ -1,0 +1,131 @@
+[14:17:04] === Row 23: grpc-java  437e03dc -> 653d076c  [TYPE-I] ===
+[14:17:04]   Resolving parent of backport commit 653d076c...
+[14:17:04]   Backport parent (target ref): a5c2b1aa51608b1fff016a313d8ee65f92e8d23d
+[14:17:04]   Extracting new-version patch for 437e03dc...
+[14:17:04]   New-version patch size: 4568 chars
+[14:17:04]   Checking out backport parent a5c2b1aa...
+[14:17:05]   Invoking OpenCode CLI (8459 chars)...
+[14:17:05]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll map the two original hunks onto the checked-out `v1.75.x` parent, then validate the resulting patch hunks individually without doing a full validation.
+[0m⚙ [0mgit_show {"ref":"437e03dc98d98f6a2875daf8ac40b00de9002612"}
+[0m⚙ [0mviewcode {"ref":"a5c2b1aa51608b1fff016a313d8ee65f92e8d23d","path":"xds/src/main/java/io/grpc/xds/PriorityLoadBalancer.java","startline":280,"endline":360}
+[0m⚙ [0mviewcode {"ref":"a5c2b1aa51608b1fff016a313d8ee65f92e8d23d","path":"xds/src/test/java/io/grpc/xds/PriorityLoadBalancerTest.java","startline":1,"endline":90}
+[0m⚙ [0mviewcode {"ref":"a5c2b1aa51608b1fff016a313d8ee65f92e8d23d","path":"xds/src/test/java/io/grpc/xds/PriorityLoadBalancerTest.java","startline":520,"endline":590}
+[0m⚙ [0mlocate_symbol {"ref":"a5c2b1aa51608b1fff016a313d8ee65f92e8d23d","symbol":"readyToConnectDoesNotFailOverButUpdatesPicker"}
+[0m⚙ [0mlocate_symbol {"ref":"a5c2b1aa51608b1fff016a313d8ee65f92e8d23d","symbol":"PriorityLoadBalancer"}
+The target code is present in the same files with matching structure. I found one context difference in the test area: the new test should be inserted after the existing failover-on-IDLE test and before `readyToConnectDoesNotFailOverButUpdatesPicker()`.
+[0m⚙ [0mgit_history {"filepath":"xds/src/main/java/io/grpc/xds/PriorityLoadBalancer.java","start_line":316,"end_line":331,"start_commit":"a5c2b1aa51608b1fff016a313d8ee65f92e8d23d","end_commit":"a5c2b1aa51608b1fff016a313d8ee65f92e8d23d"}
+I’m constructing the minimal backport patch now: the production change preserves the original old-state guard, and the test adds Mockito `InOrder` plus the duplicate-CONNECTING regression test adapted to the existing `v1.75.x` surrounding tests.
+[0m⚙ [0mvalidate {"ref":"a5c2b1aa51608b1fff016a313d8ee65f92e8d23d","mode":"hunk","patch":"diff --git a/xds/src/main/java/io/grpc/xds/PriorityLoadBalancer.java b/xds/src/main/java/io/grpc/xds/PriorityLoadBalancer.java\n--- a/xds/src/main/java/io/grpc/xds/PriorityLoadBalancer.java\n+++ b/xds/src/main/java/io/grpc/xds/PriorityLoadBalancer.java\n@@ -316,13 +316,14 @@ final class PriorityLoadBalancer extends LoadBalancer {\n         if (!children.containsKey(priority)) {\n           return;\n         }\n+        ConnectivityState oldState = connectivityState;\n         connectivityState = newState;\n         picker = newPicker;\n \n         if (deletionTimer != null && deletionTimer.isPending()) {\n           return;\n         }\n-        if (newState.equals(CONNECTING)) {\n+        if (newState.equals(CONNECTING) && !oldState.equals(newState)) {\n           if (!failOverTimer.isPending() && seenReadyOrIdleSinceTransientFailure) {\n             failOverTimer = syncContext.schedule(new FailOverTask(), 10, TimeUnit.SECONDS,\n                 executor);\n"}
+[0m⚙ [0mvalidate {"ref":"a5c2b1aa51608b1fff016a313d8ee65f92e8d23d","mode":"hunk","patch":"diff --git a/xds/src/test/java/io/grpc/xds/PriorityLoadBalancerTest.java b/xds/src/test/java/io/grpc/xds/PriorityLoadBalancerTest.java\n--- a/xds/src/test/java/io/grpc/xds/PriorityLoadBalancerTest.java\n+++ b/xds/src/test/java/io/grpc/xds/PriorityLoadBalancerTest.java\n@@ -70,6 +71,7 @@ import org.junit.runner.RunWith;\n import org.junit.runners.JUnit4;\n import org.mockito.ArgumentCaptor;\n import org.mockito.Captor;\n+import org.mockito.InOrder;\n import org.mockito.Mock;\n import org.mockito.junit.MockitoJUnit;\n import org.mockito.junit.MockitoRule;\n"}
+[0m⚙ [0mvalidate {"ref":"a5c2b1aa51608b1fff016a313d8ee65f92e8d23d","mode":"hunk","patch":"diff --git a/xds/src/test/java/io/grpc/xds/PriorityLoadBalancerTest.java b/xds/src/test/java/io/grpc/xds/PriorityLoadBalancerTest.java\n--- a/xds/src/test/java/io/grpc/xds/PriorityLoadBalancerTest.java\n+++ b/xds/src/test/java/io/grpc/xds/PriorityLoadBalancerTest.java\n@@ -554,6 +556,55 @@ public class PriorityLoadBalancerTest {\n     assertThat(fooHelpers).hasSize(2);\n   }\n \n+  @Test\n+  public void failoverTimerNotRestartedOnDupConnecting() {\n+    InOrder inOrder = inOrder(helper);\n+    PriorityChildConfig priorityChildConfig0 =\n+        new PriorityChildConfig(newChildConfig(fooLbProvider, new Object()), true);\n+    PriorityChildConfig priorityChildConfig1 =\n+        new PriorityChildConfig(newChildConfig(fooLbProvider, new Object()), true);\n+    PriorityLbConfig priorityLbConfig =\n+        new PriorityLbConfig(\n+            ImmutableMap.of(\"p0\", priorityChildConfig0, \"p1\", priorityChildConfig1),\n+            ImmutableList.of(\"p0\", \"p1\"));\n+    priorityLb.acceptResolvedAddresses(\n+        ResolvedAddresses.newBuilder()\n+            .setAddresses(ImmutableList.<EquivalentAddressGroup>of())\n+            .setLoadBalancingPolicyConfig(priorityLbConfig)\n+            .build());\n+    // Nothing important about this verify, other than to provide a baseline\n+    inOrder.verify(helper)\n+        .updateBalancingState(eq(CONNECTING), pickerReturns(PickResult.withNoResult()));\n+    assertThat(fooBalancers).hasSize(1);\n+    assertThat(fooHelpers).hasSize(1);\n+    Helper helper0 = Iterables.getOnlyElement(fooHelpers);\n+\n+    // Cause seenReadyOrIdleSinceTransientFailure = true\n+    helper0.updateBalancingState(IDLE, EMPTY_PICKER);\n+    inOrder.verify(helper)\n+        .updateBalancingState(eq(IDLE), pickerReturns(PickResult.withNoResult()));\n+    helper0.updateBalancingState(CONNECTING, EMPTY_PICKER);\n+\n+    // p0 keeps repeating CONNECTING, failover happens\n+    fakeClock.forwardTime(5, TimeUnit.SECONDS);\n+    helper0.updateBalancingState(CONNECTING, EMPTY_PICKER);\n+    fakeClock.forwardTime(5, TimeUnit.SECONDS);\n+    assertThat(fooBalancers).hasSize(2);\n+    assertThat(fooHelpers).hasSize(2);\n+    inOrder.verify(helper, times(2))\n+        .updateBalancingState(eq(CONNECTING), pickerReturns(PickResult.withNoResult()));\n+    Helper helper1 = Iterables.getLast(fooHelpers);\n+\n+    // p0 keeps repeating CONNECTING, no reset of failover timer\n+    helper1.updateBalancingState(IDLE, EMPTY_PICKER); // Stop timer for p1\n+    inOrder.verify(helper)\n+        .updateBalancingState(eq(IDLE), pickerReturns(PickResult.withNoResult()));\n+    helper0.updateBalancingState(CONNECTING, EMPTY_PICKER);\n+    fakeClock.forwardTime(10, TimeUnit.SECONDS);\n+    inOrder.verify(helper, never())\n+        .updateBalancingState(eq(CONNECTING), any());\n+  }\n+\n   @Test\n   public void readyToConnectDoesNotFailOverButUpdatesPicker() {\n     PriorityChildConfig priorityChildConfig0 =\n"}
+[0m⚙ [0mvalidate {"ref":"a5c2b1aa51608b1fff016a313d8ee65f92e8d23d","mode":"hunk","patch":"diff --git a/xds/src/test/java/io/grpc/xds/PriorityLoadBalancerTest.java b/xds/src/test/java/io/grpc/xds/PriorityLoadBalancerTest.java\n--- a/xds/src/test/java/io/grpc/xds/PriorityLoadBalancerTest.java\n+++ b/xds/src/test/java/io/grpc/xds/PriorityLoadBalancerTest.java\n@@ -28,6 +28,7 @@ import static org.mockito.ArgumentMatchers.isA;\n import static org.mockito.Mockito.atLeastOnce;\n import static org.mockito.Mockito.clearInvocations;\n import static org.mockito.Mockito.doReturn;\n+import static org.mockito.Mockito.inOrder;\n import static org.mockito.Mockito.mock;\n import static org.mockito.Mockito.never;\n import static org.mockito.Mockito.times;\n"}
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/xds/src/main/java/io/grpc/xds/PriorityLoadBalancer.java b/xds/src/main/java/io/grpc/xds/PriorityLoadBalancer.java
+    --- a/xds/src/main/java/io/grpc/xds/PriorityLoadBalancer.java
+    +++ b/xds/src/main/java/io/grpc/xds/PriorityLoadBalancer.java
+    @@ -316,13 +316,14 @@ final class PriorityLoadBalancer extends LoadBalancer {
+             if (!children.containsKey(priority)) {
+               return;
+             }
+    +        ConnectivityState oldState = connectivityState;
+             connectivityState = newState;
+             picker = newPicker;
+     
+             if (deletionTimer != null && deletionTimer.isPending()) {
+               return;
+             }
+    -        if (newState.equals(CONNECTING)) {
+    +        if (newState.equals(CONNECTING) && !oldState.equals(newState)) {
+               if (!failOverTimer.isPending() && seenReadyOrIdleSinceTransientFailure) {
+                 failOverTimer = syncContext.schedule(new FailOverTask(), 10, TimeUnit.SECONDS,
+                     executor);
+    diff --git a/xds/src/test/java/io/grpc/xds/PriorityLoadBalancerTest.java b/xds/src/test/java/io/grpc/xds/PriorityLoadBalancerTest.java
+    --- a/xds/src/test/java/io/grpc/xds/PriorityLoadBalancerTest.java
+    +++ b/xds/src/test/java/io/grpc/xds/PriorityLoadBalancerTest.java
+    @@ -28,6 +28,7 @@ import static org.mockito.ArgumentMatchers.isA;
+     import static org.mockito.Mockito.atLeastOnce;
+     import static org.mockito.Mockito.clearInvocations;
+     import static org.mockito.Mockito.doReturn;
+    +import static org.mockito.Mockito.inOrder;
+     import static org.mockito.Mockito.mock;
+     import static org.mockito.Mockito.never;
+     import static org.mockito.Mockito.times;
+    @@ -70,6 +71,7 @@ import org.junit.runner.RunWith;
+     import org.junit.runners.JUnit4;
+     import org.mockito.ArgumentCaptor;
+     import org.mockito.Captor;
+    +import org.mockito.InOrder;
+     import org.mockito.Mock;
+     import org.mockito.junit.MockitoJUnit;
+     import org.mockito.junit.MockitoRule;
+    @@ -554,6 +556,55 @@ public class PriorityLoadBalancerTest {
+         assertThat(fooHelpers).hasSize(2);
+       }
+     
+    +  @Test
+    +  public void failoverTimerNotRestartedOnDupConnecting() {
+    +    InOrder inOrder = inOrder(helper);
+    +    PriorityChildConfig priorityChildConfig0 =
+    +        new PriorityChildConfig(newChildConfig(fooLbProvider, new Object()), true);
+    +    PriorityChildConfig priorityChildConfig1 =
+    +        new PriorityChildConfig(newChildConfig(fooLbProvider, new Object()), true);
+    +    PriorityLbConfig priorityLbConfig =
+    +        new PriorityLbConfig(
+    +            ImmutableMap.of("p0", priorityChildConfig0, "p1", priorityChildConfig1),
+    +            ImmutableList.of("p0", "p1"));
+    +    priorityLb.acceptResolvedAddresses(
+    +        ResolvedAddresses.newBuilder()
+    +            .setAddresses(ImmutableList.<EquivalentAddressGroup>of())
+    +            .setLoadBalancingPolicyConfig(priorityLbConfig)
+    +            .build());
+    +    // Nothing important about this verify, other than to provide a baseline
+    +    inOrder.verify(helper)
+    +        .updateBalancingState(eq(CONNECTING), pickerReturns(PickResult.withNoResult()));
+    +    assertThat(fooBalancers).hasSize(1);
+    +    assertThat(fooHelpers).hasSize(1);
+    +    Helper helper0 = Iterables.getOnlyElement(fooHelpers);
+    +
+    +    // Cause seenReadyOrIdleSinceTransientFailure = true
+    +    helper0.updateBalancingState(IDLE, EMPTY_PICKER);
+    +    inOrder.verify(helper)
+    +        .updateBalancingState(eq(IDLE), pickerReturns(PickResult.withNoResult()));
+    +    helper0.updateBalancingState(CONNECTING, EMPTY_PICKER);
+    +
+    +    // p0 keeps repeating CONNECTING, failover happens
+    +    fakeClock.forwardTime(5, TimeUnit.SECONDS);
+    +    helper0.updateBalancingState(CONNECTING, EMPTY_PICKER);
+    +    fakeClock.forwardTime(5, TimeUnit.SECONDS);
+    +    assertThat(fooBalancers).hasSize(2);
+    +    assertThat(fooHelpers).hasSize(2);
+    +    inOrder.verify(helper, times(2))
+    +        .updateBalancingState(eq(CONNECTING), pickerReturns(PickResult.withNoResult()));
+    +    Helper helper1 = Iterables.getLast(fooHelpers);
+    +
+    +    // p0 keeps repeating CONNECTING, no reset of failover timer
+    +    helper1.updateBalancingState(IDLE, EMPTY_PICKER); // Stop timer for p1
+    +    inOrder.verify(helper)
+    +        .updateBalancingState(eq(IDLE), pickerReturns(PickResult.withNoResult()));
+    +    helper0.updateBalancingState(CONNECTING, EMPTY_PICKER);
+    +    fakeClock.forwardTime(10, TimeUnit.SECONDS);
+    +    inOrder.verify(helper, never())
+    +        .updateBalancingState(eq(CONNECTING), any());
+    +  }
+    +
+       @Test
+       public void readyToConnectDoesNotFailOverButUpdatesPicker() {
+         PriorityChildConfig priorityChildConfig0 =
+  notes: >
+    Backported the duplicate CONNECTING guard for PriorityLoadBalancer failover timer scheduling and added the matching regression test; all hunks validated cleanly.
+```
+
+--- END CLI OUTPUT ---
+[14:18:57]   Done in 112.9s | status=success

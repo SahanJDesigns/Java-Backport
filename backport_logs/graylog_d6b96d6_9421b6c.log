@@ -1,0 +1,129 @@
+[13:00:51] === Row 1: graylog  d6b96d6f -> 9421b6cc  [TYPE-I] ===
+[13:02:26]   Resolving parent of backport commit 9421b6cc...
+[13:02:26]   Backport parent (target ref): e40226f304baf7652c05ac9e30866638ef6ec557
+[13:02:26]   Extracting new-version patch for d6b96d6f...
+[13:02:26]   New-version patch size: 4628 chars
+[13:02:26]   Checking out backport parent e40226f3...
+[13:02:36]   Invoking OpenCode CLI (8487 chars)...
+[13:02:36]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the target branch context for the changed files and symbols, then build and hunk-validate a minimal backport diff against the provided parent ref.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target branch code context
+[ ] Construct unified backport patch adapted to 6.2
+[ ] Validate each hunk applies cleanly
+[ ] Return final YAML result
+[0m
+[0m⚙ [0mviewcode {"ref":"e40226f304baf7652c05ac9e30866638ef6ec557","path":"graylog2-server/src/main/java/org/graylog/plugins/views/search/searchtypes/export/ExportTabularResultResponse.java","startline":1,"endline":140}
+[0m⚙ [0mviewcode {"ref":"e40226f304baf7652c05ac9e30866638ef6ec557","path":"graylog2-server/src/test/java/org/graylog/plugins/views/search/rest/export/response/ExportTabularResultResponseTest.java","startline":1,"endline":140}
+[0m⚙ [0mgit_show {"ref":"d6b96d6f9b7030fa3461e3d8e370220205a44306"}
+[0m⚙ [0mlocate_symbol {"ref":"e40226f304baf7652c05ac9e30866638ef6ec557","symbol":"fromMessageListResult"}
+The target files exist in the expected locations on `6.2`, and the main method currently matches the pre-fix behavior: it derives the CSV header only from the first message. I’m checking call sites because changing the method signature requires adapting callers on this branch too.
+[0m⚙ [0mgit_history {"filepath":"graylog2-server/src/main/java/org/graylog/plugins/views/search/searchtypes/export/ExportTabularResultResponse.java","start_line":77,"end_line":91,"start_commit":"e40226f304baf7652c05ac9e30866638ef6ec557","end_commit":"e40226f304baf7652c05ac9e30866638ef6ec557"}
+[0m✱ [0mGrep "ExportTabularResultResponse\.fromMessageListResult"[90m in graylog2-server/src/main/java · 0 matches[0m
+[0m✱ [0mGrep "fromMessageListResult\("[90m in . · 2 matches[0m
+No production call site in this checkout references `fromMessageListResult`; only the test does, so the signature change is self-contained in this repository. The changelog entry is a new file and should be included.
+[0m✱ [0mGlob "changelog/pr-24010.toml"[90m 0 matches[0m
+[0m✱ [0mGlob "changelog/*.toml"[90m 0 matches[0m
+[0m✱ [0mGrep "sample_message_list_result"[90m in graylog2-server/src/test/resources · 0 matches[0m
+[0m✱ [0mGlob "**/sample_message_list_result.json"[90m 1 match[0m
+[0m✱ [0mGlob "changelog/**"[90m 100 matches[0m
+[0m✱ [0mGlob "**/pr-*.toml"[90m 100 matches[0m
+On `6.2`, changelog fragments live under `changelog/unreleased/` rather than directly under `changelog/`, so I’ll adapt the new changelog file path to `changelog/unreleased/pr-24010.toml`.
+[0m→ [0mRead changelog/unreleased/issue-22273.toml[90m [limit=20][0m
+[0m→ [0mRead changelog/unreleased/pr-23985.toml[90m [limit=20][0m
+[0m→ [0mRead graylog2-server/src/test/resources/org/graylog/plugins/views/search/rest/export/response/sample_message_list_result.json[90m [limit=120][0m
+I’ve assembled the adapted patch: same Java/test changes as the original, with the changelog file placed in the branch’s `changelog/unreleased` directory. I’ll hunk-validate each changed file now.
+[0m⚙ [0mvalidate {"ref":"e40226f304baf7652c05ac9e30866638ef6ec557","mode":"hunk","patch":"diff --git a/changelog/unreleased/pr-24010.toml b/changelog/unreleased/pr-24010.toml\nnew file mode 100644\nindex 0000000000..a4e4e7cd1f\n--- /dev/null\n+++ b/changelog/unreleased/pr-24010.toml\n@@ -0,0 +1,5 @@\n+type = \"f\"\n+message = \"Fix sometimes missing fields and missing filtering for selected fields in message table CSV export in reports.\"\n+\n+pulls = [\"24010\", \"Graylog2/graylog-plugin-enterprise#12368\"]\n+issues = [\"Graylog2/graylog-plugin-enterprise#12308\", \"Graylog2/graylog-plugin-enterprise#12236\"]\n"}
+[0m⚙ [0mvalidate {"ref":"e40226f304baf7652c05ac9e30866638ef6ec557","mode":"hunk","patch":"diff --git a/graylog2-server/src/main/java/org/graylog/plugins/views/search/searchtypes/export/ExportTabularResultResponse.java b/graylog2-server/src/main/java/org/graylog/plugins/views/search/searchtypes/export/ExportTabularResultResponse.java\nindex cfd2b1a895..632e4bac0d 100644\n--- a/graylog2-server/src/main/java/org/graylog/plugins/views/search/searchtypes/export/ExportTabularResultResponse.java\n+++ b/graylog2-server/src/main/java/org/graylog/plugins/views/search/searchtypes/export/ExportTabularResultResponse.java\n@@ -77,14 +77,13 @@ public record ExportTabularResultResponse(@JsonProperty List<String> header,\n         return new ExportTabularResultResponse(header, dataRows);\n     }\n \n-    public static ExportTabularResultResponse fromMessageListResult(final MessageList.Result m) {\n+    public static ExportTabularResultResponse fromMessageListResult(final List<String> fields, final MessageList.Result m) {\n         if(m.messages().isEmpty()) {\n             return new ExportTabularResultResponse(List.of(), List.of());\n         }\n \n-        final var first = m.messages().get(0);\n-\n-        final var header = first.message().keySet().stream().toList();\n+        // iterating over all messages for the header to make sure that we collect all headers from all messages\n+        final var header = (fields != null && !fields.isEmpty()) ? fields : m.messages().stream().flatMap(s -> s.message().keySet().stream()).distinct().toList();\n         final var rows = m.messages()\n                             .stream()\n                             .map(message ->\n"}
+[0m⚙ [0mvalidate {"ref":"e40226f304baf7652c05ac9e30866638ef6ec557","mode":"hunk","patch":"diff --git a/graylog2-server/src/test/java/org/graylog/plugins/views/search/rest/export/response/ExportTabularResultResponseTest.java b/graylog2-server/src/test/java/org/graylog/plugins/views/search/rest/export/response/ExportTabularResultResponseTest.java\nindex b47528628a..96fbe2bac2 100644\n--- a/graylog2-server/src/test/java/org/graylog/plugins/views/search/rest/export/response/ExportTabularResultResponseTest.java\n+++ b/graylog2-server/src/test/java/org/graylog/plugins/views/search/rest/export/response/ExportTabularResultResponseTest.java\n@@ -81,7 +81,7 @@ class ExportTabularResultResponseTest {\n         final ObjectMapper objectMapper = new ObjectMapperProvider().get();\n         final byte[] bytes = Resources.toByteArray(Resources.getResource(\"org/graylog/plugins/views/search/rest/export/response/sample_message_list_result.json\"));\n         final MessageList.Result messageListResult = objectMapper.readValue(bytes, MessageList.Result.class);\n-        final ExportTabularResultResponse response = ExportTabularResultResponse.fromMessageListResult(messageListResult);\n+        final ExportTabularResultResponse response = ExportTabularResultResponse.fromMessageListResult(List.of(), messageListResult);\n \n         final ExportTabularResultResponse expectedResponse = new ExportTabularResultResponse(\n                 List.of(\"sequence_nr\",\"ingest_time\",\"gl2_receive_timestamp\",\"took_ms\",\"source\"),\n@@ -93,4 +93,22 @@ class ExportTabularResultResponseTest {\n \n         assertEquals(expectedResponse, response);\n     }\n+\n+    @Test\n+    void testCreationFromMessageListWithSelectedFields() throws Exception {\n+        final ObjectMapper objectMapper = new ObjectMapperProvider().get();\n+        final byte[] bytes = Resources.toByteArray(Resources.getResource(\"org/graylog/plugins/views/search/rest/export/response/sample_message_list_result.json\"));\n+        final MessageList.Result messageListResult = objectMapper.readValue(bytes, MessageList.Result.class);\n+        final ExportTabularResultResponse response = ExportTabularResultResponse.fromMessageListResult(List.of(\"sequence_nr\", \"gl2_receive_timestamp\"), messageListResult);\n+\n+        final ExportTabularResultResponse expectedResponse = new ExportTabularResultResponse(\n+                List.of(\"sequence_nr\",\"gl2_receive_timestamp\"),\n+                List.of(\n+                        new DataRow(List.of(277, \"2024-05-06 12:35:52.284\")),\n+                        new DataRow(List.of(278, \"2024-05-06 12:35:52.284\"))\n+                )\n+        );\n+\n+        assertEquals(expectedResponse, response);\n+    }\n }\n"}
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch code context
+[✓] Construct unified backport patch adapted to 6.2
+[✓] Validate each hunk applies cleanly
+[•] Return final YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/changelog/unreleased/pr-24010.toml b/changelog/unreleased/pr-24010.toml
+    new file mode 100644
+    index 0000000000..a4e4e7cd1f
+    --- /dev/null
+    +++ b/changelog/unreleased/pr-24010.toml
+    @@ -0,0 +1,5 @@
+    +type = "f"
+    +message = "Fix sometimes missing fields and missing filtering for selected fields in message table CSV export in reports."
+    +
+    +pulls = ["24010", "Graylog2/graylog-plugin-enterprise#12368"]
+    +issues = ["Graylog2/graylog-plugin-enterprise#12308", "Graylog2/graylog-plugin-enterprise#12236"]
+    diff --git a/graylog2-server/src/main/java/org/graylog/plugins/views/search/searchtypes/export/ExportTabularResultResponse.java b/graylog2-server/src/main/java/org/graylog/plugins/views/search/searchtypes/export/ExportTabularResultResponse.java
+    index cfd2b1a895..632e4bac0d 100644
+    --- a/graylog2-server/src/main/java/org/graylog/plugins/views/search/searchtypes/export/ExportTabularResultResponse.java
+    +++ b/graylog2-server/src/main/java/org/graylog/plugins/views/search/searchtypes/export/ExportTabularResultResponse.java
+    @@ -77,14 +77,13 @@ public record ExportTabularResultResponse(@JsonProperty List<String> header,
+             return new ExportTabularResultResponse(header, dataRows);
+         }
+     
+    -    public static ExportTabularResultResponse fromMessageListResult(final MessageList.Result m) {
+    +    public static ExportTabularResultResponse fromMessageListResult(final List<String> fields, final MessageList.Result m) {
+             if(m.messages().isEmpty()) {
+                 return new ExportTabularResultResponse(List.of(), List.of());
+             }
+     
+    -        final var first = m.messages().get(0);
+    -
+    -        final var header = first.message().keySet().stream().toList();
+    +        // iterating over all messages for the header to make sure that we collect all headers from all messages
+    +        final var header = (fields != null && !fields.isEmpty()) ? fields : m.messages().stream().flatMap(s -> s.message().keySet().stream()).distinct().toList();
+             final var rows = m.messages()
+                                 .stream()
+                                 .map(message ->
+    diff --git a/graylog2-server/src/test/java/org/graylog/plugins/views/search/rest/export/response/ExportTabularResultResponseTest.java b/graylog2-server/src/test/java/org/graylog/plugins/views/search/rest/export/response/ExportTabularResultResponseTest.java
+    index b47528628a..96fbe2bac2 100644
+    --- a/graylog2-server/src/test/java/org/graylog/plugins/views/search/rest/export/response/ExportTabularResultResponseTest.java
+    +++ b/graylog2-server/src/test/java/org/graylog/plugins/views/search/rest/export/response/ExportTabularResultResponseTest.java
+    @@ -81,7 +81,7 @@ class ExportTabularResultResponseTest {
+             final ObjectMapper objectMapper = new ObjectMapperProvider().get();
+             final byte[] bytes = Resources.toByteArray(Resources.getResource("org/graylog/plugins/views/search/rest/export/response/sample_message_list_result.json"));
+             final MessageList.Result messageListResult = objectMapper.readValue(bytes, MessageList.Result.class);
+    -        final ExportTabularResultResponse response = ExportTabularResultResponse.fromMessageListResult(messageListResult);
+    +        final ExportTabularResultResponse response = ExportTabularResultResponse.fromMessageListResult(List.of(), messageListResult);
+     
+             final ExportTabularResultResponse expectedResponse = new ExportTabularResultResponse(
+                     List.of("sequence_nr","ingest_time","gl2_receive_timestamp","took_ms","source"),
+    @@ -93,4 +93,22 @@ class ExportTabularResultResponseTest {
+     
+             assertEquals(expectedResponse, response);
+         }
+    +
+    +    @Test
+    +    void testCreationFromMessageListWithSelectedFields() throws Exception {
+    +        final ObjectMapper objectMapper = new ObjectMapperProvider().get();
+    +        final byte[] bytes = Resources.toByteArray(Resources.getResource("org/graylog/plugins/views/search/rest/export/response/sample_message_list_result.json"));
+    +        final MessageList.Result messageListResult = objectMapper.readValue(bytes, MessageList.Result.class);
+    +        final ExportTabularResultResponse response = ExportTabularResultResponse.fromMessageListResult(List.of("sequence_nr", "gl2_receive_timestamp"), messageListResult);
+    +
+    +        final ExportTabularResultResponse expectedResponse = new ExportTabularResultResponse(
+    +                List.of("sequence_nr","gl2_receive_timestamp"),
+    +                List.of(
+    +                        new DataRow(List.of(277, "2024-05-06 12:35:52.284")),
+    +                        new DataRow(List.of(278, "2024-05-06 12:35:52.284"))
+    +                )
+    +        );
+    +
+    +        assertEquals(expectedResponse, response);
+    +    }
+     }
+  notes: >
+    Backported the MessageList export selected-field handling and all-message header collection, adapting the changelog path to 6.2's changelog/unreleased layout; each hunk was validated.
+```
+
+--- END CLI OUTPUT ---
+[13:05:57]   Done in 305.8s | status=success

@@ -492,6 +492,7 @@ def _parse_result_from_reply(text: str, log_path: Path):
         return "no_reply", "No assistant reply received", ""
 
     import re
+    yaml_text = None
 
     # Primary: look for ```yaml backport_result block
     yaml_match = re.search(
@@ -502,11 +503,24 @@ def _parse_result_from_reply(text: str, log_path: Path):
 
     if yaml_match:
         yaml_text = yaml_match.group(1)
+    else:
+        # Fallback: look for backport_result: anywhere in the text
+        raw_match = re.search(
+            r"(backport_result:\s*\n.*?)(?:\n```|$)",
+            text,
+            re.DOTALL | re.IGNORECASE,
+        )
+        if raw_match:
+            yaml_text = raw_match.group(1)
+
+    if yaml_text:
         try:
             import yaml  # type: ignore
             data = yaml.safe_load(yaml_text)
             if isinstance(data, dict):
                 br = data.get("backport_result", data)
+                if not isinstance(br, dict):
+                    br = data
                 status = str(br.get("status", "unknown")).strip()
                 notes = str(br.get("notes", "")).strip()
                 patch = str(br.get("patch", "")).strip()
@@ -523,7 +537,7 @@ def _parse_result_from_reply(text: str, log_path: Path):
 
     # Fallback: keyword heuristics
     lower = text.lower()
-    if "patch applied successfully" in lower or "compiled successfully" in lower:
+    if "patch applied successfully" in lower or "compiled successfully" in lower or "validated cleanly" in lower:
         return "success", "Detected success keywords in reply", ""
     if "need not ported" in lower:
         return "need_not_ported", "Marked as need not ported", ""
@@ -540,6 +554,11 @@ def _parse_result_from_reply(text: str, log_path: Path):
 # ---------------------------------------------------------------------------
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="OpenCode Backport Automation (CLI Mode)")
+    parser.add_argument("--project", type=str, default=None, help="Only process jobs for this project (e.g. 'crate')")
+    args = parser.parse_args()
+
     load_dotenv()
 
     # Hardcoded Configuration
@@ -564,6 +583,8 @@ def main():
     print(f"  OpenCode Backport Automation (CLI Mode)")
     print(f"  Workspace    : {workspace}")
     print(f"  Log dir      : {log_dir}")
+    if args.project:
+        print(f"  Project      : {args.project}")
     print(f"{'='*64}\n")
 
     supabase: Client = create_client(supabase_url, supabase_key)
@@ -575,10 +596,17 @@ def main():
         if LIMIT and processed_count >= LIMIT:
             break
             
-        res = supabase.table("backport_jobs").select("*").eq("backport_status", "ready").limit(1).execute()
+        query = supabase.table("backport_jobs").select("*").eq("backport_status", "ready")
+        if args.project:
+            query = query.eq("project", args.project)
+        
+        res = query.limit(1).execute()
         jobs = res.data
         if not jobs:
-            print("No more 'ready' jobs found in Supabase. Exiting.")
+            if args.project:
+                print(f"No more 'ready' jobs found for project '{args.project}'. Exiting.")
+            else:
+                print("No more 'ready' jobs found in Supabase. Exiting.")
             break
             
         job = jobs[0]

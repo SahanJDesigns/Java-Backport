@@ -1,0 +1,171 @@
+[13:24:51] === Row 7: graylog  a78649d1 -> 1b2af126  [TYPE-II] ===
+[13:24:51]   Resolving parent of backport commit 1b2af126...
+[13:24:51]   Backport parent (target ref): 86a291128b7f01675aed7584304cac16ad4e9b3c
+[13:24:51]   Extracting new-version patch for a78649d1...
+[13:24:51]   New-version patch size: 5533 chars
+[13:24:51]   Checking out backport parent 86a29112...
+[13:24:51]   Invoking OpenCode CLI (9393 chars)...
+[13:24:51]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the 6.1 context for the CEF codec and tests, then construct and hunk-validate a minimal patch against the requested parent ref without switching branches.
+[0m# [0mTodos
+[•] Inspect original commit metadata and 6.1 code context
+[ ] Construct backport patch adapted to 6.1
+[ ] Validate each hunk against target ref
+[ ] Return parseable YAML result
+[0m
+[0m⚙ [0mviewcode {"ref":"86a291128b7f01675aed7584304cac16ad4e9b3c","path":"graylog2-server/src/test/java/org/graylog/plugins/cef/codec/CEFCodecTest.java","startline":1,"endline":150}
+[0m⚙ [0mviewcode {"ref":"86a291128b7f01675aed7584304cac16ad4e9b3c","path":"graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java","startline":50,"endline":170}
+[0m⚙ [0mgit_show {"ref":"a78649d109b7695ac4fb77239cb6dc4401c5044d"}
+[0m⚙ [0mlocate_symbol {"ref":"86a291128b7f01675aed7584304cac16ad4e9b3c","symbol":"CEFCodec"}
+[0m⚙ [0mlocate_symbol {"ref":"86a291128b7f01675aed7584304cac16ad4e9b3c","symbol":"decodeCEF"}
+The target code is in the same files on 6.1. The production hunk needs only local adaptation because `decodeCEF` already wraps parsing in a `try/catch`; the test hunk and changelog file align structurally with the provided diff.
+[0m⚙ [0mgit_history {"filepath":"graylog2-server/src/test/java/org/graylog/plugins/cef/codec/CEFCodecTest.java","start_line":17,"end_line":100,"start_commit":"86a291128b7f01675aed7584304cac16ad4e9b3c","end_commit":"86a291128b7f01675aed7584304cac16ad4e9b3c"}
+[0m⚙ [0mgit_history {"filepath":"graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java","start_line":64,"end_line":151,"start_commit":"86a291128b7f01675aed7584304cac16ad4e9b3c","end_commit":"86a291128b7f01675aed7584304cac16ad4e9b3c"}
+I’m going to validate the patch hunks directly instead of editing the worktree, since the requested output is the unified diff.
+[0m⚙ [0mvalidate {"ref":"86a291128b7f01675aed7584304cac16ad4e9b3c","mode":"hunk","patch":"diff --git a/changelog/unreleased/issue-8844.toml b/changelog/unreleased/issue-8844.toml\nnew file mode 100644\nindex 0000000000..f4e2e7a6d2\n--- /dev/null\n+++ b/changelog/unreleased/issue-8844.toml\n@@ -0,0 +1,4 @@\n+type = \"f\"\n+message = \"Handle timestamp parsing for Netscaler WAF logs.\"\n+\n+issues = [\"Graylog2/graylog-plugin-enterprise#8844\"]\n"}
+[0m⚙ [0mvalidate {"ref":"86a291128b7f01675aed7584304cac16ad4e9b3c","mode":"hunk","patch":"diff --git a/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java b/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java\nindex b172c252a7..5ff3854d67 100644\n--- a/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java\n+++ b/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java\n@@ -64,6 +64,7 @@ public class CEFCodec extends AbstractCodec {\n     private static final Logger LOG = LoggerFactory.getLogger(CEFCodec.class);\n \n     private static final Pattern SYSLOG_PREFIX = Pattern.compile(\"^<(?<pri>\\\\d+)>(?<msg>.*)$\");\n+    private static final Pattern CLEAN_PATTERN = Pattern.compile(\"^\\\\d+\\\\s+(\\\\S.*)\");\n \n     private static final String CK_TIMEZONE = \"timezone\";\n     private static final String CK_LOCALE = \"locale\";\n"}
+[0m⚙ [0mvalidate {"ref":"86a291128b7f01675aed7584304cac16ad4e9b3c","mode":"hunk","patch":"diff --git a/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java b/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java\nindex b172c252a7..5ff3854d67 100644\n--- a/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java\n+++ b/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java\n@@ -127,7 +128,8 @@ public class CEFCodec extends AbstractCodec {\n     protected Message decodeCEF(@Nonnull RawMessage rawMessage, String s) {\n         try {\n-            final MappedMessage cef = new MappedMessage(parser.parse(s, timezone.toTimeZone(), locale), useFullNames);\n+            String cleanedMsg = cleanMessage(s);\n+            final MappedMessage cef = new MappedMessage(parser.parse(cleanedMsg, timezone.toTimeZone(), locale), useFullNames);\n \n             // Build standard message.\n             Message result = messageFactory.createMessage(buildMessageSummary(cef), decideSource(cef, rawMessage), new DateTime(cef.timestamp()));\n"}
+[0m⚙ [0mviewcode {"ref":"86a291128b7f01675aed7584304cac16ad4e9b3c","path":"graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java","startline":120,"endline":145}
+[0m⚙ [0mvalidate {"ref":"86a291128b7f01675aed7584304cac16ad4e9b3c","mode":"hunk","patch":"diff --git a/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java b/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java\n--- a/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java\n+++ b/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java\n@@ -128,7 +128,8 @@ public class CEFCodec extends AbstractCodec {\n     protected Message decodeCEF(@Nonnull RawMessage rawMessage, String s) {\n         try {\n             final MappedMessage cef = new MappedMessage(parser.parse(s, timezone.toTimeZone(), locale), useFullNames);\n+            String cleanedMsg = cleanMessage(s);\n+            final MappedMessage cef = new MappedMessage(parser.parse(cleanedMsg, timezone.toTimeZone(), locale), useFullNames);\n \n             // Build standard message.\n             Message result = messageFactory.createMessage(buildMessageSummary(cef), decideSource(cef, rawMessage), new DateTime(cef.timestamp()));\n"}
+[0m⚙ [0mvalidate {"ref":"86a291128b7f01675aed7584304cac16ad4e9b3c","mode":"hunk","patch":"diff --git a/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java b/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java\n--- a/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java\n+++ b/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java\n@@ -128,7 +128,8 @@ public class CEFCodec extends AbstractCodec {\n     protected Message decodeCEF(@Nonnull RawMessage rawMessage, String s) {\n         try {\n-            final MappedMessage cef = new MappedMessage(parser.parse(s, timezone.toTimeZone(), locale), useFullNames);\n+            String cleanedMsg = cleanMessage(s);\n+            final MappedMessage cef = new MappedMessage(parser.parse(cleanedMsg, timezone.toTimeZone(), locale), useFullNames);\n \n             // Build standard message.\n             Message result = messageFactory.createMessage(buildMessageSummary(cef), decideSource(cef, rawMessage), new DateTime(cef.timestamp()));\n"}
+[0m⚙ [0mvalidate {"ref":"86a291128b7f01675aed7584304cac16ad4e9b3c","mode":"hunk","patch":"diff --git a/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java b/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java\n--- a/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java\n+++ b/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java\n@@ -128,7 +128,8 @@ public class CEFCodec extends AbstractCodec {\n     protected Message decodeCEF(@Nonnull RawMessage rawMessage, String s) {\n         try {\n-            final MappedMessage cef = new MappedMessage(parser.parse(s, timezone.toTimeZone(), locale), useFullNames);\n+            String cleanedMsg = cleanMessage(s);\n+            final MappedMessage cef = new MappedMessage(parser.parse(cleanedMsg, timezone.toTimeZone(), locale), useFullNames);\n \n             // Build standard message.\n             Message result = messageFactory.createMessage(buildMessageSummary(cef), decideSource(cef, rawMessage), new DateTime(cef.timestamp()));\n \n"}
+[0m⚙ [0mviewcode {"ref":"86a291128b7f01675aed7584304cac16ad4e9b3c","path":"graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java","startline":145,"endline":165}
+[0m⚙ [0mvalidate {"ref":"86a291128b7f01675aed7584304cac16ad4e9b3c","mode":"hunk","patch":"diff --git a/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java b/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java\n--- a/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java\n+++ b/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java\n@@ -151,6 +152,11 @@ public class CEFCodec extends AbstractCodec {\n         }\n     }\n \n+    private String cleanMessage(String message) {\n+        Matcher matcher = CLEAN_PATTERN.matcher(message);\n+        return matcher.find() ? matcher.group(1) : message;\n+    }\n+\n     protected String buildMessageSummary(com.github.jcustenborder.cef.Message cef) {\n         return cef.deviceProduct() + \": [\" + cef.deviceEventClassId() + \", \" + cef.severity() + \"] \" + cef.name();\n     }\n"}
+[0m⚙ [0mvalidate {"ref":"86a291128b7f01675aed7584304cac16ad4e9b3c","mode":"hunk","patch":"diff --git a/graylog2-server/src/test/java/org/graylog/plugins/cef/codec/CEFCodecTest.java b/graylog2-server/src/test/java/org/graylog/plugins/cef/codec/CEFCodecTest.java\n--- a/graylog2-server/src/test/java/org/graylog/plugins/cef/codec/CEFCodecTest.java\n+++ b/graylog2-server/src/test/java/org/graylog/plugins/cef/codec/CEFCodecTest.java\n@@ -17,18 +17,23 @@\n package org.graylog.plugins.cef.codec;\n \n import org.graylog.plugins.cef.parser.MappedMessage;\n+import org.graylog2.plugin.Message;\n import org.graylog2.plugin.MessageFactory;\n import org.graylog2.plugin.TestMessageFactory;\n import org.graylog2.plugin.configuration.Configuration;\n import org.graylog2.plugin.journal.RawMessage;\n+import org.joda.time.DateTime;\n+import org.joda.time.DateTimeZone;\n import org.junit.Before;\n import org.junit.Test;\n \n import java.net.InetSocketAddress;\n+import java.nio.charset.StandardCharsets;\n import java.util.Collections;\n \n import static org.junit.Assert.assertEquals;\n import static org.junit.Assert.assertNull;\n+import static org.junit.Assert.assertTrue;\n import static org.mockito.Mockito.mock;\n import static org.mockito.Mockito.when;\n"}
+[0m⚙ [0mvalidate {"ref":"86a291128b7f01675aed7584304cac16ad4e9b3c","mode":"hunk","patch":"diff --git a/graylog2-server/src/test/java/org/graylog/plugins/cef/codec/CEFCodecTest.java b/graylog2-server/src/test/java/org/graylog/plugins/cef/codec/CEFCodecTest.java\n--- a/graylog2-server/src/test/java/org/graylog/plugins/cef/codec/CEFCodecTest.java\n+++ b/graylog2-server/src/test/java/org/graylog/plugins/cef/codec/CEFCodecTest.java\n@@ -17,18 +17,23 @@\n package org.graylog.plugins.cef.codec;\n \n import org.graylog.plugins.cef.parser.MappedMessage;\n+import org.graylog2.plugin.Message;\n import org.graylog2.plugin.MessageFactory;\n import org.graylog2.plugin.TestMessageFactory;\n import org.graylog2.plugin.configuration.Configuration;\n import org.graylog2.plugin.journal.RawMessage;\n+import org.joda.time.DateTime;\n+import org.joda.time.DateTimeZone;\n import org.junit.Before;\n import org.junit.Test;\n \n import java.net.InetSocketAddress;\n+import java.nio.charset.StandardCharsets;\n import java.util.Collections;\n \n import static org.junit.Assert.assertEquals;\n import static org.junit.Assert.assertNull;\n+import static org.junit.Assert.assertTrue;\n import static org.mockito.Mockito.mock;\n import static org.mockito.Mockito.when;\n \n"}
+[0m⚙ [0mvalidate {"ref":"86a291128b7f01675aed7584304cac16ad4e9b3c","mode":"hunk","patch":"diff --git a/graylog2-server/src/test/java/org/graylog/plugins/cef/codec/CEFCodecTest.java b/graylog2-server/src/test/java/org/graylog/plugins/cef/codec/CEFCodecTest.java\n--- a/graylog2-server/src/test/java/org/graylog/plugins/cef/codec/CEFCodecTest.java\n+++ b/graylog2-server/src/test/java/org/graylog/plugins/cef/codec/CEFCodecTest.java\n@@ -93,9 +98,41 @@ public class CEFCodecTest {\n \n         assertEquals(\"128.66.23.42\", codec.decideSource(cefMessage, rawMessage));\n     }\n \n+    @Test\n+    public void testIssue8844() {\n+        // https://github.com/Graylog2/graylog-plugin-enterprise/issues/8844\n+        final RawMessage rawMessage = buildRawMessage(\"<134>1 2024-09-13T12:23:43.288000+02:00 netscaler-waf appname 1234 msgid - CEF:0|Vendor|Product|Version|EventID|Name|Severity|...\\n\");\n+        final MappedMessage cefMessage = mock(MappedMessage.class);\n+        when(cefMessage.mappedExtensions()).thenReturn(Collections.singletonMap(\"dvc\", \"128.66.23.42\"));\n+        final Message message = codec.decodeSafe(rawMessage).get();\n+        verifyFields(message);\n+    }\n+\n+    @Test\n+    public void testIssue8844WithoutPriority() {\n+        // https://github.com/Graylog2/graylog-plugin-enterprise/issues/8844\n+        final RawMessage rawMessage = buildRawMessage(\"<134>2024-09-13T12:23:43.288000+02:00 netscaler-waf appname 1234 msgid - CEF:0|Vendor|Product|Version|EventID|Name|Severity|...\\n\");\n+        final MappedMessage cefMessage = mock(MappedMessage.class);\n+        when(cefMessage.mappedExtensions()).thenReturn(Collections.singletonMap(\"dvc\", \"128.66.23.42\"));\n+        final Message message = codec.decodeSafe(rawMessage).get();\n+        verifyFields(message);\n+    }\n+\n+    private static void verifyFields(Message message) {\n+        assertTrue(message.getMessage().contains(\"Product: [EventID, Severity] Name\"));\n+        assertEquals(6, message.getField(\"level\"));\n+        assertEquals(\"Vendor\", message.getField(\"device_vendor\"));\n+        assertEquals(\"local0\", message.getField(\"facility\"));\n+        assertEquals(new DateTime(2024, 9, 13, 10, 28, 31, DateTimeZone.UTC), message.getTimestamp());\n+    }\n+\n     @Test\n     public void getAggregator() throws Exception {\n         assertNull(codec.getAggregator());\n     }\n+\n+    private RawMessage buildRawMessage(String message) {\n+        return new RawMessage(message.getBytes(StandardCharsets.UTF_8), new InetSocketAddress(\"127.0.0.1\", 5140));\n+    }\n }\n"}
+All hunks have been validated individually with `mode=hunk` against `86a291128b7f01675aed7584304cac16ad4e9b3c`. I’m skipping full validation as instructed and returning the patch YAML.
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and 6.1 code context
+[✓] Construct backport patch adapted to 6.1
+[✓] Validate each hunk against target ref
+[•] Return parseable YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/changelog/unreleased/issue-8844.toml b/changelog/unreleased/issue-8844.toml
+    new file mode 100644
+    index 0000000000..f4e2e7a6d2
+    --- /dev/null
+    +++ b/changelog/unreleased/issue-8844.toml
+    @@ -0,0 +1,4 @@
+    +type = "f"
+    +message = "Handle timestamp parsing for Netscaler WAF logs."
+    +
+    +issues = ["Graylog2/graylog-plugin-enterprise#8844"]
+    diff --git a/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java b/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java
+    --- a/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java
+    +++ b/graylog2-server/src/main/java/org/graylog/plugins/cef/codec/CEFCodec.java
+    @@ -64,6 +64,7 @@ public class CEFCodec extends AbstractCodec {
+         private static final Logger LOG = LoggerFactory.getLogger(CEFCodec.class);
+     
+         private static final Pattern SYSLOG_PREFIX = Pattern.compile("^<(?<pri>\\d+)>(?<msg>.*)$");
+    +    private static final Pattern CLEAN_PATTERN = Pattern.compile("^\\d+\\s+(\\S.*)");
+     
+         private static final String CK_TIMEZONE = "timezone";
+         private static final String CK_LOCALE = "locale";
+    @@ -128,7 +129,8 @@ public class CEFCodec extends AbstractCodec {
+         protected Message decodeCEF(@Nonnull RawMessage rawMessage, String s) {
+             try {
+    -            final MappedMessage cef = new MappedMessage(parser.parse(s, timezone.toTimeZone(), locale), useFullNames);
+    +            String cleanedMsg = cleanMessage(s);
+    +            final MappedMessage cef = new MappedMessage(parser.parse(cleanedMsg, timezone.toTimeZone(), locale), useFullNames);
+     
+                 // Build standard message.
+                 Message result = messageFactory.createMessage(buildMessageSummary(cef), decideSource(cef, rawMessage), new DateTime(cef.timestamp()));
+     
+    @@ -151,6 +153,11 @@ public class CEFCodec extends AbstractCodec {
+             }
+         }
+     
+    +    private String cleanMessage(String message) {
+    +        Matcher matcher = CLEAN_PATTERN.matcher(message);
+    +        return matcher.find() ? matcher.group(1) : message;
+    +    }
+    +
+         protected String buildMessageSummary(com.github.jcustenborder.cef.Message cef) {
+             return cef.deviceProduct() + ": [" + cef.deviceEventClassId() + ", " + cef.severity() + "] " + cef.name();
+         }
+    diff --git a/graylog2-server/src/test/java/org/graylog/plugins/cef/codec/CEFCodecTest.java b/graylog2-server/src/test/java/org/graylog/plugins/cef/codec/CEFCodecTest.java
+    --- a/graylog2-server/src/test/java/org/graylog/plugins/cef/codec/CEFCodecTest.java
+    +++ b/graylog2-server/src/test/java/org/graylog/plugins/cef/codec/CEFCodecTest.java
+    @@ -17,18 +17,23 @@
+     package org.graylog.plugins.cef.codec;
+     
+     import org.graylog.plugins.cef.parser.MappedMessage;
+    +import org.graylog2.plugin.Message;
+     import org.graylog2.plugin.MessageFactory;
+     import org.graylog2.plugin.TestMessageFactory;
+     import org.graylog2.plugin.configuration.Configuration;
+     import org.graylog2.plugin.journal.RawMessage;
+    +import org.joda.time.DateTime;
+    +import org.joda.time.DateTimeZone;
+     import org.junit.Before;
+     import org.junit.Test;
+     
+     import java.net.InetSocketAddress;
+    +import java.nio.charset.StandardCharsets;
+     import java.util.Collections;
+     
+     import static org.junit.Assert.assertEquals;
+     import static org.junit.Assert.assertNull;
+    +import static org.junit.Assert.assertTrue;
+     import static org.mockito.Mockito.mock;
+     import static org.mockito.Mockito.when;
+     
+    @@ -93,9 +98,41 @@ public class CEFCodecTest {
+     
+             assertEquals("128.66.23.42", codec.decideSource(cefMessage, rawMessage));
+         }
+     
+    +    @Test
+    +    public void testIssue8844() {
+    +        // https://github.com/Graylog2/graylog-plugin-enterprise/issues/8844
+    +        final RawMessage rawMessage = buildRawMessage("<134>1 2024-09-13T12:23:43.288000+02:00 netscaler-waf appname 1234 msgid - CEF:0|Vendor|Product|Version|EventID|Name|Severity|...\n");
+    +        final MappedMessage cefMessage = mock(MappedMessage.class);
+    +        when(cefMessage.mappedExtensions()).thenReturn(Collections.singletonMap("dvc", "128.66.23.42"));
+    +        final Message message = codec.decodeSafe(rawMessage).get();
+    +        verifyFields(message);
+    +    }
+    +
+    +    @Test
+    +    public void testIssue8844WithoutPriority() {
+    +        // https://github.com/Graylog2/graylog-plugin-enterprise/issues/8844
+    +        final RawMessage rawMessage = buildRawMessage("<134>2024-09-13T12:23:43.288000+02:00 netscaler-waf appname 1234 msgid - CEF:0|Vendor|Product|Version|EventID|Name|Severity|...\n");
+    +        final MappedMessage cefMessage = mock(MappedMessage.class);
+    +        when(cefMessage.mappedExtensions()).thenReturn(Collections.singletonMap("dvc", "128.66.23.42"));
+    +        final Message message = codec.decodeSafe(rawMessage).get();
+    +        verifyFields(message);
+    +    }
+    +
+    +    private static void verifyFields(Message message) {
+    +        assertTrue(message.getMessage().contains("Product: [EventID, Severity] Name"));
+    +        assertEquals(6, message.getField("level"));
+    +        assertEquals("Vendor", message.getField("device_vendor"));
+    +        assertEquals("local0", message.getField("facility"));
+    +        assertEquals(new DateTime(2024, 9, 13, 10, 28, 31, DateTimeZone.UTC), message.getTimestamp());
+    +    }
+    +
+         @Test
+         public void getAggregator() throws Exception {
+             assertNull(codec.getAggregator());
+         }
+    +
+    +    private RawMessage buildRawMessage(String message) {
+    +        return new RawMessage(message.getBytes(StandardCharsets.UTF_8), new InetSocketAddress("127.0.0.1", 5140));
+    +    }
+     }
+  notes: >
+    Backported the Netscaler WAF CEF cleanup, changelog entry, and regression tests to the 6.1 code context; each hunk was validated with mode=hunk.
+```
+
+--- END CLI OUTPUT ---
+[13:28:48]   Done in 236.9s | status=success

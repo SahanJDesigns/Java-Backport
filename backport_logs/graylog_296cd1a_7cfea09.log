@@ -1,0 +1,97 @@
+[13:50:51] === Row 14: graylog  296cd1a8 -> 7cfea09b  [TYPE-I] ===
+[13:50:51]   Resolving parent of backport commit 7cfea09b...
+[13:50:51]   Backport parent (target ref): e74a4db33e8b74673af48653fa1fd6d1afc63fd9
+[13:50:51]   Extracting new-version patch for 296cd1a8...
+[13:50:51]   New-version patch size: 4492 chars
+[13:50:51]   Checking out backport parent e74a4db3...
+[13:50:51]   Invoking OpenCode CLI (8351 chars)...
+[13:50:51]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll map the three original hunks onto the checked-out `6.0` ref, then validate the adapted diff hunk-by-hunk without checking out any other commit.
+[0m⚙ [0mgit_show {"ref":"296cd1a876b532606be160dc3a504b9539301a13"}
+[0m⚙ [0mviewcode {"ref":"e74a4db33e8b74673af48653fa1fd6d1afc63fd9","path":"graylog2-server/src/main/java/org/graylog2/inputs/codecs/SyslogCodec.java","startline":120,"endline":150}
+[0m⚙ [0mviewcode {"ref":"e74a4db33e8b74673af48653fa1fd6d1afc63fd9","path":"graylog2-server/src/test/java/org/graylog2/inputs/codecs/SyslogCodecTest.java","startline":45,"endline":60}
+[0m⚙ [0mviewcode {"ref":"e74a4db33e8b74673af48653fa1fd6d1afc63fd9","path":"graylog2-server/src/test/java/org/graylog2/inputs/codecs/SyslogCodecTest.java","startline":415,"endline":450}
+[0m⚙ [0mlocate_symbol {"ref":"e74a4db33e8b74673af48653fa1fd6d1afc63fd9","symbol":"testFortiGateFirewall"}
+[0m⚙ [0mlocate_symbol {"ref":"e74a4db33e8b74673af48653fa1fd6d1afc63fd9","symbol":"SyslogCodec"}
+The target code matches the original locations on `6.0`: `SyslogCodec` still constructs `FortiGateSyslogEvent` with the raw message, and the existing Fortigate test still embeds the sample message inline. I’ll now validate a minimal adapted patch with the changelog addition, production trim, and test refactor/new trim case.
+[0m⚙ [0mgit_history {"filepath":"graylog2-server/src/test/java/org/graylog2/inputs/codecs/SyslogCodecTest.java","start_line":426,"end_line":441,"start_commit":"e74a4db33e8b74673af48653fa1fd6d1afc63fd9","end_commit":"e74a4db33e8b74673af48653fa1fd6d1afc63fd9"}
+[0m⚙ [0mgit_history {"filepath":"graylog2-server/src/main/java/org/graylog2/inputs/codecs/SyslogCodec.java","start_line":137,"end_line":141,"start_commit":"e74a4db33e8b74673af48653fa1fd6d1afc63fd9","end_commit":"e74a4db33e8b74673af48653fa1fd6d1afc63fd9"}
+[0m⚙ [0mgit_history {"filepath":"graylog2-server/src/test/java/org/graylog2/inputs/codecs/SyslogCodecTest.java","start_line":426,"end_line":441,"start_commit":"e74a4db33e8b74673af48653fa1fd6d1afc63fd9~50","end_commit":"e74a4db33e8b74673af48653fa1fd6d1afc63fd9"}
+[0m⚙ [0mgit_history {"filepath":"graylog2-server/src/main/java/org/graylog2/inputs/codecs/SyslogCodec.java","start_line":137,"end_line":141,"start_commit":"e74a4db33e8b74673af48653fa1fd6d1afc63fd9~50","end_commit":"e74a4db33e8b74673af48653fa1fd6d1afc63fd9"}
+`git_history` found no relocations in recent `6.0` lineage for the relevant regions, so the direct file-level adaptation is appropriate. I’m validating each independent diff hunk now.
+[0m⚙ [0mvalidate {"ref":"e74a4db33e8b74673af48653fa1fd6d1afc63fd9","mode":"hunk","patch":"diff --git a/changelog/unreleased/pr-20788.toml b/changelog/unreleased/pr-20788.toml\nnew file mode 100644\nindex 0000000000..4f2273c685\n--- /dev/null\n+++ b/changelog/unreleased/pr-20788.toml\n@@ -0,0 +1,5 @@\n+type = \"a\"\n+message = \"Automatically trim newline characters for Fortigate messages received through Syslog inputs.\"\n+\n+issues = [\"graylog-plugin-enterprise#8980\"]\n+pulls = [\"20788\"]\n"}
+[0m⚙ [0mvalidate {"ref":"e74a4db33e8b74673af48653fa1fd6d1afc63fd9","mode":"hunk","patch":"diff --git a/graylog2-server/src/main/java/org/graylog2/inputs/codecs/SyslogCodec.java b/graylog2-server/src/main/java/org/graylog2/inputs/codecs/SyslogCodec.java\nindex 143ec30a96..f1032f7e9e 100644\n--- a/graylog2-server/src/main/java/org/graylog2/inputs/codecs/SyslogCodec.java\n+++ b/graylog2-server/src/main/java/org/graylog2/inputs/codecs/SyslogCodec.java\n@@ -137,7 +137,7 @@ public class SyslogCodec extends AbstractCodec {\n         } else if (CISCO_WITH_SEQUENCE_NUMBERS_PATTERN.matcher(msg).matches()) {\n             e = new CiscoSyslogServerEvent(msg, remoteAddress, defaultTimeZone);\n         } else if (FORTIGATE_PATTERN.matcher(msg).matches()) {\n-            e = new FortiGateSyslogEvent(msg, defaultTimeZone);\n+            e = new FortiGateSyslogEvent(msg.trim(), defaultTimeZone);\n         } else {\n             e = new SyslogServerEvent(msg, remoteAddress, defaultTimeZone);\n         }\n"}
+The changelog and production-code hunks apply cleanly. The test change includes two adjacent hunks in the same file, so I’m validating that file’s combined adaptation next.
+[0m⚙ [0mvalidate {"ref":"e74a4db33e8b74673af48653fa1fd6d1afc63fd9","mode":"hunk","patch":"diff --git a/graylog2-server/src/test/java/org/graylog2/inputs/codecs/SyslogCodecTest.java b/graylog2-server/src/test/java/org/graylog2/inputs/codecs/SyslogCodecTest.java\nindex 7689247272..dfc5b22ec2 100644\n--- a/graylog2-server/src/test/java/org/graylog2/inputs/codecs/SyslogCodecTest.java\n+++ b/graylog2-server/src/test/java/org/graylog2/inputs/codecs/SyslogCodecTest.java\n@@ -51,6 +51,7 @@ import static org.mockito.Mockito.when;\n \n public class SyslogCodecTest {\n     private static final int YEAR = Tools.nowUTC().getYear();\n+    private static final String FORTIGATE = \"<45>date=2017-03-06 time=12:53:10 devname=DEVICENAME devid=DEVICEID logid=0000000013 type=traffic subtype=forward level=notice vd=ALIAS srcip=IP srcport=45748 srcintf=\\\"IF\\\" dstip=IP dstport=443 dstintf=\\\"IF\\\" sessionid=1122686199 status=close policyid=77 dstcountry=\\\"COUNTRY\\\" srccountry=\\\"COUNTRY\\\" trandisp=dnat tranip=IP tranport=443 service=HTTPS proto=6 appid=41540 app=\\\"SSL_TLSv1.2\\\" appcat=\\\"Network.Service\\\" applist=\\\"ACLNAME\\\" appact=detected duration=1 sentbyte=2313 rcvdbyte=14883 sentpkt=19 rcvdpkt=19 utmaction=passthrough utmevent=app-ctrl attack=\\\"SSL\\\" hostname=\\\"HOSTNAME\\\"\";\n     private static String STRUCTURED = \"<165>1 2012-12-25T22:14:15.003Z mymachine.example.com evntslog - ID47 [exampleSDID@32473 iut=\\\"3\\\" eventSource=\\\"Application\\\" eventID=\\\"1011\\\"] BOMAn application event log entry\";\n     private static String STRUCTURED_ISSUE_845 = \"<190>1 2015-01-06T20:56:33.287Z app-1 app - - [mdc@18060 ip=\\\"::ffff:132.123.15.30\\\" logger=\\\"{c.corp.Handler}\\\" session=\\\"4ot7\\\" user=\\\"user@example.com\\\" user-agent=\\\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_5) AppleWebKit/600.2.5 (KHTML, like Gecko) Version/7.1.2 Safari/537.85.11\\\"] User page 13 requested\";\n     private static String STRUCTURED_ISSUE_845_EMPTY = \"<128>1 2015-01-11T16:35:21.335797+01:00 s000000.example.com - - - - tralala\";\n@@ -426,8 +427,18 @@ public class SyslogCodecTest {\n     }\n \n     @Test\n-    public void testFortiGateFirewall() {\n-        final RawMessage rawMessage = buildRawMessage(\"<45>date=2017-03-06 time=12:53:10 devname=DEVICENAME devid=DEVICEID logid=0000000013 type=traffic subtype=forward level=notice vd=ALIAS srcip=IP srcport=45748 srcintf=\\\"IF\\\" dstip=IP dstport=443 dstintf=\\\"IF\\\" sessionid=1122686199 status=close policyid=77 dstcountry=\\\"COUNTRY\\\" srccountry=\\\"COUNTRY\\\" trandisp=dnat tranip=IP tranport=443 service=HTTPS proto=6 appid=41540 app=\\\"SSL_TLSv1.2\\\" appcat=\\\"Network.Service\\\" applist=\\\"ACLNAME\\\" appact=detected duration=1 sentbyte=2313 rcvdbyte=14883 sentpkt=19 rcvdpkt=19 utmaction=passthrough utmevent=app-ctrl attack=\\\"SSL\\\" hostname=\\\"HOSTNAME\\\"\");\n+    public void testFortiGate() {\n+        doTestFortigate(FORTIGATE);\n+    }\n+\n+    @Test\n+    public void testFortiGateTrimLineBreaks() {\n+        // Ensure that trailing line breaks are trimmed for Fortigate messages to avoid parsing error.\n+        doTestFortigate(FORTIGATE + \"\\r\\n \");\n+    }\n+\n+    private void doTestFortigate(String fortigateMessage) {\n+        final RawMessage rawMessage = buildRawMessage(fortigateMessage);\n         final Message message = codec.decode(rawMessage);\n \n         assertThat(message).isNotNull();\n"}
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/changelog/unreleased/pr-20788.toml b/changelog/unreleased/pr-20788.toml
+    new file mode 100644
+    index 0000000000..4f2273c685
+    --- /dev/null
+    +++ b/changelog/unreleased/pr-20788.toml
+    @@ -0,0 +1,5 @@
+    +type = "a"
+    +message = "Automatically trim newline characters for Fortigate messages received through Syslog inputs."
+    +
+    +issues = ["graylog-plugin-enterprise#8980"]
+    +pulls = ["20788"]
+    diff --git a/graylog2-server/src/main/java/org/graylog2/inputs/codecs/SyslogCodec.java b/graylog2-server/src/main/java/org/graylog2/inputs/codecs/SyslogCodec.java
+    index 143ec30a96..f1032f7e9e 100644
+    --- a/graylog2-server/src/main/java/org/graylog2/inputs/codecs/SyslogCodec.java
+    +++ b/graylog2-server/src/main/java/org/graylog2/inputs/codecs/SyslogCodec.java
+    @@ -137,7 +137,7 @@ public class SyslogCodec extends AbstractCodec {
+             } else if (CISCO_WITH_SEQUENCE_NUMBERS_PATTERN.matcher(msg).matches()) {
+                 e = new CiscoSyslogServerEvent(msg, remoteAddress, defaultTimeZone);
+             } else if (FORTIGATE_PATTERN.matcher(msg).matches()) {
+    -            e = new FortiGateSyslogEvent(msg, defaultTimeZone);
+    +            e = new FortiGateSyslogEvent(msg.trim(), defaultTimeZone);
+             } else {
+                 e = new SyslogServerEvent(msg, remoteAddress, defaultTimeZone);
+             }
+    diff --git a/graylog2-server/src/test/java/org/graylog2/inputs/codecs/SyslogCodecTest.java b/graylog2-server/src/test/java/org/graylog2/inputs/codecs/SyslogCodecTest.java
+    index 7689247272..dfc5b22ec2 100644
+    --- a/graylog2-server/src/test/java/org/graylog2/inputs/codecs/SyslogCodecTest.java
+    +++ b/graylog2-server/src/test/java/org/graylog2/inputs/codecs/SyslogCodecTest.java
+    @@ -51,6 +51,7 @@ import static org.mockito.Mockito.when;
+     
+     public class SyslogCodecTest {
+         private static final int YEAR = Tools.nowUTC().getYear();
+    +    private static final String FORTIGATE = "<45>date=2017-03-06 time=12:53:10 devname=DEVICENAME devid=DEVICEID logid=0000000013 type=traffic subtype=forward level=notice vd=ALIAS srcip=IP srcport=45748 srcintf=\"IF\" dstip=IP dstport=443 dstintf=\"IF\" sessionid=1122686199 status=close policyid=77 dstcountry=\"COUNTRY\" srccountry=\"COUNTRY\" trandisp=dnat tranip=IP tranport=443 service=HTTPS proto=6 appid=41540 app=\"SSL_TLSv1.2\" appcat=\"Network.Service\" applist=\"ACLNAME\" appact=detected duration=1 sentbyte=2313 rcvdbyte=14883 sentpkt=19 rcvdpkt=19 utmaction=passthrough utmevent=app-ctrl attack=\"SSL\" hostname=\"HOSTNAME\"";
+         private static String STRUCTURED = "<165>1 2012-12-25T22:14:15.003Z mymachine.example.com evntslog - ID47 [exampleSDID@32473 iut=\"3\" eventSource=\"Application\" eventID=\"1011\"] BOMAn application event log entry";
+         private static String STRUCTURED_ISSUE_845 = "<190>1 2015-01-06T20:56:33.287Z app-1 app - - [mdc@18060 ip=\"::ffff:132.123.15.30\" logger=\"{c.corp.Handler}\" session=\"4ot7\" user=\"user@example.com\" user-agent=\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_5) AppleWebKit/600.2.5 (KHTML, like Gecko) Version/7.1.2 Safari/537.85.11\"] User page 13 requested";
+         private static String STRUCTURED_ISSUE_845_EMPTY = "<128>1 2015-01-11T16:35:21.335797+01:00 s000000.example.com - - - - tralala";
+    @@ -426,8 +427,18 @@ public class SyslogCodecTest {
+         }
+     
+         @Test
+    -    public void testFortiGateFirewall() {
+    -        final RawMessage rawMessage = buildRawMessage("<45>date=2017-03-06 time=12:53:10 devname=DEVICENAME devid=DEVICEID logid=0000000013 type=traffic subtype=forward level=notice vd=ALIAS srcip=IP srcport=45748 srcintf=\"IF\" dstip=IP dstport=443 dstintf=\"IF\" sessionid=1122686199 status=close policyid=77 dstcountry=\"COUNTRY\" srccountry=\"COUNTRY\" trandisp=dnat tranip=IP tranport=443 service=HTTPS proto=6 appid=41540 app=\"SSL_TLSv1.2\" appcat=\"Network.Service\" applist=\"ACLNAME\" appact=detected duration=1 sentbyte=2313 rcvdbyte=14883 sentpkt=19 rcvdpkt=19 utmaction=passthrough utmevent=app-ctrl attack=\"SSL\" hostname=\"HOSTNAME\"");
+    +    public void testFortiGate() {
+    +        doTestFortigate(FORTIGATE);
+    +    }
+    +
+    +    @Test
+    +    public void testFortiGateTrimLineBreaks() {
+    +        // Ensure that trailing line breaks are trimmed for Fortigate messages to avoid parsing error.
+    +        doTestFortigate(FORTIGATE + "\r\n ");
+    +    }
+    +
+    +    private void doTestFortigate(String fortigateMessage) {
+    +        final RawMessage rawMessage = buildRawMessage(fortigateMessage);
+             final Message message = codec.decode(rawMessage);
+     
+             assertThat(message).isNotNull();
+  notes: >
+    Backported the Fortigate syslog trim fix directly to the matching 6.0 SyslogCodec and test locations; all hunks validated with mode=hunk.
+```
+
+--- END CLI OUTPUT ---
+[13:53:13]   Done in 142.5s | status=success

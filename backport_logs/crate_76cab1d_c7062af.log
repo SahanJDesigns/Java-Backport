@@ -1,0 +1,210 @@
+[11:42:10] === Row 2: crate  76cab1d4 -> c7062afd  [TYPE-V] ===
+[11:42:10]   Resolving parent of backport commit c7062afd...
+[11:42:10]   Backport parent (target ref): 19a58e178646e670a2dec8493ef38ca820617a03
+[11:42:10]   Extracting new-version patch for 76cab1d4...
+[11:42:10]   New-version patch size: 7565 chars
+[11:42:10]   Checking out backport parent 19a58e17...
+[11:42:10]   Invoking OpenCode CLI (11420 chars)...
+[11:42:10]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll map the supplied hunks onto the current `5.6` parent ref, inspect the local file context, then build and hunk-validate a minimal unified diff.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target branch context for changed files
+[ ] Construct adapted backport diff
+[ ] Validate each hunk applies against target ref
+[ ] Return parseable YAML result
+[0m
+[0m⚙ [0mgit_show {"ref":"76cab1d4a51cda3329cf429e1ac6086dcbeb595e"}
+[0m⚙ [0mlocate_symbol {"ref":"19a58e178646e670a2dec8493ef38ca820617a03","symbol":"PGIntervalParser"}
+[0m⚙ [0mlocate_symbol {"ref":"19a58e178646e670a2dec8493ef38ca820617a03","symbol":"IntervalParserTest"}
+The commit metadata confirms the supplied diff is complete. One symbol lookup hit a stale Git `index.lock`; I’ll avoid branch switching and use the checked-out files plus ref-aware view tools where possible.
+[0m⚙ [0mviewcode {"ref":"19a58e178646e670a2dec8493ef38ca820617a03","path":"server/src/test/java/io/crate/interval/IntervalParserTest.java","startline":210,"endline":260}
+[0m⚙ [0mviewcode {"ref":"19a58e178646e670a2dec8493ef38ca820617a03","path":"docs/appendices/release-notes/5.6.3.rst","startline":40,"endline":65}
+[0m⚙ [0mviewcode {"ref":"19a58e178646e670a2dec8493ef38ca820617a03","path":"server/src/main/java/io/crate/interval/PGIntervalParser.java","startline":55,"endline":155}
+The 5.6 target parser has the same structure but lacks the single-letter unit aliases present on master. I’m adapting only the duplicate-unit behavior and keeping 5.6’s existing supported unit set.
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch context for changed files
+[•] Construct adapted backport diff
+[ ] Validate each hunk applies against target ref
+[ ] Return parseable YAML result
+[0m
+A stale `.git/index.lock` is blocking ref-aware validation. I’m checking whether a Git process is active before removing only that stale lock file.
+[0m$ [0mGet-Process git -ErrorAction SilentlyContinue
+(no output)
+[0m
+No Git process is active, so I’m clearing the stale lock created during the earlier symbol lookup to allow hunk validation.
+[0m$ [0mif (Test-Path -LiteralPath ".git\index.lock") { Remove-Item -LiteralPath ".git\index.lock" }
+(no output)
+[0m
+I’ve constructed the adapted hunks and will validate them one by one against `19a58e178646e670a2dec8493ef38ca820617a03`.
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch context for changed files
+[✓] Construct adapted backport diff
+[•] Validate each hunk applies against target ref
+[ ] Return parseable YAML result
+[0m
+[0m⚙ [0mvalidate {"ref":"19a58e178646e670a2dec8493ef38ca820617a03","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.6.3.rst b/docs/appendices/release-notes/5.6.3.rst\n--- a/docs/appendices/release-notes/5.6.3.rst\n+++ b/docs/appendices/release-notes/5.6.3.rst\n@@ -47,6 +47,11 @@ See the :ref:`version_5.6.0` release notes for a full list of changes in the\n Fixes\n =====\n \n+- Fixed an issue with PostgreSQL style :ref:`INTERVALs <type-interval>`, which\n+  allowed duplicate unit definitions, e.g.::\n+\n+     SELECT '1 year 3 days 2 years'::INTERVAL\n+\n - Fixed an issue with PostgreSQL style :ref:`INTERVALs <type-interval>`, which\n   didn't allow units next to values without whitespace separation, e.g.::\n \n"}
+[0m⚙ [0mvalidate {"ref":"19a58e178646e670a2dec8493ef38ca820617a03","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/interval/PGIntervalParser.java b/server/src/main/java/io/crate/interval/PGIntervalParser.java\n--- a/server/src/main/java/io/crate/interval/PGIntervalParser.java\n+++ b/server/src/main/java/io/crate/interval/PGIntervalParser.java\n@@ -63,10 +63,13 @@ final class PGIntervalParser {\n         int minutes = 0;\n         int seconds = 0;\n         int milliSeconds = 0;\n+        boolean weeksParsed = false;\n+        boolean daysParsed = false;\n \n         try {\n             String unitToken = null;\n-            String valueToken = null;\n+            String valueToken;\n+            boolean timeParsed = false;\n             final StringTokenizer st = new StringTokenizer(strInterval);\n             while (st.hasMoreTokens()) {\n                 String token = st.nextToken();\n@@ -84,6 +87,10 @@ final class PGIntervalParser {\n \n                 int endHours = token.indexOf(':');\n                 if (endHours > 0) {\n+                    if (timeParsed) {\n+                        throw new IllegalArgumentException(\"Invalid interval format: \" + value);\n+                    }\n+\n                     // This handles hours, minutes, seconds and microseconds for\n                     // ISO intervals\n                     int offset = (token.charAt(0) == '-') ? 1 : 0;\n@@ -101,6 +108,7 @@ final class PGIntervalParser {\n                         seconds = -seconds;\n                         milliSeconds = -milliSeconds;\n                     }\n+                    timeParsed = true;\n                 } else {\n                     if (unitToken == null) {\n                         throw new IllegalArgumentException(\"Invalid interval format: \" + value);\n@@ -112,15 +120,53 @@ final class PGIntervalParser {\n                 // are handled for Non-ISO intervals here.\n                 if (unitToken != null) {\n                     switch (unitToken) {\n-                        case \"year\", \"years\" -> years = nullSafeIntGet(valueToken);\n-                        case \"month\", \"months\", \"mon\", \"mons\" -> months = nullSafeIntGet(valueToken);\n-                        case \"day\", \"days\" -> days += nullSafeIntGet(valueToken);\n-                        case \"week\", \"weeks\" -> days += nullSafeIntGet(valueToken) * 7;\n-                        case \"hour\", \"hours\" -> hours = nullSafeIntGet(valueToken);\n-                        case \"min\", \"mins\", \"minute\", \"minutes\" -> minutes = nullSafeIntGet(valueToken);\n+                        case \"year\", \"years\" -> {\n+                            if (years > 0) {\n+                                throw new IllegalArgumentException(\"Invalid interval format: \" + value);\n+                            }\n+                            years = nullSafeIntGet(valueToken);\n+                        }\n+                        case \"month\", \"months\", \"mon\", \"mons\" -> {\n+                            if (months > 0) {\n+                                throw new IllegalArgumentException(\"Invalid interval format: \" + value);\n+                            }\n+                            months = nullSafeIntGet(valueToken);\n+                        }\n+                        case \"day\", \"days\" -> {\n+                            if (daysParsed) {\n+                                throw new IllegalArgumentException(\"Invalid interval format: \" + value);\n+                            }\n+                            days += nullSafeIntGet(valueToken);\n+                            daysParsed = true;\n+                        }\n+                        case \"week\", \"weeks\" -> {\n+                            if (weeksParsed) {\n+                                throw new IllegalArgumentException(\"Invalid interval format: \" + value);\n+                            }\n+                            days += nullSafeIntGet(valueToken) * 7;\n+                            weeksParsed = true;\n+                        }\n+                        case \"hour\", \"hours\" -> {\n+                            if (hours > 0) {\n+                                throw new IllegalArgumentException(\"Invalid interval format: \" + value);\n+                            }\n+                            hours = nullSafeIntGet(valueToken);\n+                            timeParsed = true;\n+                        }\n+                        case \"min\", \"mins\", \"minute\", \"minutes\" -> {\n+                            if (minutes > 0) {\n+                                throw new IllegalArgumentException(\"Invalid interval format: \" + value);\n+                            }\n+                            minutes = nullSafeIntGet(valueToken);\n+                            timeParsed = true;\n+                        }\n                         case \"sec\", \"secs\", \"second\", \"seconds\" -> {\n+                            if (seconds > 0 || milliSeconds > 0) {\n+                                throw new IllegalArgumentException(\"Invalid interval format: \" + value);\n+                            }\n                             seconds = parseInteger(valueToken);\n                             milliSeconds = parseMilliSeconds(valueToken);\n+                            timeParsed = true;\n                         }\n                         default -> throw new IllegalArgumentException(\"Invalid interval format: \" + value);\n                     }\n"}
+The parser and release-note hunks apply cleanly. The test hunk is adapted to avoid adding unsupported short aliases from master while still covering duplicate weeks, time, seconds, and years.
+[0m⚙ [0mvalidate {"ref":"19a58e178646e670a2dec8493ef38ca820617a03","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/interval/IntervalParserTest.java b/server/src/test/java/io/crate/interval/IntervalParserTest.java\n--- a/server/src/test/java/io/crate/interval/IntervalParserTest.java\n+++ b/server/src/test/java/io/crate/interval/IntervalParserTest.java\n@@ -232,6 +232,22 @@ public class IntervalParserTest extends ESTestCase {\n             .hasMessage(\"Invalid interval format: 1 week 2 monthss 3 days\");\n     }\n \n+    @Test\n+    public void test_invalid_duplicate_units() {\n+        assertThatThrownBy(() -> IntervalParser.apply(\"1 week 2 mons 3 days 4 weeks\"))\n+            .isExactlyInstanceOf(IllegalArgumentException.class)\n+            .hasMessage(\"Invalid interval format: 1 week 2 mons 3 days 4 weeks\");\n+        assertThatThrownBy(() -> IntervalParser.apply(\"1 years 11:22:33 11:22:33\"))\n+            .isExactlyInstanceOf(IllegalArgumentException.class)\n+            .hasMessage(\"Invalid interval format: 1 years 11:22:33 11:22:33\");\n+        assertThatThrownBy(() -> IntervalParser.apply(\"2sec 11:22:33\"))\n+            .isExactlyInstanceOf(IllegalArgumentException.class)\n+            .hasMessage(\"Invalid interval format: 2sec 11:22:33\");\n+        assertThatThrownBy(() -> IntervalParser.apply(\"1 years 2 mons 3 days 2 years\"))\n+            .isExactlyInstanceOf(IllegalArgumentException.class)\n+            .hasMessage(\"Invalid interval format: 1 years 2 mons 3 days 2 years\");\n+    }\n+\n     @Test\n     public void test_normalization() {\n         var expected = new Period(1, 2, 0, 827, 4, 40, 43, 0)\n"}
+All hunks validate individually against the target ref. Per instructions, I’m skipping full validation and returning the YAML patch result.
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch context for changed files
+[✓] Construct adapted backport diff
+[✓] Validate each hunk applies against target ref
+[•] Return parseable YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/docs/appendices/release-notes/5.6.3.rst b/docs/appendices/release-notes/5.6.3.rst
+    --- a/docs/appendices/release-notes/5.6.3.rst
+    +++ b/docs/appendices/release-notes/5.6.3.rst
+    @@ -47,6 +47,11 @@ See the :ref:`version_5.6.0` release notes for a full list of changes in the
+     Fixes
+     =====
+     
+    +- Fixed an issue with PostgreSQL style :ref:`INTERVALs <type-interval>`, which
+    +  allowed duplicate unit definitions, e.g.::
+    +
+    +     SELECT '1 year 3 days 2 years'::INTERVAL
+    +
+     - Fixed an issue with PostgreSQL style :ref:`INTERVALs <type-interval>`, which
+       didn't allow units next to values without whitespace separation, e.g.::
+     
+    diff --git a/server/src/main/java/io/crate/interval/PGIntervalParser.java b/server/src/main/java/io/crate/interval/PGIntervalParser.java
+    --- a/server/src/main/java/io/crate/interval/PGIntervalParser.java
+    +++ b/server/src/main/java/io/crate/interval/PGIntervalParser.java
+    @@ -63,10 +63,13 @@ final class PGIntervalParser {
+             int minutes = 0;
+             int seconds = 0;
+             int milliSeconds = 0;
+    +        boolean weeksParsed = false;
+    +        boolean daysParsed = false;
+     
+             try {
+                 String unitToken = null;
+    -            String valueToken = null;
+    +            String valueToken;
+    +            boolean timeParsed = false;
+                 final StringTokenizer st = new StringTokenizer(strInterval);
+                 while (st.hasMoreTokens()) {
+                     String token = st.nextToken();
+    @@ -84,6 +87,10 @@ final class PGIntervalParser {
+     
+                     int endHours = token.indexOf(':');
+                     if (endHours > 0) {
+    +                    if (timeParsed) {
+    +                        throw new IllegalArgumentException("Invalid interval format: " + value);
+    +                    }
+    +
+                         // This handles hours, minutes, seconds and microseconds for
+                         // ISO intervals
+                         int offset = (token.charAt(0) == '-') ? 1 : 0;
+    @@ -101,6 +108,7 @@ final class PGIntervalParser {
+                             seconds = -seconds;
+                             milliSeconds = -milliSeconds;
+                         }
+    +                    timeParsed = true;
+                     } else {
+                         if (unitToken == null) {
+                             throw new IllegalArgumentException("Invalid interval format: " + value);
+    @@ -112,15 +120,53 @@ final class PGIntervalParser {
+                     // are handled for Non-ISO intervals here.
+                     if (unitToken != null) {
+                         switch (unitToken) {
+    -                        case "year", "years" -> years = nullSafeIntGet(valueToken);
+    -                        case "month", "months", "mon", "mons" -> months = nullSafeIntGet(valueToken);
+    -                        case "day", "days" -> days += nullSafeIntGet(valueToken);
+    -                        case "week", "weeks" -> days += nullSafeIntGet(valueToken) * 7;
+    -                        case "hour", "hours" -> hours = nullSafeIntGet(valueToken);
+    -                        case "min", "mins", "minute", "minutes" -> minutes = nullSafeIntGet(valueToken);
+    +                        case "year", "years" -> {
+    +                            if (years > 0) {
+    +                                throw new IllegalArgumentException("Invalid interval format: " + value);
+    +                            }
+    +                            years = nullSafeIntGet(valueToken);
+    +                        }
+    +                        case "month", "months", "mon", "mons" -> {
+    +                            if (months > 0) {
+    +                                throw new IllegalArgumentException("Invalid interval format: " + value);
+    +                            }
+    +                            months = nullSafeIntGet(valueToken);
+    +                        }
+    +                        case "day", "days" -> {
+    +                            if (daysParsed) {
+    +                                throw new IllegalArgumentException("Invalid interval format: " + value);
+    +                            }
+    +                            days += nullSafeIntGet(valueToken);
+    +                            daysParsed = true;
+    +                        }
+    +                        case "week", "weeks" -> {
+    +                            if (weeksParsed) {
+    +                                throw new IllegalArgumentException("Invalid interval format: " + value);
+    +                            }
+    +                            days += nullSafeIntGet(valueToken) * 7;
+    +                            weeksParsed = true;
+    +                        }
+    +                        case "hour", "hours" -> {
+    +                            if (hours > 0) {
+    +                                throw new IllegalArgumentException("Invalid interval format: " + value);
+    +                            }
+    +                            hours = nullSafeIntGet(valueToken);
+    +                            timeParsed = true;
+    +                        }
+    +                        case "min", "mins", "minute", "minutes" -> {
+    +                            if (minutes > 0) {
+    +                                throw new IllegalArgumentException("Invalid interval format: " + value);
+    +                            }
+    +                            minutes = nullSafeIntGet(valueToken);
+    +                            timeParsed = true;
+    +                        }
+                             case "sec", "secs", "second", "seconds" -> {
+    +                            if (seconds > 0 || milliSeconds > 0) {
+    +                                throw new IllegalArgumentException("Invalid interval format: " + value);
+    +                            }
+                                 seconds = parseInteger(valueToken);
+                                 milliSeconds = parseMilliSeconds(valueToken);
+    +                            timeParsed = true;
+                             }
+                             default -> throw new IllegalArgumentException("Invalid interval format: " + value);
+                         }
+    diff --git a/server/src/test/java/io/crate/interval/IntervalParserTest.java b/server/src/test/java/io/crate/interval/IntervalParserTest.java
+    --- a/server/src/test/java/io/crate/interval/IntervalParserTest.java
+    +++ b/server/src/test/java/io/crate/interval/IntervalParserTest.java
+    @@ -232,6 +232,22 @@ public class IntervalParserTest extends ESTestCase {
+                 .hasMessage("Invalid interval format: 1 week 2 monthss 3 days");
+         }
+     
+    +    @Test
+    +    public void test_invalid_duplicate_units() {
+    +        assertThatThrownBy(() -> IntervalParser.apply("1 week 2 mons 3 days 4 weeks"))
+    +            .isExactlyInstanceOf(IllegalArgumentException.class)
+    +            .hasMessage("Invalid interval format: 1 week 2 mons 3 days 4 weeks");
+    +        assertThatThrownBy(() -> IntervalParser.apply("1 years 11:22:33 11:22:33"))
+    +            .isExactlyInstanceOf(IllegalArgumentException.class)
+    +            .hasMessage("Invalid interval format: 1 years 11:22:33 11:22:33");
+    +        assertThatThrownBy(() -> IntervalParser.apply("2sec 11:22:33"))
+    +            .isExactlyInstanceOf(IllegalArgumentException.class)
+    +            .hasMessage("Invalid interval format: 2sec 11:22:33");
+    +        assertThatThrownBy(() -> IntervalParser.apply("1 years 2 mons 3 days 2 years"))
+    +            .isExactlyInstanceOf(IllegalArgumentException.class)
+    +            .hasMessage("Invalid interval format: 1 years 2 mons 3 days 2 years");
+    +    }
+    +
+         @Test
+         public void test_normalization() {
+             var expected = new Period(1, 2, 0, 827, 4, 40, 43, 0)
+  notes: >
+    Backported duplicate PostgreSQL-style INTERVAL unit rejection to 5.6, adapting tests to the branch's supported interval unit aliases; each hunk was validated individually.
+```
+
+--- END CLI OUTPUT ---
+[11:45:14]   Done in 184.2s | status=success

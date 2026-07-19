@@ -1,0 +1,409 @@
+[01:22:12] === Row 23: crate  86114f2e -> bdeaef7f  [TYPE-II] ===
+[01:22:12]   Resolving parent of backport commit bdeaef7f...
+[01:22:12]   Backport parent (target ref): 97ae481c47c7809f07f1c7b772d93e37fb986255
+[01:22:12]   Extracting new-version patch for 86114f2e...
+[01:22:12]   New-version patch size: 2519 chars
+[01:22:12]   Checking out backport parent 97ae481c...
+[01:22:13]   Invoking OpenCode CLI (6548 chars)...
+[01:22:13]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the original commit metadata and the corresponding 5.9 files at the target ref, then build and validate the backport hunks before applying and committing.
+[0m# [0mTodos
+[•] Understand original commit intent and changed hunks
+[ ] Locate equivalent 5.9 code and adapt hunks
+[ ] Validate hunks against target ref
+[ ] Apply patch and commit backport
+[ ] Run full validation and report patch
+[0m
+[0m⚙ [0mviewcode {"ref":"97ae481c47c7809f07f1c7b772d93e37fb986255","path":"server/src/main/java/io/crate/analyze/where/EqualityExtractor.java","startline":450,"endline":515}
+[0m⚙ [0mviewcode {"ref":"97ae481c47c7809f07f1c7b772d93e37fb986255","path":"docs/appendices/release-notes/5.9.7.rst","startline":35,"endline":60}
+[0m⚙ [0mviewcode {"ref":"97ae481c47c7809f07f1c7b772d93e37fb986255","path":"server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java","startline":450,"endline":500}
+[0m⚙ [0mlocate_symbol {"ref":"97ae481c47c7809f07f1c7b772d93e37fb986255","symbol":"test_no_exact_result_on_partial_match"}
+[0m⚙ [0mgit_show {"ref":"86114f2ec05fea5c5ab56a9cfbe07c6cab131fb4"}
+[0m⚙ [0mlocate_symbol {"ref":"97ae481c47c7809f07f1c7b772d93e37fb986255","symbol":"EqualityExtractor"}
+The target production hunk is present with identical surrounding logic. The test file is shorter on 5.9, so I’m locating the equivalent insertion point before validating the adapted patch.
+[0m⚙ [0mgit_history {"filepath":"server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java","start_line":430,"end_line":451,"start_commit":"97ae481c47c7809f07f1c7b772d93e37fb986255","end_commit":"97ae481c47c7809f07f1c7b772d93e37fb986255"}
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/analyze/where/EqualityExtractor.java","start_line":470,"end_line":480,"start_commit":"97ae481c47c7809f07f1c7b772d93e37fb986255","end_commit":"97ae481c47c7809f07f1c7b772d93e37fb986255"}
+[0m⚙ [0mviewcode {"ref":"97ae481c47c7809f07f1c7b772d93e37fb986255","path":"server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java","startline":1,"endline":451}
+I found the 5.9 test class already has nearby regression tests for OR/non-PK extraction, but not the timeout test from master. I’ll insert the new regression before the existing iteration-limit test, and keep the production and release-note changes equivalent.
+[0m
+[0m# [0mTodos
+[✓] Understand original commit intent and changed hunks
+[•] Locate equivalent 5.9 code and adapt hunks
+[ ] Validate hunks against target ref
+[ ] Apply patch and commit backport
+[ ] Run full validation and report patch
+[0m
+I’m validating the three adapted hunks independently against `97ae481c47c7809f07f1c7b772d93e37fb986255` before touching the worktree.
+[0m⚙ [0mvalidate {"ref":"97ae481c47c7809f07f1c7b772d93e37fb986255","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.9.7.rst b/docs/appendices/release-notes/5.9.7.rst\n--- a/docs/appendices/release-notes/5.9.7.rst\n+++ b/docs/appendices/release-notes/5.9.7.rst\n@@ -47,6 +47,10 @@ See the :ref:`version_5.9.0` release notes for a full list of changes in the\n Fixes\n =====\n \n+- Fixed an issue that could cause queries to run into a ``NullPointerException``\n+  if having a query condition like ``(nonPrimaryKey = ? AND primaryKeyPart =\n+  ?)``\n+\n - Fixed an issue that caused ``FILTER`` clauses on non-aggregate window\n   functions to be ignored instead of raising an unsupported error.\n \n"}
+[0m⚙ [0mvalidate {"ref":"97ae481c47c7809f07f1c7b772d93e37fb986255","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java b/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java\n--- a/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java\n+++ b/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java\n@@ -472,7 +472,7 @@ public class EqualityExtractor {\n                     proxyBelowPost = ctx.proxyBelow || proxyBelowPost;\n                 }\n                 if ((ctx.foundPKColumnUnderOr && ctx.foundNonPKColumnUnderOr) || ctx.foundPKColumnUnderNot) {\n-                    return null;\n+                    return Literal.BOOLEAN_FALSE;\n                 }\n                 ctx.isUnderNotPredicate = prevIsUnderNotPredicate;\n                 ctx.proxyBelow = proxyBelowPost;\n"}
+[0m⚙ [0mvalidate {"ref":"97ae481c47c7809f07f1c7b772d93e37fb986255","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java b/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java\n--- a/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java\n+++ b/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java\n@@ -419,6 +419,15 @@ public class EqualityExtractorTest extends CrateDummyClusterServiceUnitTest {\n         assertThat(matches).isNull();\n     }\n \n+    @Test\n+    public void test_no_exact_result_on_partial_match() throws Exception {\n+        // https://github.com/crate/crate/issues/17197\n+        // It is important that the query first hits a non-pk column\n+        Symbol query = query(\"(i = 1 or x = 2) and (i = 2 and a = 'foo')\");\n+        List<List<Symbol>> analyzeExact = analyzeExact(query, List.of(ColumnIdent.of(\"x\")));\n+        assertThat(analyzeExact).isNull();\n+    }\n+\n     @Test\n     public void test_pk_extraction_breaks_after_x_iterations() {\n         StringJoiner sj = new StringJoiner(\" or \");\n"}
+All three hunks apply cleanly in isolation. I’ll apply the patch to the current worktree, then inspect the resulting diff before committing.
+[0m
+[0m# [0mTodos
+[✓] Understand original commit intent and changed hunks
+[✓] Locate equivalent 5.9 code and adapt hunks
+[✓] Validate hunks against target ref
+[•] Apply patch and commit backport
+[ ] Run full validation and report patch
+[0m
+[0m% [0mPatch 3 files
+The patch is applied. I’ll inspect status, diff, and recent history before staging only the intended files and committing.
+[0m
+[0m$ [0mgit log --oneline -10
+97ae481c47 Merge EqualityExtractorBaseTest back into EqualityExtractorTest
+c4bdd6964d Raise an error if FILTER is used with non-aggregate window function
+0648f7af17 Fix `alter` from falsely updating table version created setting to latest
+c922e99ea5 Fix link in create-repository.rst
+fd30324948 Upgrade template on new partitions creation
+57665e57f1 Use bigger buffer size for OpenDAL's OperatorOutputStream
+6afab01a2c Update OpenDAL to 0.47.6
+b52d509e6d Bump version to 5.9.7-SNAPSHOT
+28638ad43f Release 5.9.6
+0fd6e967d2 Fix release notes indentations
+[0m
+[0m$ [0mgit status --short
+M docs/appendices/release-notes/5.9.7.rst
+ M server/src/main/java/io/crate/analyze/where/EqualityExtractor.java
+ M server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java
+?? tags
+[0m
+[0m$ [0mgit diff -- docs/appendices/release-notes/5.9.7.rst server/src/main/java/io/crate/analyze/where/EqualityExtractor.java server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java
+warning: in the working copy of 'docs/appendices/release-notes/5.9.7.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/analyze/where/EqualityExtractor.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java', LF will be replaced by CRLF the next time Git touches it
+diff --git a/docs/appendices/release-notes/5.9.7.rst b/docs/appendices/release-notes/5.9.7.rst
+index de3d645921..6dca320174 100644
+--- a/docs/appendices/release-notes/5.9.7.rst
++++ b/docs/appendices/release-notes/5.9.7.rst
+@@ -47,6 +47,10 @@ See the :ref:`version_5.9.0` release notes for a full list of changes in the
+ Fixes
+ =====
+ 
++- Fixed an issue that could cause queries to run into a ``NullPointerException``
++  if having a query condition like ``(nonPrimaryKey = ? AND primaryKeyPart =
++  ?)``
++
+ - Fixed an issue that caused ``FILTER`` clauses on non-aggregate window
+   functions to be ignored instead of raising an unsupported error.
+ 
+diff --git a/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java b/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java
+index c57b34bf17..3f238d56cc 100644
+--- a/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java
++++ b/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java
+@@ -473,7 +473,7 @@ public class EqualityExtractor {
+                     proxyBelowPost = ctx.proxyBelow || proxyBelowPost;
+                 }
+                 if ((ctx.foundPKColumnUnderOr && ctx.foundNonPKColumnUnderOr) || ctx.foundPKColumnUnderNot) {
+-                    return null;
++                    return Literal.BOOLEAN_FALSE;
+                 }
+                 ctx.isUnderNotPredicate = prevIsUnderNotPredicate;
+                 ctx.proxyBelow = proxyBelowPost;
+diff --git a/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java b/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java
+index 2592d6a3bb..e938e17a2a 100644
+--- a/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java
++++ b/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java
+@@ -419,6 +419,15 @@ public class EqualityExtractorTest extends CrateDummyClusterServiceUnitTest {
+         assertThat(matches).isNull();
+     }
+ 
++    @Test
++    public void test_no_exact_result_on_partial_match() throws Exception {
++        // https://github.com/crate/crate/issues/17197
++        // It is important that the query first hits a non-pk column
++        Symbol query = query("(i = 1 or x = 2) and (i = 2 and a = 'foo')");
++        List<List<Symbol>> analyzeExact = analyzeExact(query, List.of(ColumnIdent.of("x")));
++        assertThat(analyzeExact).isNull();
++    }
++
+     @Test
+     public void test_pk_extraction_breaks_after_x_iterations() {
+         StringJoiner sj = new StringJoiner(" or ");
+[0m
+`git status` shows an untracked `tags` file, likely generated by symbol lookup. I won’t stage it; I’ll remove that tool artifact and commit only the three intended files.
+[0m% [0mPatch 1 file
+The intended diff is ready. I’m staging the three backport files and creating the backport commit now.
+[0m
+[0m$ [0mgit add -- "docs/appendices/release-notes/5.9.7.rst" "server/src/main/java/io/crate/analyze/where/EqualityExtractor.java" "server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java"; if ($?) { git commit -m "Fix NPE in EqualityExtractor for pk/non-pk mixes" }
+warning: in the working copy of 'docs/appendices/release-notes/5.9.7.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/analyze/where/EqualityExtractor.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java', LF will be replaced by CRLF the next time Git touches it
+[detached HEAD d199cf827c] Fix NPE in EqualityExtractor for pk/non-pk mixes
+ 3 files changed, 14 insertions(+), 1 deletion(-)
+[0m
+The backport commit was created. I’ll run the required full patch validation against the target ref and capture the final diff for reporting.
+[0m# [0mTodos
+[✓] Understand original commit intent and changed hunks
+[✓] Locate equivalent 5.9 code and adapt hunks
+[✓] Validate hunks against target ref
+[✓] Apply patch and commit backport
+[•] Run full validation and report patch
+[0m
+[0m⚙ [0mvalidate {"ref":"97ae481c47c7809f07f1c7b772d93e37fb986255","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.9.7.rst b/docs/appendices/release-notes/5.9.7.rst\nindex de3d645921..6dca320174 100644\n--- a/docs/appendices/release-notes/5.9.7.rst\n+++ b/docs/appendices/release-notes/5.9.7.rst\n@@ -47,6 +47,10 @@ See the :ref:`version_5.9.0` release notes for a full list of changes in the\n Fixes\n =====\n \n+- Fixed an issue that could cause queries to run into a ``NullPointerException``\n+  if having a query condition like ``(nonPrimaryKey = ? AND primaryKeyPart =\n+  ?)``\n+\n - Fixed an issue that caused ``FILTER`` clauses on non-aggregate window\n   functions to be ignored instead of raising an unsupported error.\n \ndiff --git a/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java b/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java\nindex c57b34bf17..3f238d56cc 100644\n--- a/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java\n+++ b/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java\n@@ -473,7 +473,7 @@ public class EqualityExtractor {\n                     proxyBelowPost = ctx.proxyBelow || proxyBelowPost;\n                 }\n                 if ((ctx.foundPKColumnUnderOr && ctx.foundNonPKColumnUnderOr) || ctx.foundPKColumnUnderNot) {\n-                    return null;\n+                    return Literal.BOOLEAN_FALSE;\n                 }\n                 ctx.isUnderNotPredicate = prevIsUnderNotPredicate;\n                 ctx.proxyBelow = proxyBelowPost;\ndiff --git a/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java b/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java\nindex 2592d6a3bb..e938e17a2a 100644\n--- a/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java\n+++ b/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java\n@@ -419,6 +419,15 @@ public class EqualityExtractorTest extends CrateDummyClusterServiceUnitTest {\n         assertThat(matches).isNull();\n     }\n \n+    @Test\n+    public void test_no_exact_result_on_partial_match() throws Exception {\n+        // https://github.com/crate/crate/issues/17197\n+        // It is important that the query first hits a non-pk column\n+        Symbol query = query(\"(i = 1 or x = 2) and (i = 2 and a = 'foo')\");\n+        List<List<Symbol>> analyzeExact = analyzeExact(query, List.of(ColumnIdent.of(\"x\")));\n+        assertThat(analyzeExact).isNull();\n+    }\n+\n     @Test\n     public void test_pk_extraction_breaks_after_x_iterations() {\n         StringJoiner sj = new StringJoiner(\" or \");\n"}
+Full validation rejected the compact diff because its hunks lacked enough surrounding context for that mode, even though each hunk applied. I’ll regenerate the full patch with wider context and re-run validation.
+[0m
+[0m$ [0mgit status --short
+(no output)
+[0m
+[0m$ [0mgit diff --unified=5 97ae481c47c7809f07f1c7b772d93e37fb986255 HEAD -- "docs/appendices/release-notes/5.9.7.rst" "server/src/main/java/io/crate/analyze/where/EqualityExtractor.java" "server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java"
+diff --git a/docs/appendices/release-notes/5.9.7.rst b/docs/appendices/release-notes/5.9.7.rst
+index de3d645921..6dca320174 100644
+--- a/docs/appendices/release-notes/5.9.7.rst
++++ b/docs/appendices/release-notes/5.9.7.rst
+@@ -45,10 +45,14 @@ See the :ref:`version_5.9.0` release notes for a full list of changes in the
+ 5.9 series.
+ 
+ Fixes
+ =====
+ 
++- Fixed an issue that could cause queries to run into a ``NullPointerException``
++  if having a query condition like ``(nonPrimaryKey = ? AND primaryKeyPart =
++  ?)``
++
+ - Fixed an issue that caused ``FILTER`` clauses on non-aggregate window
+   functions to be ignored instead of raising an unsupported error.
+ 
+ - Fixed an issue leading to an error when exporting big tables via ``COPY TO``
+   to the :ref:`Azure Blob Storage <sql-copy-to-az>`.
+diff --git a/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java b/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java
+index c57b34bf17..3f238d56cc 100644
+--- a/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java
++++ b/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java
+@@ -471,11 +471,11 @@ public class EqualityExtractor {
+                     ctx.proxyBelow = proxyBelowPre;
+                     newArgs.add(arg.accept(this, ctx));
+                     proxyBelowPost = ctx.proxyBelow || proxyBelowPost;
+                 }
+                 if ((ctx.foundPKColumnUnderOr && ctx.foundNonPKColumnUnderOr) || ctx.foundPKColumnUnderNot) {
+-                    return null;
++                    return Literal.BOOLEAN_FALSE;
+                 }
+                 ctx.isUnderNotPredicate = prevIsUnderNotPredicate;
+                 ctx.proxyBelow = proxyBelowPost;
+                 if (!ctx.proxyBelow && function.valueType().equals(DataTypes.BOOLEAN)) {
+                     return Literal.BOOLEAN_TRUE;
+diff --git a/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java b/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java
+index 2592d6a3bb..e938e17a2a 100644
+--- a/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java
++++ b/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java
+@@ -417,10 +417,19 @@ public class EqualityExtractorTest extends CrateDummyClusterServiceUnitTest {
+         assertThat(matches).isNull();
+         matches = analyzeExactX(query("x = 1 AND (x = 2 AND (NOT(x = 3) OR i = 1) AND x = 4)"));
+         assertThat(matches).isNull();
+     }
+ 
++    @Test
++    public void test_no_exact_result_on_partial_match() throws Exception {
++        // https://github.com/crate/crate/issues/17197
++        // It is important that the query first hits a non-pk column
++        Symbol query = query("(i = 1 or x = 2) and (i = 2 and a = 'foo')");
++        List<List<Symbol>> analyzeExact = analyzeExact(query, List.of(ColumnIdent.of("x")));
++        assertThat(analyzeExact).isNull();
++    }
++
+     @Test
+     public void test_pk_extraction_breaks_after_x_iterations() {
+         StringJoiner sj = new StringJoiner(" or ");
+         for (int j = 0; j < 20; j++) {
+             sj.add("x = ? AND i = ?");
+[0m
+[0m⚙ [0mvalidate {"ref":"97ae481c47c7809f07f1c7b772d93e37fb986255","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.9.7.rst b/docs/appendices/release-notes/5.9.7.rst\nindex de3d645921..6dca320174 100644\n--- a/docs/appendices/release-notes/5.9.7.rst\n+++ b/docs/appendices/release-notes/5.9.7.rst\n@@ -45,10 +45,14 @@ See the :ref:`version_5.9.0` release notes for a full list of changes in the\n 5.9 series.\n \n Fixes\n =====\n \n+- Fixed an issue that could cause queries to run into a ``NullPointerException``\n+  if having a query condition like ``(nonPrimaryKey = ? AND primaryKeyPart =\n+  ?)``\n+\n - Fixed an issue that caused ``FILTER`` clauses on non-aggregate window\n   functions to be ignored instead of raising an unsupported error.\n \n - Fixed an issue leading to an error when exporting big tables via ``COPY TO``\n   to the :ref:`Azure Blob Storage <sql-copy-to-az>`.\ndiff --git a/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java b/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java\nindex c57b34bf17..3f238d56cc 100644\n--- a/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java\n+++ b/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java\n@@ -471,11 +471,11 @@ public class EqualityExtractor {\n                     ctx.proxyBelow = proxyBelowPre;\n                     newArgs.add(arg.accept(this, ctx));\n                     proxyBelowPost = ctx.proxyBelow || proxyBelowPost;\n                 }\n                 if ((ctx.foundPKColumnUnderOr && ctx.foundNonPKColumnUnderOr) || ctx.foundPKColumnUnderNot) {\n-                    return null;\n+                    return Literal.BOOLEAN_FALSE;\n                 }\n                 ctx.isUnderNotPredicate = prevIsUnderNotPredicate;\n                 ctx.proxyBelow = proxyBelowPost;\n                 if (!ctx.proxyBelow && function.valueType().equals(DataTypes.BOOLEAN)) {\n                     return Literal.BOOLEAN_TRUE;\ndiff --git a/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java b/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java\nindex 2592d6a3bb..e938e17a2a 100644\n--- a/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java\n+++ b/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java\n@@ -417,10 +417,19 @@ public class EqualityExtractorTest extends CrateDummyClusterServiceUnitTest {\n         assertThat(matches).isNull();\n         matches = analyzeExactX(query(\"x = 1 AND (x = 2 AND (NOT(x = 3) OR i = 1) AND x = 4)\"));\n         assertThat(matches).isNull();\n     }\n \n+    @Test\n+    public void test_no_exact_result_on_partial_match() throws Exception {\n+        // https://github.com/crate/crate/issues/17197\n+        // It is important that the query first hits a non-pk column\n+        Symbol query = query(\"(i = 1 or x = 2) and (i = 2 and a = 'foo')\");\n+        List<List<Symbol>> analyzeExact = analyzeExact(query, List.of(ColumnIdent.of(\"x\")));\n+        assertThat(analyzeExact).isNull();\n+    }\n+\n     @Test\n     public void test_pk_extraction_breaks_after_x_iterations() {\n         StringJoiner sj = new StringJoiner(\" or \");\n         for (int j = 0; j < 20; j++) {\n             sj.add(\"x = ? AND i = ?\");\n"}
+The full validator is still reporting a context mismatch despite identifying 100% matching source blocks, which points to validator patch-context handling rather than a semantic conflict. I’ll retry full validation with context revision enabled.
+[0m⚙ [0mvalidate {"ref":"97ae481c47c7809f07f1c7b772d93e37fb986255","mode":"full","revise_context":true,"patch":"diff --git a/docs/appendices/release-notes/5.9.7.rst b/docs/appendices/release-notes/5.9.7.rst\n--- a/docs/appendices/release-notes/5.9.7.rst\n+++ b/docs/appendices/release-notes/5.9.7.rst\n@@ -45,10 +45,14 @@ See the :ref:`version_5.9.0` release notes for a full list of changes in the\n 5.9 series.\n \n Fixes\n =====\n \n+- Fixed an issue that could cause queries to run into a ``NullPointerException``\n+  if having a query condition like ``(nonPrimaryKey = ? AND primaryKeyPart =\n+  ?)``\n+\n - Fixed an issue that caused ``FILTER`` clauses on non-aggregate window\n   functions to be ignored instead of raising an unsupported error.\n \n - Fixed an issue leading to an error when exporting big tables via ``COPY TO``\n   to the :ref:`Azure Blob Storage <sql-copy-to-az>`.\ndiff --git a/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java b/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java\n--- a/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java\n+++ b/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java\n@@ -471,11 +471,11 @@ public class EqualityExtractor {\n                     ctx.proxyBelow = proxyBelowPre;\n                     newArgs.add(arg.accept(this, ctx));\n                     proxyBelowPost = ctx.proxyBelow || proxyBelowPost;\n                 }\n                 if ((ctx.foundPKColumnUnderOr && ctx.foundNonPKColumnUnderOr) || ctx.foundPKColumnUnderNot) {\n-                    return null;\n+                    return Literal.BOOLEAN_FALSE;\n                 }\n                 ctx.isUnderNotPredicate = prevIsUnderNotPredicate;\n                 ctx.proxyBelow = proxyBelowPost;\n                 if (!ctx.proxyBelow && function.valueType().equals(DataTypes.BOOLEAN)) {\n                     return Literal.BOOLEAN_TRUE;\ndiff --git a/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java b/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java\n--- a/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java\n+++ b/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java\n@@ -417,10 +417,19 @@ public class EqualityExtractorTest extends CrateDummyClusterServiceUnitTest {\n         assertThat(matches).isNull();\n         matches = analyzeExactX(query(\"x = 1 AND (x = 2 AND (NOT(x = 3) OR i = 1) AND x = 4)\"));\n         assertThat(matches).isNull();\n     }\n \n+    @Test\n+    public void test_no_exact_result_on_partial_match() throws Exception {\n+        // https://github.com/crate/crate/issues/17197\n+        // It is important that the query first hits a non-pk column\n+        Symbol query = query(\"(i = 1 or x = 2) and (i = 2 and a = 'foo')\");\n+        List<List<Symbol>> analyzeExact = analyzeExact(query, List.of(ColumnIdent.of(\"x\")));\n+        assertThat(analyzeExact).isNull();\n+    }\n+\n     @Test\n     public void test_pk_extraction_breaks_after_x_iterations() {\n         StringJoiner sj = new StringJoiner(\" or \");\n         for (int j = 0; j < 20; j++) {\n             sj.add(\"x = ? AND i = ?\");\n"}
+The validator appears to apply against the current checked-out contents, and the patch is already committed there. To get a meaningful full validation without switching refs, I’ll temporarily reverse only my three file edits in the worktree, run full validation, then restore the committed contents so `HEAD` remains the backport commit.
+[0m% [0mPatch 3 files
+[0m⚙ [0mvalidate {"ref":"97ae481c47c7809f07f1c7b772d93e37fb986255","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.9.7.rst b/docs/appendices/release-notes/5.9.7.rst\n--- a/docs/appendices/release-notes/5.9.7.rst\n+++ b/docs/appendices/release-notes/5.9.7.rst\n@@ -45,10 +45,14 @@ See the :ref:`version_5.9.0` release notes for a full list of changes in the\n 5.9 series.\n \n Fixes\n =====\n \n+- Fixed an issue that could cause queries to run into a ``NullPointerException``\n+  if having a query condition like ``(nonPrimaryKey = ? AND primaryKeyPart =\n+  ?)``\n+\n - Fixed an issue that caused ``FILTER`` clauses on non-aggregate window\n   functions to be ignored instead of raising an unsupported error.\n \n - Fixed an issue leading to an error when exporting big tables via ``COPY TO``\n   to the :ref:`Azure Blob Storage <sql-copy-to-az>`.\ndiff --git a/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java b/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java\n--- a/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java\n+++ b/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java\n@@ -471,11 +471,11 @@ public class EqualityExtractor {\n                     ctx.proxyBelow = proxyBelowPre;\n                     newArgs.add(arg.accept(this, ctx));\n                     proxyBelowPost = ctx.proxyBelow || proxyBelowPost;\n                 }\n                 if ((ctx.foundPKColumnUnderOr && ctx.foundNonPKColumnUnderOr) || ctx.foundPKColumnUnderNot) {\n-                    return null;\n+                    return Literal.BOOLEAN_FALSE;\n                 }\n                 ctx.isUnderNotPredicate = prevIsUnderNotPredicate;\n                 ctx.proxyBelow = proxyBelowPost;\n                 if (!ctx.proxyBelow && function.valueType().equals(DataTypes.BOOLEAN)) {\n                     return Literal.BOOLEAN_TRUE;\ndiff --git a/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java b/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java\n--- a/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java\n+++ b/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java\n@@ -417,10 +417,19 @@ public class EqualityExtractorTest extends CrateDummyClusterServiceUnitTest {\n         assertThat(matches).isNull();\n         matches = analyzeExactX(query(\"x = 1 AND (x = 2 AND (NOT(x = 3) OR i = 1) AND x = 4)\"));\n         assertThat(matches).isNull();\n     }\n \n+    @Test\n+    public void test_no_exact_result_on_partial_match() throws Exception {\n+        // https://github.com/crate/crate/issues/17197\n+        // It is important that the query first hits a non-pk column\n+        Symbol query = query(\"(i = 1 or x = 2) and (i = 2 and a = 'foo')\");\n+        List<List<Symbol>> analyzeExact = analyzeExact(query, List.of(ColumnIdent.of(\"x\")));\n+        assertThat(analyzeExact).isNull();\n+    }\n+\n     @Test\n     public void test_pk_extraction_breaks_after_x_iterations() {\n         StringJoiner sj = new StringJoiner(\" or \");\n         for (int j = 0; j < 20; j++) {\n             sj.add(\"x = ? AND i = ?\");\n"}
+Full validation passed, including compile and `server:EqualityExtractorTest`. I’ll restore the worktree to the committed backport contents and verify it is clean.
+[0m% [0mPatch 3 files
+[0m
+[0m$ [0mgit diff --unified=5 97ae481c47c7809f07f1c7b772d93e37fb986255 HEAD -- "docs/appendices/release-notes/5.9.7.rst" "server/src/main/java/io/crate/analyze/where/EqualityExtractor.java" "server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java"
+(no output)
+[0m
+[0m$ [0mgit diff --stat
+warning: in the working copy of 'docs/appendices/release-notes/5.9.7.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/analyze/where/EqualityExtractor.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java', LF will be replaced by CRLF the next time Git touches it
+ docs/appendices/release-notes/5.9.7.rst                          | 4 ++++
+ .../src/main/java/io/crate/analyze/where/EqualityExtractor.java  | 2 +-
+ .../test/java/io/crate/analyze/where/EqualityExtractorTest.java  | 9 +++++++++
+ 3 files changed, 14 insertions(+), 1 deletion(-)
+[0m
+[0m$ [0mgit status --short
+M docs/appendices/release-notes/5.9.7.rst
+ M server/src/main/java/io/crate/analyze/where/EqualityExtractor.java
+ M server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java
+[0m
+[0m$ [0mgit log --oneline -3
+97ae481c47 Merge EqualityExtractorBaseTest back into EqualityExtractorTest
+c4bdd6964d Raise an error if FILTER is used with non-aggregate window function
+0648f7af17 Fix `alter` from falsely updating table version created setting to latest
+[0m
+[0m$ [0mgit diff --cached --stat
+(no output)
+[0m
+[0m$ [0mgit status --short --branch
+## HEAD (no branch)
+ M docs/appendices/release-notes/5.9.7.rst
+ M server/src/main/java/io/crate/analyze/where/EqualityExtractor.java
+ M server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java
+[0m
+The full validator reset the repository back to the target ref after validation, leaving the validated patch in the worktree and removing the earlier local commit. I’ll recommit the same validated changes now.
+[0m$ [0mgit add -- "docs/appendices/release-notes/5.9.7.rst" "server/src/main/java/io/crate/analyze/where/EqualityExtractor.java" "server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java"; if ($?) { git commit -m "Fix NPE in EqualityExtractor for pk/non-pk mixes" }
+warning: in the working copy of 'docs/appendices/release-notes/5.9.7.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/analyze/where/EqualityExtractor.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java', LF will be replaced by CRLF the next time Git touches it
+[detached HEAD 7d37d80819] Fix NPE in EqualityExtractor for pk/non-pk mixes
+ 3 files changed, 14 insertions(+), 1 deletion(-)
+[0m
+[0m$ [0mgit log --oneline -3
+7d37d80819 Fix NPE in EqualityExtractor for pk/non-pk mixes
+97ae481c47 Merge EqualityExtractorBaseTest back into EqualityExtractorTest
+c4bdd6964d Raise an error if FILTER is used with non-aggregate window function
+[0m
+[0m$ [0mgit diff --unified=5 97ae481c47c7809f07f1c7b772d93e37fb986255 HEAD -- "docs/appendices/release-notes/5.9.7.rst" "server/src/main/java/io/crate/analyze/where/EqualityExtractor.java" "server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java"
+diff --git a/docs/appendices/release-notes/5.9.7.rst b/docs/appendices/release-notes/5.9.7.rst
+index de3d645921..6dca320174 100644
+--- a/docs/appendices/release-notes/5.9.7.rst
++++ b/docs/appendices/release-notes/5.9.7.rst
+@@ -45,10 +45,14 @@ See the :ref:`version_5.9.0` release notes for a full list of changes in the
+ 5.9 series.
+ 
+ Fixes
+ =====
+ 
++- Fixed an issue that could cause queries to run into a ``NullPointerException``
++  if having a query condition like ``(nonPrimaryKey = ? AND primaryKeyPart =
++  ?)``
++
+ - Fixed an issue that caused ``FILTER`` clauses on non-aggregate window
+   functions to be ignored instead of raising an unsupported error.
+ 
+ - Fixed an issue leading to an error when exporting big tables via ``COPY TO``
+   to the :ref:`Azure Blob Storage <sql-copy-to-az>`.
+diff --git a/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java b/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java
+index c57b34bf17..3f238d56cc 100644
+--- a/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java
++++ b/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java
+@@ -471,11 +471,11 @@ public class EqualityExtractor {
+                     ctx.proxyBelow = proxyBelowPre;
+                     newArgs.add(arg.accept(this, ctx));
+                     proxyBelowPost = ctx.proxyBelow || proxyBelowPost;
+                 }
+                 if ((ctx.foundPKColumnUnderOr && ctx.foundNonPKColumnUnderOr) || ctx.foundPKColumnUnderNot) {
+-                    return null;
++                    return Literal.BOOLEAN_FALSE;
+                 }
+                 ctx.isUnderNotPredicate = prevIsUnderNotPredicate;
+                 ctx.proxyBelow = proxyBelowPost;
+                 if (!ctx.proxyBelow && function.valueType().equals(DataTypes.BOOLEAN)) {
+                     return Literal.BOOLEAN_TRUE;
+diff --git a/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java b/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java
+index 2592d6a3bb..e938e17a2a 100644
+--- a/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java
++++ b/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java
+@@ -417,10 +417,19 @@ public class EqualityExtractorTest extends CrateDummyClusterServiceUnitTest {
+         assertThat(matches).isNull();
+         matches = analyzeExactX(query("x = 1 AND (x = 2 AND (NOT(x = 3) OR i = 1) AND x = 4)"));
+         assertThat(matches).isNull();
+     }
+ 
++    @Test
++    public void test_no_exact_result_on_partial_match() throws Exception {
++        // https://github.com/crate/crate/issues/17197
++        // It is important that the query first hits a non-pk column
++        Symbol query = query("(i = 1 or x = 2) and (i = 2 and a = 'foo')");
++        List<List<Symbol>> analyzeExact = analyzeExact(query, List.of(ColumnIdent.of("x")));
++        assertThat(analyzeExact).isNull();
++    }
++
+     @Test
+     public void test_pk_extraction_breaks_after_x_iterations() {
+         StringJoiner sj = new StringJoiner(" or ");
+         for (int j = 0; j < 20; j++) {
+             sj.add("x = ? AND i = ?");
+[0m
+[0m$ [0mgit status --short --branch
+## HEAD (no branch)
+[0m
+[0m# [0mTodos
+[✓] Understand original commit intent and changed hunks
+[✓] Locate equivalent 5.9 code and adapt hunks
+[✓] Validate hunks against target ref
+[✓] Apply patch and commit backport
+[✓] Run full validation and report patch
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/docs/appendices/release-notes/5.9.7.rst b/docs/appendices/release-notes/5.9.7.rst
+    index de3d645921..6dca320174 100644
+    --- a/docs/appendices/release-notes/5.9.7.rst
+    +++ b/docs/appendices/release-notes/5.9.7.rst
+    @@ -45,10 +45,14 @@ See the :ref:`version_5.9.0` release notes for a full list of changes in the
+     5.9 series.
+     
+     Fixes
+     =====
+     
+    +- Fixed an issue that could cause queries to run into a ``NullPointerException``
+    +  if having a query condition like ``(nonPrimaryKey = ? AND primaryKeyPart =
+    +  ?)``
+    +
+     - Fixed an issue that caused ``FILTER`` clauses on non-aggregate window
+       functions to be ignored instead of raising an unsupported error.
+     
+     - Fixed an issue leading to an error when exporting big tables via ``COPY TO``
+       to the :ref:`Azure Blob Storage <sql-copy-to-az>`.
+    diff --git a/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java b/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java
+    index c57b34bf17..3f238d56cc 100644
+    --- a/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java
+    +++ b/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java
+    @@ -471,11 +471,11 @@ public class EqualityExtractor {
+                         ctx.proxyBelow = proxyBelowPre;
+                         newArgs.add(arg.accept(this, ctx));
+                         proxyBelowPost = ctx.proxyBelow || proxyBelowPost;
+                     }
+                     if ((ctx.foundPKColumnUnderOr && ctx.foundNonPKColumnUnderOr) || ctx.foundPKColumnUnderNot) {
+    -                    return null;
+    +                    return Literal.BOOLEAN_FALSE;
+                     }
+                     ctx.isUnderNotPredicate = prevIsUnderNotPredicate;
+                     ctx.proxyBelow = proxyBelowPost;
+                     if (!ctx.proxyBelow && function.valueType().equals(DataTypes.BOOLEAN)) {
+                         return Literal.BOOLEAN_TRUE;
+    diff --git a/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java b/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java
+    index 2592d6a3bb..e938e17a2a 100644
+    --- a/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java
+    +++ b/server/src/test/java/io/crate/analyze/where/EqualityExtractorTest.java
+    @@ -417,10 +417,19 @@ public class EqualityExtractorTest extends CrateDummyClusterServiceUnitTest {
+             assertThat(matches).isNull();
+             matches = analyzeExactX(query("x = 1 AND (x = 2 AND (NOT(x = 3) OR i = 1) AND x = 4)"));
+             assertThat(matches).isNull();
+         }
+     
+    +    @Test
+    +    public void test_no_exact_result_on_partial_match() throws Exception {
+    +        // https://github.com/crate/crate/issues/17197
+    +        // It is important that the query first hits a non-pk column
+    +        Symbol query = query("(i = 1 or x = 2) and (i = 2 and a = 'foo')");
+    +        List<List<Symbol>> analyzeExact = analyzeExact(query, List.of(ColumnIdent.of("x")));
+    +        assertThat(analyzeExact).isNull();
+    +    }
+    +
+         @Test
+         public void test_pk_extraction_breaks_after_x_iterations() {
+             StringJoiner sj = new StringJoiner(" or ");
+             for (int j = 0; j < 20; j++) {
+                 sj.add("x = ? AND i = ?");
+  notes: >
+    Backported and committed the EqualityExtractor NPE fix to 5.9; hunk validation and full validation with compile plus EqualityExtractorTest passed.
+```
+
+--- END CLI OUTPUT ---
+[02:01:06]   Done in 2333.9s | status=success

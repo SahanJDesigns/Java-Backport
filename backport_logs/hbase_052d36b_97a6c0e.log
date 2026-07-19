@@ -1,0 +1,222 @@
+[15:33:53] === Row 54: hbase  052d36b0 -> 97a6c0ec  [TYPE-I] ===
+[15:33:53]   Resolving parent of backport commit 97a6c0ec...
+[15:33:53]   Backport parent (target ref): 635e710ceccb0ffcd01e5a6452b36cb8efb2bd9b
+[15:33:53]   Extracting new-version patch for 052d36b0...
+[15:33:53]   New-version patch size: 7175 chars
+[15:33:53]   Checking out backport parent 635e710c...
+[15:33:54]   Invoking OpenCode CLI (11065 chars)...
+[15:33:54]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the branch-2 context for the affected classes and validate the ported hunks against the specified parent ref before returning only the required YAML.
+[0m⚙ [0mgit_show {"ref":"052d36b0b262daba69bdbea4c44ef4e4b951df2b"}
+[0m⚙ [0mviewcode {"ref":"635e710ceccb0ffcd01e5a6452b36cb8efb2bd9b","path":"hbase-mapreduce/src/test/java/org/apache/hadoop/hbase/mapreduce/TestWALInputFormat.java","startline":1,"endline":180}
+[0m⚙ [0mviewcode {"ref":"635e710ceccb0ffcd01e5a6452b36cb8efb2bd9b","path":"hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java","startline":1,"endline":430}
+[0m⚙ [0mlocate_symbol {"ref":"635e710ceccb0ffcd01e5a6452b36cb8efb2bd9b","symbol":"WALInputFormat"}
+[0m⚙ [0mlocate_symbol {"ref":"635e710ceccb0ffcd01e5a6452b36cb8efb2bd9b","symbol":"AbstractFSWALProvider"}
+[0m⚙ [0mlocate_symbol {"ref":"635e710ceccb0ffcd01e5a6452b36cb8efb2bd9b","symbol":"TestWALInputFormat"}
+The main source file matches the master patch structure closely on branch-2. I’m checking the branch-2 test APIs/import locations before constructing the unified diff so the test hunk is adapted correctly.
+[0m✱ [0mGrep "getWALs\(\)"[90m in hbase-server/src/main/java · 12 matches[0m
+[0m✱ [0mGrep "class AbstractFSWAL"[90m in hbase-server/src/main/java · 2 matches[0m
+[0m✱ [0mGrep "initCredentialsForCluster"[90m in hbase-mapreduce/src/test/java · 4 matches[0m
+[0m✱ [0mGrep "interface AbstractFSWAL|abstract class AbstractFSWAL"[90m in . · 2 matches[0m
+[0m✱ [0mGrep "createWALRootDir\("[90m in . · 12 matches[0m
+The branch-2 APIs needed by the original test exist, including `HRegionServer.getWALs()`, `HBaseTestingUtil.createWALRootDir()`, and `regionserver.wal.AbstractFSWAL`, so the test can be ported with the same intent.
+[0m⚙ [0mgit_history {"filepath":"hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java","start_line":312,"end_line":399,"start_commit":"635e710ceccb0ffcd01e5a6452b36cb8efb2bd9b","end_commit":"635e710ceccb0ffcd01e5a6452b36cb8efb2bd9b"}
+[0m⚙ [0mgit_history {"filepath":"hbase-mapreduce/src/test/java/org/apache/hadoop/hbase/mapreduce/TestWALInputFormat.java","start_line":1,"end_line":78,"start_commit":"635e710ceccb0ffcd01e5a6452b36cb8efb2bd9b","end_commit":"635e710ceccb0ffcd01e5a6452b36cb8efb2bd9b"}
+[0m✱ [0mGrep "class HBaseTestingUtil"[90m in hbase-server/src/test/java/org/apache/hadoop/hbase · 1 match[0m
+[0m✱ [0mGrep "HBaseTestingUtil TEST_UTIL"[90m in hbase-mapreduce/src/test/java/org/apache/hadoop/hbase/mapreduce · 0 matches[0m
+[0m✱ [0mGrep "getCurrentFileName\("[90m in hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/wal · 2 matches[0m
+[0m✱ [0mGrep "HREGION_OLDLOGDIR_NAME"[90m in . · 57 matches[0m
+One branch-2 difference is the test utility class name: this branch uses `HBaseTestingUtility`, not `HBaseTestingUtil`, so the backport patch must adapt that import and field type.
+[0m→ [0mRead hbase-mapreduce/src/test/java/org/apache/hadoop/hbase/mapreduce/TestWALRecordReader.java[90m [offset=1, limit=160][0m
+[0m→ [0mRead hbase-mapreduce/src/test/java/org/apache/hadoop/hbase/mapreduce/TestWALPlayer.java[90m [offset=1, limit=140][0m
+[0m→ [0mRead hbase-mapreduce/src/test/java/org/apache/hadoop/hbase/mapreduce/TestTableMapReduceUtil.java[90m [offset=1, limit=70][0m
+[0m⚙ [0mviewcode {"ref":"635e710ceccb0ffcd01e5a6452b36cb8efb2bd9b","path":"hbase-server/src/main/java/org/apache/hadoop/hbase/wal/AbstractFSWALProvider.java","startline":430,"endline":490}
+I’m validating the backport hunks now. The main logic is unchanged from the original patch; the only adaptation is `HBaseTestingUtility` for branch-2 test code.
+[0m⚙ [0mvalidate {"ref":"635e710ceccb0ffcd01e5a6452b36cb8efb2bd9b","mode":"hunk","patch":"diff --git a/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java b/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java\n--- a/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java\n+++ b/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java\n@@ -318,7 +318,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {\n     for (Path inputPath : inputPaths) {\n       FileSystem fs = inputPath.getFileSystem(conf);\n       try {\n-        List<FileStatus> files = getFiles(fs, inputPath, startTime, endTime);\n+        List<FileStatus> files = getFiles(fs, inputPath, startTime, endTime, conf);\n         allFiles.addAll(files);\n       } catch (FileNotFoundException e) {\n         if (ignoreMissing) {\n"}
+[0m⚙ [0mvalidate {"ref":"635e710ceccb0ffcd01e5a6452b36cb8efb2bd9b","mode":"hunk","patch":"diff --git a/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java b/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java\n--- a/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java\n+++ b/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java\n@@ -394,6 +394,30 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {\n   public RecordReader<WALKey, WALEdit> createRecordReader(InputSplit split,\n     TaskAttemptContext context) throws IOException, InterruptedException {\n     return new WALKeyRecordReader();\n   }\n+\n+  /**\n+   * Attempts to return the {@link LocatedFileStatus} for the given directory. If the directory does\n+   * not exist, it will check if the directory is an archived log file and try to find it\n+   */\n+  private static RemoteIterator<LocatedFileStatus> listLocatedFileStatus(FileSystem fs, Path dir,\n+    Configuration conf) throws IOException {\n+    try {\n+      return fs.listLocatedStatus(dir);\n+    } catch (FileNotFoundException e) {\n+      if (AbstractFSWALProvider.isArchivedLogFile(dir)) {\n+        throw e;\n+      }\n+\n+      LOG.warn(\"Log file {} not found, trying to find it in archive directory.\", dir);\n+      Path archiveFile = AbstractFSWALProvider.findArchivedLog(dir, conf);\n+      if (archiveFile == null) {\n+        LOG.error(\"Did not find archive file for {}\", dir);\n+        throw e;\n+      }\n+\n+      return fs.listLocatedStatus(archiveFile);\n+    }\n+  }\n }\n"}
+[0m⚙ [0mvalidate {"ref":"635e710ceccb0ffcd01e5a6452b36cb8efb2bd9b","mode":"hunk","patch":"diff --git a/hbase-mapreduce/src/test/java/org/apache/hadoop/hbase/mapreduce/TestWALInputFormat.java b/hbase-mapreduce/src/test/java/org/apache/hadoop/hbase/mapreduce/TestWALInputFormat.java\n--- a/hbase-mapreduce/src/test/java/org/apache/hadoop/hbase/mapreduce/TestWALInputFormat.java\n+++ b/hbase-mapreduce/src/test/java/org/apache/hadoop/hbase/mapreduce/TestWALInputFormat.java\n@@ -21,24 +21,43 @@ import static org.junit.Assert.assertEquals;\n \n import java.util.ArrayList;\n import java.util.List;\n+import org.apache.hadoop.conf.Configuration;\n import org.apache.hadoop.fs.FileStatus;\n import org.apache.hadoop.fs.LocatedFileStatus;\n import org.apache.hadoop.fs.Path;\n import org.apache.hadoop.hbase.HBaseClassTestRule;\n+import org.apache.hadoop.hbase.HBaseTestingUtility;\n+import org.apache.hadoop.hbase.HConstants;\n+import org.apache.hadoop.hbase.regionserver.HRegionServer;\n+import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;\n import org.apache.hadoop.hbase.testclassification.MapReduceTests;\n-import org.apache.hadoop.hbase.testclassification.SmallTests;\n+import org.apache.hadoop.hbase.testclassification.MediumTests;\n+import org.apache.hadoop.hbase.util.CommonFSUtils;\n import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;\n+import org.apache.hadoop.mapreduce.InputSplit;\n+import org.apache.hadoop.mapreduce.Job;\n+import org.apache.hadoop.mapreduce.JobContext;\n+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;\n+import org.junit.BeforeClass;\n import org.junit.ClassRule;\n import org.junit.Test;\n import org.junit.experimental.categories.Category;\n import org.mockito.Mockito;\n \n-@Category({ MapReduceTests.class, SmallTests.class })\n+@Category({ MapReduceTests.class, MediumTests.class })\n public class TestWALInputFormat {\n+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();\n+\n   @ClassRule\n   public static final HBaseClassTestRule CLASS_RULE =\n     HBaseClassTestRule.forClass(TestWALInputFormat.class);\n \n+  @BeforeClass\n+  public static void setupClass() throws Exception {\n+    TEST_UTIL.startMiniCluster();\n+    TEST_UTIL.createWALRootDir();\n+  }\n+\n   /**\n    * Test the primitive start/end time filtering.\n    */\n"}
+[0m⚙ [0mvalidate {"ref":"635e710ceccb0ffcd01e5a6452b36cb8efb2bd9b","mode":"hunk","patch":"diff --git a/hbase-mapreduce/src/test/java/org/apache/hadoop/hbase/mapreduce/TestWALInputFormat.java b/hbase-mapreduce/src/test/java/org/apache/hadoop/hbase/mapreduce/TestWALInputFormat.java\n--- a/hbase-mapreduce/src/test/java/org/apache/hadoop/hbase/mapreduce/TestWALInputFormat.java\n+++ b/hbase-mapreduce/src/test/java/org/apache/hadoop/hbase/mapreduce/TestWALInputFormat.java\n@@ -74,4 +93,36 @@ public class TestWALInputFormat {\n     WALInputFormat.addFile(lfss, lfs, now, now);\n     assertEquals(8, lfss.size());\n   }\n+\n+  @Test\n+  public void testHandlesArchivedWALFiles() throws Exception {\n+    Configuration conf = TEST_UTIL.getConfiguration();\n+    JobContext ctx = Mockito.mock(JobContext.class);\n+    Mockito.when(ctx.getConfiguration()).thenReturn(conf);\n+    Job job = Job.getInstance(conf);\n+    TableMapReduceUtil.initCredentialsForCluster(job, conf);\n+    Mockito.when(ctx.getCredentials()).thenReturn(job.getCredentials());\n+\n+    // Setup WAL file, then archive it\n+    HRegionServer rs = TEST_UTIL.getHBaseCluster().getRegionServer(0);\n+    AbstractFSWAL wal = (AbstractFSWAL) rs.getWALs().get(0);\n+    Path walPath = wal.getCurrentFileName();\n+    TEST_UTIL.getConfiguration().set(FileInputFormat.INPUT_DIR, walPath.toString());\n+    TEST_UTIL.getConfiguration().set(WALPlayer.INPUT_FILES_SEPARATOR_KEY, \";\");\n+\n+    Path rootDir = CommonFSUtils.getWALRootDir(conf);\n+    Path archiveWal = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);\n+    archiveWal = new Path(archiveWal, walPath.getName());\n+    TEST_UTIL.getTestFileSystem().delete(walPath, true);\n+    TEST_UTIL.getTestFileSystem().mkdirs(archiveWal.getParent());\n+    TEST_UTIL.getTestFileSystem().create(archiveWal).close();\n+\n+    // Test for that we can read from the archived WAL file\n+    WALInputFormat wif = new WALInputFormat();\n+    List<InputSplit> splits = wif.getSplits(ctx);\n+    assertEquals(1, splits.size());\n+    WALInputFormat.WALSplit split = (WALInputFormat.WALSplit) splits.get(0);\n+    assertEquals(archiveWal.toString(), split.getLogFileName());\n+  }\n+\n }\n"}
+[0m⚙ [0mvalidate {"ref":"635e710ceccb0ffcd01e5a6452b36cb8efb2bd9b","mode":"hunk","patch":"diff --git a/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java b/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java\n--- a/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java\n+++ b/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java\n@@ -349,17 +349,17 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {\n    * @param endTime   If file looks like it has a timestamp in its name, we'll check if older or\n    *                  equal to this value else we will filter out the file. If name does not seem to\n    *                  have a timestamp, we will just return it w/o filtering.\n    */\n-  private List<FileStatus> getFiles(FileSystem fs, Path dir, long startTime, long endTime)\n-    throws IOException {\n+  private List<FileStatus> getFiles(FileSystem fs, Path dir, long startTime, long endTime,\n+    Configuration conf) throws IOException {\n     List<FileStatus> result = new ArrayList<>();\n     LOG.debug(\"Scanning \" + dir.toString() + \" for WAL files\");\n-    RemoteIterator<LocatedFileStatus> iter = fs.listLocatedStatus(dir);\n+    RemoteIterator<LocatedFileStatus> iter = listLocatedFileStatus(fs, dir, conf);\n     if (!iter.hasNext()) {\n       return Collections.emptyList();\n     }\n     while (iter.hasNext()) {\n       LocatedFileStatus file = iter.next();\n       if (file.isDirectory()) {\n         // Recurse into sub directories\n-        result.addAll(getFiles(fs, file.getPath(), startTime, endTime));\n+        result.addAll(getFiles(fs, file.getPath(), startTime, endTime, conf));\n       } else {\n         addFile(result, file, startTime, endTime);\n       }\n"}
+Two validation failures were patch-format/context issues in my drafted hunks, not code mismatches. I’m correcting the hunk ranges and adding sufficient trailing context.
+[0m⚙ [0mvalidate {"ref":"635e710ceccb0ffcd01e5a6452b36cb8efb2bd9b","mode":"hunk","patch":"diff --git a/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java b/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java\n--- a/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java\n+++ b/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java\n@@ -345,29 +345,29 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {\n    *                  equal to this value else we will filter out the file. If name does not seem to\n    *                  have a timestamp, we will just return it w/o filtering.\n    * @param endTime   If file looks like it has a timestamp in its name, we'll check if older or\n    *                  equal to this value else we will filter out the file. If name does not seem to\n    *                  have a timestamp, we will just return it w/o filtering.\n    */\n-  private List<FileStatus> getFiles(FileSystem fs, Path dir, long startTime, long endTime)\n-    throws IOException {\n+  private List<FileStatus> getFiles(FileSystem fs, Path dir, long startTime, long endTime,\n+    Configuration conf) throws IOException {\n     List<FileStatus> result = new ArrayList<>();\n     LOG.debug(\"Scanning \" + dir.toString() + \" for WAL files\");\n-    RemoteIterator<LocatedFileStatus> iter = fs.listLocatedStatus(dir);\n+    RemoteIterator<LocatedFileStatus> iter = listLocatedFileStatus(fs, dir, conf);\n     if (!iter.hasNext()) {\n       return Collections.emptyList();\n     }\n     while (iter.hasNext()) {\n       LocatedFileStatus file = iter.next();\n       if (file.isDirectory()) {\n         // Recurse into sub directories\n-        result.addAll(getFiles(fs, file.getPath(), startTime, endTime));\n+        result.addAll(getFiles(fs, file.getPath(), startTime, endTime, conf));\n       } else {\n         addFile(result, file, startTime, endTime);\n       }\n     }\n     // TODO: These results should be sorted? Results could be content of recovered.edits directory\n     // -- null padded increasing numeric -- or a WAL file w/ timestamp suffix or timestamp and\n     // then meta suffix. See AbstractFSWALProvider#WALStartTimeComparator\n     return result;\n"}
+[0m⚙ [0mvalidate {"ref":"635e710ceccb0ffcd01e5a6452b36cb8efb2bd9b","mode":"hunk","patch":"diff --git a/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java b/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java\n--- a/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java\n+++ b/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java\n@@ -394,7 +394,31 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {\n   public RecordReader<WALKey, WALEdit> createRecordReader(InputSplit split,\n     TaskAttemptContext context) throws IOException, InterruptedException {\n     return new WALKeyRecordReader();\n   }\n+\n+  /**\n+   * Attempts to return the {@link LocatedFileStatus} for the given directory. If the directory does\n+   * not exist, it will check if the directory is an archived log file and try to find it\n+   */\n+  private static RemoteIterator<LocatedFileStatus> listLocatedFileStatus(FileSystem fs, Path dir,\n+    Configuration conf) throws IOException {\n+    try {\n+      return fs.listLocatedStatus(dir);\n+    } catch (FileNotFoundException e) {\n+      if (AbstractFSWALProvider.isArchivedLogFile(dir)) {\n+        throw e;\n+      }\n+\n+      LOG.warn(\"Log file {} not found, trying to find it in archive directory.\", dir);\n+      Path archiveFile = AbstractFSWALProvider.findArchivedLog(dir, conf);\n+      if (archiveFile == null) {\n+        LOG.error(\"Did not find archive file for {}\", dir);\n+        throw e;\n+      }\n+\n+      return fs.listLocatedStatus(archiveFile);\n+    }\n+  }\n }\n"}
+[0m→ [0mRead hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java[90m [offset=386, limit=20][0m
+I found the exact issue: the local file is 399 lines, so the add-method hunk and the `getFiles` hunk had inflated line counts. I’m revalidating with exact hunk counts.
+[0m⚙ [0mvalidate {"ref":"635e710ceccb0ffcd01e5a6452b36cb8efb2bd9b","mode":"hunk","patch":"diff --git a/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java b/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java\n--- a/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java\n+++ b/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java\n@@ -345,27 +345,27 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {\n    *                  equal to this value else we will filter out the file. If name does not seem to\n    *                  have a timestamp, we will just return it w/o filtering.\n    * @param endTime   If file looks like it has a timestamp in its name, we'll check if older or\n    *                  equal to this value else we will filter out the file. If name does not seem to\n    *                  have a timestamp, we will just return it w/o filtering.\n    */\n-  private List<FileStatus> getFiles(FileSystem fs, Path dir, long startTime, long endTime)\n-    throws IOException {\n+  private List<FileStatus> getFiles(FileSystem fs, Path dir, long startTime, long endTime,\n+    Configuration conf) throws IOException {\n     List<FileStatus> result = new ArrayList<>();\n     LOG.debug(\"Scanning \" + dir.toString() + \" for WAL files\");\n-    RemoteIterator<LocatedFileStatus> iter = fs.listLocatedStatus(dir);\n+    RemoteIterator<LocatedFileStatus> iter = listLocatedFileStatus(fs, dir, conf);\n     if (!iter.hasNext()) {\n       return Collections.emptyList();\n     }\n     while (iter.hasNext()) {\n       LocatedFileStatus file = iter.next();\n       if (file.isDirectory()) {\n         // Recurse into sub directories\n-        result.addAll(getFiles(fs, file.getPath(), startTime, endTime));\n+        result.addAll(getFiles(fs, file.getPath(), startTime, endTime, conf));\n       } else {\n         addFile(result, file, startTime, endTime);\n       }\n     }\n     // TODO: These results should be sorted? Results could be content of recovered.edits directory\n     // -- null padded increasing numeric -- or a WAL file w/ timestamp suffix or timestamp and\n     // then meta suffix. See AbstractFSWALProvider#WALStartTimeComparator\n     return result;\n"}
+[0m⚙ [0mvalidate {"ref":"635e710ceccb0ffcd01e5a6452b36cb8efb2bd9b","mode":"hunk","patch":"diff --git a/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java b/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java\n--- a/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java\n+++ b/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java\n@@ -394,6 +394,30 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {\n   @Override\n   public RecordReader<WALKey, WALEdit> createRecordReader(InputSplit split,\n     TaskAttemptContext context) throws IOException, InterruptedException {\n     return new WALKeyRecordReader();\n   }\n+\n+  /**\n+   * Attempts to return the {@link LocatedFileStatus} for the given directory. If the directory does\n+   * not exist, it will check if the directory is an archived log file and try to find it\n+   */\n+  private static RemoteIterator<LocatedFileStatus> listLocatedFileStatus(FileSystem fs, Path dir,\n+    Configuration conf) throws IOException {\n+    try {\n+      return fs.listLocatedStatus(dir);\n+    } catch (FileNotFoundException e) {\n+      if (AbstractFSWALProvider.isArchivedLogFile(dir)) {\n+        throw e;\n+      }\n+\n+      LOG.warn(\"Log file {} not found, trying to find it in archive directory.\", dir);\n+      Path archiveFile = AbstractFSWALProvider.findArchivedLog(dir, conf);\n+      if (archiveFile == null) {\n+        LOG.error(\"Did not find archive file for {}\", dir);\n+        throw e;\n+      }\n+\n+      return fs.listLocatedStatus(archiveFile);\n+    }\n+  }\n }\n"}
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java b/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java
+    --- a/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java
+    +++ b/hbase-mapreduce/src/main/java/org/apache/hadoop/hbase/mapreduce/WALInputFormat.java
+    @@ -318,7 +318,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
+         for (Path inputPath : inputPaths) {
+           FileSystem fs = inputPath.getFileSystem(conf);
+           try {
+    -        List<FileStatus> files = getFiles(fs, inputPath, startTime, endTime);
+    +        List<FileStatus> files = getFiles(fs, inputPath, startTime, endTime, conf);
+             allFiles.addAll(files);
+           } catch (FileNotFoundException e) {
+             if (ignoreMissing) {
+    @@ -345,27 +345,27 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
+        *                  equal to this value else we will filter out the file. If name does not seem to
+        *                  have a timestamp, we will just return it w/o filtering.
+        * @param endTime   If file looks like it has a timestamp in its name, we'll check if older or
+        *                  equal to this value else we will filter out the file. If name does not seem to
+        *                  have a timestamp, we will just return it w/o filtering.
+        */
+    -  private List<FileStatus> getFiles(FileSystem fs, Path dir, long startTime, long endTime)
+    -    throws IOException {
+    +  private List<FileStatus> getFiles(FileSystem fs, Path dir, long startTime, long endTime,
+    +    Configuration conf) throws IOException {
+         List<FileStatus> result = new ArrayList<>();
+         LOG.debug("Scanning " + dir.toString() + " for WAL files");
+    -    RemoteIterator<LocatedFileStatus> iter = fs.listLocatedStatus(dir);
+    +    RemoteIterator<LocatedFileStatus> iter = listLocatedFileStatus(fs, dir, conf);
+         if (!iter.hasNext()) {
+           return Collections.emptyList();
+         }
+         while (iter.hasNext()) {
+           LocatedFileStatus file = iter.next();
+           if (file.isDirectory()) {
+             // Recurse into sub directories
+    -        result.addAll(getFiles(fs, file.getPath(), startTime, endTime));
+    +        result.addAll(getFiles(fs, file.getPath(), startTime, endTime, conf));
+           } else {
+             addFile(result, file, startTime, endTime);
+           }
+         }
+         // TODO: These results should be sorted? Results could be content of recovered.edits directory
+         // -- null padded increasing numeric -- or a WAL file w/ timestamp suffix or timestamp and
+         // then meta suffix. See AbstractFSWALProvider#WALStartTimeComparator
+         return result;
+    @@ -394,6 +394,30 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
+       @Override
+       public RecordReader<WALKey, WALEdit> createRecordReader(InputSplit split,
+         TaskAttemptContext context) throws IOException, InterruptedException {
+         return new WALKeyRecordReader();
+       }
+    +
+    +  /**
+    +   * Attempts to return the {@link LocatedFileStatus} for the given directory. If the directory does
+    +   * not exist, it will check if the directory is an archived log file and try to find it
+    +   */
+    +  private static RemoteIterator<LocatedFileStatus> listLocatedFileStatus(FileSystem fs, Path dir,
+    +    Configuration conf) throws IOException {
+    +    try {
+    +      return fs.listLocatedStatus(dir);
+    +    } catch (FileNotFoundException e) {
+    +      if (AbstractFSWALProvider.isArchivedLogFile(dir)) {
+    +        throw e;
+    +      }
+    +
+    +      LOG.warn("Log file {} not found, trying to find it in archive directory.", dir);
+    +      Path archiveFile = AbstractFSWALProvider.findArchivedLog(dir, conf);
+    +      if (archiveFile == null) {
+    +        LOG.error("Did not find archive file for {}", dir);
+    +        throw e;
+    +      }
+    +
+    +      return fs.listLocatedStatus(archiveFile);
+    +    }
+    +  }
+     }
+    diff --git a/hbase-mapreduce/src/test/java/org/apache/hadoop/hbase/mapreduce/TestWALInputFormat.java b/hbase-mapreduce/src/test/java/org/apache/hadoop/hbase/mapreduce/TestWALInputFormat.java
+    --- a/hbase-mapreduce/src/test/java/org/apache/hadoop/hbase/mapreduce/TestWALInputFormat.java
+    +++ b/hbase-mapreduce/src/test/java/org/apache/hadoop/hbase/mapreduce/TestWALInputFormat.java
+    @@ -21,24 +21,43 @@ import static org.junit.Assert.assertEquals;
+     
+     import java.util.ArrayList;
+     import java.util.List;
+    +import org.apache.hadoop.conf.Configuration;
+     import org.apache.hadoop.fs.FileStatus;
+     import org.apache.hadoop.fs.LocatedFileStatus;
+     import org.apache.hadoop.fs.Path;
+     import org.apache.hadoop.hbase.HBaseClassTestRule;
+    +import org.apache.hadoop.hbase.HBaseTestingUtility;
+    +import org.apache.hadoop.hbase.HConstants;
+    +import org.apache.hadoop.hbase.regionserver.HRegionServer;
+    +import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
+     import org.apache.hadoop.hbase.testclassification.MapReduceTests;
+    -import org.apache.hadoop.hbase.testclassification.SmallTests;
+    +import org.apache.hadoop.hbase.testclassification.MediumTests;
+    +import org.apache.hadoop.hbase.util.CommonFSUtils;
+     import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+    +import org.apache.hadoop.mapreduce.InputSplit;
+    +import org.apache.hadoop.mapreduce.Job;
+    +import org.apache.hadoop.mapreduce.JobContext;
+    +import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+    +import org.junit.BeforeClass;
+     import org.junit.ClassRule;
+     import org.junit.Test;
+     import org.junit.experimental.categories.Category;
+     import org.mockito.Mockito;
+     
+    -@Category({ MapReduceTests.class, SmallTests.class })
+    +@Category({ MapReduceTests.class, MediumTests.class })
+     public class TestWALInputFormat {
+    +  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    +
+       @ClassRule
+       public static final HBaseClassTestRule CLASS_RULE =
+         HBaseClassTestRule.forClass(TestWALInputFormat.class);
+     
+    +  @BeforeClass
+    +  public static void setupClass() throws Exception {
+    +    TEST_UTIL.startMiniCluster();
+    +    TEST_UTIL.createWALRootDir();
+    +  }
+    +
+       /**
+        * Test the primitive start/end time filtering.
+        */
+    @@ -74,4 +93,36 @@ public class TestWALInputFormat {
+         WALInputFormat.addFile(lfss, lfs, now, now);
+         assertEquals(8, lfss.size());
+       }
+    +
+    +  @Test
+    +  public void testHandlesArchivedWALFiles() throws Exception {
+    +    Configuration conf = TEST_UTIL.getConfiguration();
+    +    JobContext ctx = Mockito.mock(JobContext.class);
+    +    Mockito.when(ctx.getConfiguration()).thenReturn(conf);
+    +    Job job = Job.getInstance(conf);
+    +    TableMapReduceUtil.initCredentialsForCluster(job, conf);
+    +    Mockito.when(ctx.getCredentials()).thenReturn(job.getCredentials());
+    +
+    +    // Setup WAL file, then archive it
+    +    HRegionServer rs = TEST_UTIL.getHBaseCluster().getRegionServer(0);
+    +    AbstractFSWAL wal = (AbstractFSWAL) rs.getWALs().get(0);
+    +    Path walPath = wal.getCurrentFileName();
+    +    TEST_UTIL.getConfiguration().set(FileInputFormat.INPUT_DIR, walPath.toString());
+    +    TEST_UTIL.getConfiguration().set(WALPlayer.INPUT_FILES_SEPARATOR_KEY, ";");
+    +
+    +    Path rootDir = CommonFSUtils.getWALRootDir(conf);
+    +    Path archiveWal = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    +    archiveWal = new Path(archiveWal, walPath.getName());
+    +    TEST_UTIL.getTestFileSystem().delete(walPath, true);
+    +    TEST_UTIL.getTestFileSystem().mkdirs(archiveWal.getParent());
+    +    TEST_UTIL.getTestFileSystem().create(archiveWal).close();
+    +
+    +    // Test for that we can read from the archived WAL file
+    +    WALInputFormat wif = new WALInputFormat();
+    +    List<InputSplit> splits = wif.getSplits(ctx);
+    +    assertEquals(1, splits.size());
+    +    WALInputFormat.WALSplit split = (WALInputFormat.WALSplit) splits.get(0);
+    +    assertEquals(archiveWal.toString(), split.getLogFileName());
+    +  }
+    +
+     }
+  notes: >
+    Backported the WALInputFormat archive fallback and test, adapting HBaseTestingUtil to branch-2's HBaseTestingUtility; all hunks validated in hunk mode and full validation was skipped as requested.
+```
+
+--- END CLI OUTPUT ---
+[15:37:56]   Done in 243.6s | status=success

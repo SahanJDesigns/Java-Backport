@@ -1,0 +1,10 @@
+[14:40:48] === Row 29: graylog  32fbea91 -> 97ec98b3  [TYPE-II] ===
+[14:40:48]   Resolving parent of backport commit 97ec98b3...
+[14:40:48]   Backport parent (target ref): baf2dcc4d368ded1a5902116b2193d840b018695
+[14:40:48]   Extracting new-version patch for 32fbea91...
+[14:40:48]   New-version patch size: 4716 chars
+[14:40:48]   Checking out backport parent baf2dcc4...
+[14:40:49]   ERROR: Could not checkout backport parent baf2dcc4d368ded1a5902116b2193d840b018695: error: Your local changes to the following files would be overwritten by checkout:
+	graylog2-server/src/main/java/org/graylog/integrations/ipfix/IpfixParser.java
+Please commit your changes or stash them before you switch branches.
+Aborting

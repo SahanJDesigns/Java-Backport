@@ -1,0 +1,410 @@
+[14:29:21] === Row 26: grpc-java  1fc4ab0b -> 1df2a330  [TYPE-II] ===
+[14:29:21]   Resolving parent of backport commit 1df2a330...
+[14:29:21]   Backport parent (target ref): a5eaa66ccc2add0c9b78096ca3196ec1c7904c1f
+[14:29:21]   Extracting new-version patch for 1fc4ab0b...
+[14:29:21]   New-version patch size: 13496 chars
+[14:29:21]   Checking out backport parent a5eaa66c...
+[14:29:21]   Invoking OpenCode CLI (17388 chars)...
+[14:29:21]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll map each hunk from the master diff onto the checked-out `v1.74.x` parent, then validate the resulting unified diff hunk-by-hunk without switching refs.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target-branch context for all patched files
+[ ] Construct adapted unified diff for v1.74.x parent
+[ ] Validate each hunk against a5eaa66ccc2add0c9b78096ca3196ec1c7904c1f
+[ ] Return parseable YAML result
+[0m
+[0m⚙ [0mlocate_symbol {"ref":"a5eaa66ccc2add0c9b78096ca3196ec1c7904c1f","symbol":"RingHashLoadBalancer"}
+[0m⚙ [0mlocate_symbol {"ref":"a5eaa66ccc2add0c9b78096ca3196ec1c7904c1f","symbol":"RequestConnectionPicker"}
+[0m⚙ [0mgit_show {"ref":"1fc4ab0bb203a7934753d4d29d8d4689a1012390"}
+[0m⚙ [0mlocate_symbol {"ref":"a5eaa66ccc2add0c9b78096ca3196ec1c7904c1f","symbol":"LazyLoadBalancer"}
+The symbol lookup hit a stale `.git/index.lock` while an internal git operation tried to reset to the same ref. I’ll avoid branch switching and inspect the checked-out files directly; if the lock blocks validation, I’ll remove only that stale lock file.
+[0m✱ [0mGrep "class RequestConnectionPicker|RequestConnectionPicker\("[90m in core/src/main/java/io/grpc/internal · 7 matches[0m
+[0m✱ [0mGrep "class RequestConnectionPicker|RequestConnectionPicker\("[90m in examples/src/main/java/io/grpc/examples/customloadbalance · 3 matches[0m
+[0m✱ [0mGrep "class LazyLoadBalancer|void shutdown\(\)|class LazyPicker|activate\(\)"[90m in xds/src/main/java/io/grpc/xds · 5 matches[0m
+[0m✱ [0mGrep "childLbState\.getLb\(\)\.requestConnection|connectivityState == IDLE|getCurrentState\(\)"[90m in xds/src/main/java/io/grpc/xds · 7 matches[0m
+[0m✱ [0mGrep "public void requestConnection\(\)|shutdown\)|checkState\(started"[90m in core/src/main/java/io/grpc/internal · 7 matches[0m
+[0m✱ [0mGrep "getSynchronizationContext\(\)|SynchronizationContext#schedule"[90m in api/src/main/java/io/grpc · 3 matches[0m
+[0m→ [0mRead xds/src/main/java/io/grpc/xds/LazyLoadBalancer.java[90m [offset=1, limit=160][0m
+[0m→ [0mRead core/src/main/java/io/grpc/internal/PickFirstLoadBalancer.java[90m [offset=120, limit=105][0m
+[0m→ [0mRead api/src/main/java/io/grpc/LoadBalancer.java[90m [offset=1184, limit=18][0m
+[0m→ [0mRead xds/src/main/java/io/grpc/xds/RingHashLoadBalancer.java[90m [offset=430, limit=45][0m
+[0m→ [0mRead examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java[90m [offset=112, limit=100][0m
+[0m→ [0mRead core/src/main/java/io/grpc/internal/ManagedChannelImpl.java[90m [offset=1964, limit=15][0m
+The target branch contains all relevant files and the core code shape matches the source patch. I’m checking imports and test scaffolding now so the backport patch stays minimal and compiles on `v1.74.x`.
+[0m→ [0mRead core/src/main/java/io/grpc/internal/PickFirstLoadBalancer.java[90m [offset=1, limit=35][0m
+[0m→ [0mRead xds/src/test/java/io/grpc/xds/RingHashLoadBalancerTest.java[90m [offset=250, limit=20][0m
+[0m→ [0mRead xds/src/test/java/io/grpc/xds/RingHashLoadBalancerTest.java[90m [offset=638, limit=20][0m
+[0m✱ [0mGlob "xds/src/test/java/io/grpc/xds/LazyLoadBalancerTest.java"[90m 0 matches[0m
+[0m→ [0mRead examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java[90m [offset=1, limit=40][0m
+[0m→ [0mRead core/src/test/java/io/grpc/internal/ManagedChannelImplTest.java[90m [offset=1745, limit=45][0m
+[0m✱ [0mGrep "abstract .*createOobChannel|createResolvingOobChannel|createSubchannel\("[90m in api/src/main/java/io/grpc · 10 matches[0m
+[0m✱ [0mGrep "class FakeHelper extends LoadBalancer.Helper|extends LoadBalancer.Helper"[90m in xds/src/test/java/io/grpc/xds · 1 match[0m
+[0m✗ [0mGrep "PickDetailsConsumer" failed[90m in core/src/test/java xds/src/test/java[0m
+[91m[1mError: [0mripgrep execution failed
+[0m→ [0mRead api/src/main/java/io/grpc/LoadBalancer.java[90m [offset=1000, limit=145][0m
+[0m✱ [0mGrep "new PickSubchannelArgsImpl|PickDetailsConsumer"[90m in xds/src/test/java/io/grpc/xds · 23 matches[0m
+[0m→ [0mRead xds/src/test/java/io/grpc/xds/ClusterImplLoadBalancerTest.java[90m [offset=1110, limit=70][0m
+One target-only nuance is `PickFirstLeafLoadBalancer`, which has a similar deferred connection picker in `v1.74.x` but is not in the provided master diff. Since the backport must preserve the source commit’s intent across branch structural differences, I’m inspecting it to decide whether it is the equivalent target code path or an additional untouched implementation.
+[0m→ [0mRead core/src/main/java/io/grpc/internal/PickFirstLeafLoadBalancer.java[90m [offset=150, limit=145][0m
+[0m✱ [0mGrep "isEnabledNewPickFirst|PickFirstLeafLoadBalancer"[90m in core/src/main/java/io/grpc/internal · 15 matches[0m
+[0m→ [0mRead core/src/main/java/io/grpc/internal/PickFirstLeafLoadBalancer.java[90m [offset=600, limit=55][0m
+[0m→ [0mRead core/src/main/java/io/grpc/internal/PickFirstLeafLoadBalancer.java[90m [offset=440, limit=80][0m
+[0m✱ [0mGrep "void shutdown\(\)|void requestConnection\(\)|rawConnectivityState == SHUTDOWN"[90m in core/src/main/java/io/grpc/internal/PickFirstLeafLoadBalancer.java · 22 matches[0m
+`PickFirstLeafLoadBalancer` already defers to its LB instance and its `requestConnection()` no-ops after shutdown, so the provided PickFirst hunk maps to the older `PickFirstLoadBalancer` only.
+[0m
+[0m$ [0mTest-Path -LiteralPath ".git\index.lock"
+False
+[0m
+[0m✱ [0mGrep "checkNotNull\("[90m in examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java · 3 matches[0m
+[0m✱ [0mGrep "checkNotNull\("[90m in core/src/main/java/io/grpc/internal/PickFirstLoadBalancer.java · 100 matches[0m
+I’ve finished the mapping. I’m validating the adapted hunks now; the patch includes the source hunks plus the new `LazyLoadBalancerTest`, with no target-only PickFirstLeaf changes because that path already has the required shutdown guard.
+[0m⚙ [0mvalidate {"ref":"a5eaa66ccc2add0c9b78096ca3196ec1c7904c1f","mode":"hunk","patch":"diff --git a/core/src/main/java/io/grpc/internal/ManagedChannelImpl.java b/core/src/main/java/io/grpc/internal/ManagedChannelImpl.java\n--- a/core/src/main/java/io/grpc/internal/ManagedChannelImpl.java\n+++ b/core/src/main/java/io/grpc/internal/ManagedChannelImpl.java\n@@ -1969,6 +1969,9 @@ final class ManagedChannelImpl extends ManagedChannel implements\n     public void requestConnection() {\n       syncContext.throwIfNotInThisSynchronizationContext();\n       checkState(started, \"not started\");\n+      if (shutdown) {\n+        return;\n+      }\n       subchannel.obtainActiveTransport();\n     }\n \n"}
+[0m⚙ [0mvalidate {"ref":"a5eaa66ccc2add0c9b78096ca3196ec1c7904c1f","mode":"hunk","patch":"diff --git a/api/src/main/java/io/grpc/LoadBalancer.java b/api/src/main/java/io/grpc/LoadBalancer.java\n--- a/api/src/main/java/io/grpc/LoadBalancer.java\n+++ b/api/src/main/java/io/grpc/LoadBalancer.java\n@@ -1188,6 +1188,10 @@ public abstract class LoadBalancer {\n      * Returns a {@link SynchronizationContext} that runs tasks in the same Synchronization Context\n      * as that the callback methods on the {@link LoadBalancer} interface are run in.\n      *\n+     * <p>Work added to the synchronization context might not run immediately, so LB implementations\n+     * must be careful to ensure that any assumptions still hold when it is executed. In particular,\n+     * the LB might have been shut down or subchannels might have changed state.\n+     *\n      * <p>Pro-tip: in order to call {@link SynchronizationContext#schedule}, you need to provide a\n      * {@link ScheduledExecutorService}.  {@link #getScheduledExecutorService} is provided for your\n      * convenience.\n"}
+[0m⚙ [0mvalidate {"ref":"a5eaa66ccc2add0c9b78096ca3196ec1c7904c1f","mode":"hunk","patch":"diff --git a/core/src/main/java/io/grpc/internal/PickFirstLoadBalancer.java b/core/src/main/java/io/grpc/internal/PickFirstLoadBalancer.java\n--- a/core/src/main/java/io/grpc/internal/PickFirstLoadBalancer.java\n+++ b/core/src/main/java/io/grpc/internal/PickFirstLoadBalancer.java\n@@ -134,7 +134,7 @@ final class PickFirstLoadBalancer extends LoadBalancer {\n     SubchannelPicker picker;\n     switch (newState) {\n       case IDLE:\n-        picker = new RequestConnectionPicker(subchannel);\n+        picker = new RequestConnectionPicker();\n         break;\n       case CONNECTING:\n         // It's safe to use RequestConnectionPicker here, so when coming from IDLE we could leave\n"}
+[0m⚙ [0mvalidate {"ref":"a5eaa66ccc2add0c9b78096ca3196ec1c7904c1f","mode":"hunk","patch":"diff --git a/core/src/main/java/io/grpc/internal/PickFirstLoadBalancer.java b/core/src/main/java/io/grpc/internal/PickFirstLoadBalancer.java\n--- a/core/src/main/java/io/grpc/internal/PickFirstLoadBalancer.java\n+++ b/core/src/main/java/io/grpc/internal/PickFirstLoadBalancer.java\n@@ -197,22 +197,12 @@ final class PickFirstLoadBalancer extends LoadBalancer {\n \n   /** Picker that requests connection during the first pick, and returns noResult. */\n   private final class RequestConnectionPicker extends SubchannelPicker {\n-    private final Subchannel subchannel;\n     private final AtomicBoolean connectionRequested = new AtomicBoolean(false);\n \n-    RequestConnectionPicker(Subchannel subchannel) {\n-      this.subchannel = checkNotNull(subchannel, \"subchannel\");\n-    }\n-\n     @Override\n     public PickResult pickSubchannel(PickSubchannelArgs args) {\n       if (connectionRequested.compareAndSet(false, true)) {\n-        helper.getSynchronizationContext().execute(new Runnable() {\n-            @Override\n-            public void run() {\n-              subchannel.requestConnection();\n-            }\n-          });\n+        helper.getSynchronizationContext().execute(PickFirstLoadBalancer.this::requestConnection);\n       }\n       return PickResult.withNoResult();\n     }\n"}
+[0m⚙ [0mvalidate {"ref":"a5eaa66ccc2add0c9b78096ca3196ec1c7904c1f","mode":"hunk","patch":"diff --git a/core/src/test/java/io/grpc/internal/ManagedChannelImplTest.java b/core/src/test/java/io/grpc/internal/ManagedChannelImplTest.java\n--- a/core/src/test/java/io/grpc/internal/ManagedChannelImplTest.java\n+++ b/core/src/test/java/io/grpc/internal/ManagedChannelImplTest.java\n@@ -1769,6 +1769,19 @@ public class ManagedChannelImplTest {\n             any(SocketAddress.class), any(ClientTransportOptions.class), any(ChannelLogger.class));\n   }\n \n+  @Test\n+  public void subchannelsRequestConnectionNoopAfterShutdown() {\n+    createChannel();\n+    Subchannel sub1 =\n+        createSubchannelSafely(helper, addressGroup, Attributes.EMPTY, subchannelStateListener);\n+\n+    shutdownSafely(helper, sub1);\n+    requestConnectionSafely(helper, sub1);\n+    verify(mockTransportFactory, never())\n+        .newClientTransport(\n+            any(SocketAddress.class), any(ClientTransportOptions.class), any(ChannelLogger.class));\n+  }\n+\n   @Test\n   public void subchannelsNoConnectionShutdownNow() {\n     createChannel();\n"}
+[0m⚙ [0mvalidate {"ref":"a5eaa66ccc2add0c9b78096ca3196ec1c7904c1f","mode":"hunk","patch":"diff --git a/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java b/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java\n--- a/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java\n+++ b/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java\n@@ -122,7 +122,7 @@ class ShufflingPickFirstLoadBalancer extends LoadBalancer {\n     SubchannelPicker picker;\n     switch (currentState) {\n       case IDLE:\n-        picker = new RequestConnectionPicker(subchannel);\n+        picker = new RequestConnectionPicker();\n         break;\n       case CONNECTING:\n         picker = new Picker(PickResult.withNoResult());\n"}
+[0m⚙ [0mvalidate {"ref":"a5eaa66ccc2add0c9b78096ca3196ec1c7904c1f","mode":"hunk","patch":"diff --git a/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java b/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java\n--- a/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java\n+++ b/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java\n@@ -182,23 +182,14 @@ class ShufflingPickFirstLoadBalancer extends LoadBalancer {\n    */\n   private final class RequestConnectionPicker extends SubchannelPicker {\n \n-    private final Subchannel subchannel;\n     private final AtomicBoolean connectionRequested = new AtomicBoolean(false);\n \n-    RequestConnectionPicker(Subchannel subchannel) {\n-      this.subchannel = checkNotNull(subchannel, \"subchannel\");\n-    }\n-\n     @Override\n     public PickResult pickSubchannel(PickSubchannelArgs args) {\n       if (connectionRequested.compareAndSet(false, true)) {\n-        helper.getSynchronizationContext().execute(new Runnable() {\n-          @Override\n-          public void run() {\n-            subchannel.requestConnection();\n-          }\n-        });\n+        helper.getSynchronizationContext().execute(\n+            ShufflingPickFirstLoadBalancer.this::requestConnection);\n       }\n       return PickResult.withNoResult();\n     }\n"}
+[0m⚙ [0mvalidate {"ref":"a5eaa66ccc2add0c9b78096ca3196ec1c7904c1f","mode":"hunk","patch":"diff --git a/xds/src/main/java/io/grpc/xds/LazyLoadBalancer.java b/xds/src/main/java/io/grpc/xds/LazyLoadBalancer.java\n--- a/xds/src/main/java/io/grpc/xds/LazyLoadBalancer.java\n+++ b/xds/src/main/java/io/grpc/xds/LazyLoadBalancer.java\n@@ -100,11 +100,13 @@ final class LazyLoadBalancer extends ForwardingLoadBalancer {\n \n     @Override\n     public void shutdown() {\n+      delegate = new NoopLoadBalancer();\n     }\n \n     private final class LazyPicker extends SubchannelPicker {\n       @Override\n       public PickResult pickSubchannel(PickSubchannelArgs args) {\n+        // activate() is a no-op after shutdown()\n         helper.getSynchronizationContext().execute(LazyDelegate.this::activate);\n         return PickResult.withNoResult();\n       }\n"}
+[0m⚙ [0mvalidate {"ref":"a5eaa66ccc2add0c9b78096ca3196ec1c7904c1f","mode":"hunk","patch":"diff --git a/xds/src/main/java/io/grpc/xds/LazyLoadBalancer.java b/xds/src/main/java/io/grpc/xds/LazyLoadBalancer.java\n--- a/xds/src/main/java/io/grpc/xds/LazyLoadBalancer.java\n+++ b/xds/src/main/java/io/grpc/xds/LazyLoadBalancer.java\n@@ -121,4 +123,17 @@ final class LazyLoadBalancer extends ForwardingLoadBalancer {\n       return new LazyLoadBalancer(helper, delegate);\n     }\n   }\n+\n+  private static final class NoopLoadBalancer extends LoadBalancer {\n+    @Override\n+    public Status acceptResolvedAddresses(ResolvedAddresses resolvedAddresses) {\n+      return Status.OK;\n+    }\n+\n+    @Override\n+    public void handleNameResolutionError(Status error) {}\n+\n+    @Override\n+    public void shutdown() {}\n+  }\n }\n"}
+[0m⚙ [0mvalidate {"ref":"a5eaa66ccc2add0c9b78096ca3196ec1c7904c1f","mode":"hunk","patch":"diff --git a/xds/src/main/java/io/grpc/xds/RingHashLoadBalancer.java b/xds/src/main/java/io/grpc/xds/RingHashLoadBalancer.java\n--- a/xds/src/main/java/io/grpc/xds/RingHashLoadBalancer.java\n+++ b/xds/src/main/java/io/grpc/xds/RingHashLoadBalancer.java\n@@ -438,7 +438,9 @@ final class RingHashLoadBalancer extends MultiChildLoadBalancer {\n \n           if (subchannelView.connectivityState == IDLE) {\n             syncContext.execute(() -> {\n-              childLbState.getLb().requestConnection();\n+              if (childLbState.getCurrentState() == IDLE) {\n+                childLbState.getLb().requestConnection();\n+              }\n             });\n \n             return PickResult.withNoResult(); // Indicates that this should be retried after backoff\n"}
+[0m⚙ [0mvalidate {"ref":"a5eaa66ccc2add0c9b78096ca3196ec1c7904c1f","mode":"hunk","patch":"diff --git a/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java b/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java\n--- a/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java\n+++ b/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java\n@@ -182,23 +182,14 @@ class ShufflingPickFirstLoadBalancer extends LoadBalancer {\n    */\n   private final class RequestConnectionPicker extends SubchannelPicker {\n \n-    private final Subchannel subchannel;\n     private final AtomicBoolean connectionRequested = new AtomicBoolean(false);\n \n-    RequestConnectionPicker(Subchannel subchannel) {\n-      this.subchannel = checkNotNull(subchannel, \"subchannel\");\n-    }\n-\n     @Override\n     public PickResult pickSubchannel(PickSubchannelArgs args) {\n       if (connectionRequested.compareAndSet(false, true)) {\n-        helper.getSynchronizationContext().execute(new Runnable() {\n-          @Override\n-          public void run() {\n-            subchannel.requestConnection();\n-          }\n-        });\n+        helper.getSynchronizationContext().execute(\n+            ShufflingPickFirstLoadBalancer.this::requestConnection);\n       }\n       return PickResult.withNoResult();\n     }\n"}
+[0m⚙ [0mvalidate {"ref":"a5eaa66ccc2add0c9b78096ca3196ec1c7904c1f","mode":"hunk","patch":"diff --git a/xds/src/main/java/io/grpc/xds/RingHashLoadBalancer.java b/xds/src/main/java/io/grpc/xds/RingHashLoadBalancer.java\n--- a/xds/src/main/java/io/grpc/xds/RingHashLoadBalancer.java\n+++ b/xds/src/main/java/io/grpc/xds/RingHashLoadBalancer.java\n@@ -456,10 +456,11 @@ final class RingHashLoadBalancer extends MultiChildLoadBalancer {\n             return childLbState.getCurrentPicker().pickSubchannel(args);\n           }\n           if (!requestedConnection && subchannelView.connectivityState == IDLE) {\n-            syncContext.execute(\n-                () -> {\n-                  childLbState.getLb().requestConnection();\n-                });\n+            syncContext.execute(() -> {\n+              if (childLbState.getCurrentState() == IDLE) {\n+                childLbState.getLb().requestConnection();\n+              }\n+            });\n             requestedConnection = true;\n           }\n         }\n"}
+[0m⚙ [0mvalidate {"ref":"a5eaa66ccc2add0c9b78096ca3196ec1c7904c1f","mode":"hunk","patch":"diff --git a/xds/src/test/java/io/grpc/xds/RingHashLoadBalancerTest.java b/xds/src/test/java/io/grpc/xds/RingHashLoadBalancerTest.java\n--- a/xds/src/test/java/io/grpc/xds/RingHashLoadBalancerTest.java\n+++ b/xds/src/test/java/io/grpc/xds/RingHashLoadBalancerTest.java\n@@ -261,7 +261,7 @@ public class RingHashLoadBalancerTest {\n   private void verifyConnection(int times) {\n     for (int i = 0; i < times; i++) {\n       Subchannel connectOnce = connectionRequestedQueue.poll();\n-      assertWithMessage(\"Null connection is at (%s) of (%s)\", i, times)\n+      assertWithMessage(\"Expected %s new connections, but found %s\", times, i)\n           .that(connectOnce).isNotNull();\n       clearInvocations(connectOnce);\n     }\n"}
+[0m⚙ [0mvalidate {"ref":"a5eaa66ccc2add0c9b78096ca3196ec1c7904c1f","mode":"hunk","patch":"diff --git a/xds/src/test/java/io/grpc/xds/RingHashLoadBalancerTest.java b/xds/src/test/java/io/grpc/xds/RingHashLoadBalancerTest.java\n--- a/xds/src/test/java/io/grpc/xds/RingHashLoadBalancerTest.java\n+++ b/xds/src/test/java/io/grpc/xds/RingHashLoadBalancerTest.java\n@@ -648,7 +648,7 @@ public class RingHashLoadBalancerTest {\n         getSubchannel(servers, 2),\n         ConnectivityStateInfo.forTransientFailure(\n             Status.PERMISSION_DENIED.withDescription(\"permission denied\")));\n-    verify(helper).updateBalancingState(eq(CONNECTING), pickerCaptor.capture());\n+    verify(helper).updateBalancingState(eq(TRANSIENT_FAILURE), pickerCaptor.capture());\n     verifyConnection(0);\n     PickResult result = pickerCaptor.getValue().pickSubchannel(args); // activate last subchannel\n     assertThat(result.getStatus().isOk()).isTrue();\n"}
+[0m⚙ [0mvalidate {"ref":"a5eaa66ccc2add0c9b78096ca3196ec1c7904c1f","mode":"hunk","patch":"diff --git a/xds/src/test/java/io/grpc/xds/LazyLoadBalancerTest.java b/xds/src/test/java/io/grpc/xds/LazyLoadBalancerTest.java\nnew file mode 100644\n--- /dev/null\n+++ b/xds/src/test/java/io/grpc/xds/LazyLoadBalancerTest.java\n@@ -0,0 +1,94 @@\n+/*\n+ * Copyright 2025 The gRPC Authors\n+ *\n+ * Licensed under the Apache License, Version 2.0 (the \"License\");\n+ * you may not use this file except in compliance with the License.\n+ * You may obtain a copy of the License at\n+ *\n+ *     http://www.apache.org/licenses/LICENSE-2.0\n+ *\n+ * Unless required by applicable law or agreed to in writing, software\n+ * distributed under the License is distributed on an \"AS IS\" BASIS,\n+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n+ * See the License for the specific language governing permissions and\n+ * limitations under the License.\n+ */\n+\n+package io.grpc.xds;\n+\n+import static com.google.common.truth.Truth.assertThat;\n+\n+import io.grpc.CallOptions;\n+import io.grpc.ConnectivityState;\n+import io.grpc.EquivalentAddressGroup;\n+import io.grpc.LoadBalancer;\n+import io.grpc.LoadBalancer.ResolvedAddresses;\n+import io.grpc.LoadBalancer.SubchannelPicker;\n+import io.grpc.ManagedChannel;\n+import io.grpc.Metadata;\n+import io.grpc.SynchronizationContext;\n+import io.grpc.internal.PickSubchannelArgsImpl;\n+import io.grpc.testing.TestMethodDescriptors;\n+import java.util.Arrays;\n+import org.junit.Test;\n+import org.junit.runner.RunWith;\n+import org.junit.runners.JUnit4;\n+\n+/** Unit test for {@link io.grpc.xds.LazyLoadBalancer}. */\n+@RunWith(JUnit4.class)\n+public final class LazyLoadBalancerTest {\n+  private SynchronizationContext syncContext =\n+      new SynchronizationContext((t, e) -> {\n+        throw new AssertionError(e);\n+      });\n+  private LoadBalancer.PickSubchannelArgs args = new PickSubchannelArgsImpl(\n+      TestMethodDescriptors.voidMethod(),\n+      new Metadata(),\n+      CallOptions.DEFAULT,\n+      new LoadBalancer.PickDetailsConsumer() {});\n+  private FakeHelper helper = new FakeHelper();\n+\n+  @Test\n+  public void pickerIsNoopAfterEarlyShutdown() {\n+    LazyLoadBalancer lb = new LazyLoadBalancer(helper, new LoadBalancer.Factory() {\n+      @Override\n+      public LoadBalancer newLoadBalancer(LoadBalancer.Helper helper) {\n+        throw new AssertionError(\"unexpected\");\n+      }\n+    });\n+    lb.acceptResolvedAddresses(ResolvedAddresses.newBuilder()\n+        .setAddresses(Arrays.asList())\n+        .build());\n+    SubchannelPicker picker = helper.picker;\n+    assertThat(picker).isNotNull();\n+    lb.shutdown();\n+\n+    picker.pickSubchannel(args);\n+  }\n+\n+  class FakeHelper extends LoadBalancer.Helper {\n+    ConnectivityState state;\n+    SubchannelPicker picker;\n+\n+    @Override\n+    public ManagedChannel createOobChannel(EquivalentAddressGroup eag, String authority) {\n+      throw new UnsupportedOperationException();\n+    }\n+\n+    @Override\n+    public void updateBalancingState(ConnectivityState newState, SubchannelPicker newPicker) {\n+      this.state = newState;\n+      this.picker = newPicker;\n+    }\n+\n+    @Override\n+    public SynchronizationContext getSynchronizationContext() {\n+      return syncContext;\n+    }\n+\n+    @Override\n+    public String getAuthority() {\n+      return \"localhost\";\n+    }\n+  }\n+}\n"}
+[0m⚙ [0mvalidate {"ref":"a5eaa66ccc2add0c9b78096ca3196ec1c7904c1f","mode":"hunk","patch":"diff --git a/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java b/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java\n--- a/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java\n+++ b/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java\n@@ -182,24 +182,15 @@ class ShufflingPickFirstLoadBalancer extends LoadBalancer {\n    */\n   private final class RequestConnectionPicker extends SubchannelPicker {\n \n-    private final Subchannel subchannel;\n     private final AtomicBoolean connectionRequested = new AtomicBoolean(false);\n \n-    RequestConnectionPicker(Subchannel subchannel) {\n-      this.subchannel = checkNotNull(subchannel, \"subchannel\");\n-    }\n-\n     @Override\n     public PickResult pickSubchannel(PickSubchannelArgs args) {\n       if (connectionRequested.compareAndSet(false, true)) {\n-        helper.getSynchronizationContext().execute(new Runnable() {\n-          @Override\n-          public void run() {\n-            subchannel.requestConnection();\n-          }\n-        });\n+        helper.getSynchronizationContext().execute(\n+            ShufflingPickFirstLoadBalancer.this::requestConnection);\n       }\n       return PickResult.withNoResult();\n     }\n   }\n"}
+[0m⚙ [0mvalidate {"ref":"a5eaa66ccc2add0c9b78096ca3196ec1c7904c1f","mode":"hunk","patch":"diff --git a/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java b/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java\n--- a/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java\n+++ b/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java\n@@ -182,24 +182,15 @@ class ShufflingPickFirstLoadBalancer extends LoadBalancer {\n    */\n   private final class RequestConnectionPicker extends SubchannelPicker {\n \n-    private final Subchannel subchannel;\n     private final AtomicBoolean connectionRequested = new AtomicBoolean(false);\n \n-    RequestConnectionPicker(Subchannel subchannel) {\n-      this.subchannel = checkNotNull(subchannel, \"subchannel\");\n-    }\n-\n     @Override\n     public PickResult pickSubchannel(PickSubchannelArgs args) {\n       if (connectionRequested.compareAndSet(false, true)) {\n-        helper.getSynchronizationContext().execute(new Runnable() {\n-          @Override\n-          public void run() {\n-            subchannel.requestConnection();\n-          }\n-        });\n+        helper.getSynchronizationContext().execute(\n+            ShufflingPickFirstLoadBalancer.this::requestConnection);\n       }\n       return PickResult.withNoResult();\n     }\n   }\n }\n"}
+All adapted hunks now apply cleanly with `validate` in `hunk` mode. Per instruction, I’m skipping full validation and returning the patch YAML.
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target-branch context for all patched files
+[✓] Construct adapted unified diff for v1.74.x parent
+[✓] Validate each hunk against a5eaa66ccc2add0c9b78096ca3196ec1c7904c1f
+[•] Return parseable YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/api/src/main/java/io/grpc/LoadBalancer.java b/api/src/main/java/io/grpc/LoadBalancer.java
+    --- a/api/src/main/java/io/grpc/LoadBalancer.java
+    +++ b/api/src/main/java/io/grpc/LoadBalancer.java
+    @@ -1188,6 +1188,10 @@ public abstract class LoadBalancer {
+          * Returns a {@link SynchronizationContext} that runs tasks in the same Synchronization Context
+          * as that the callback methods on the {@link LoadBalancer} interface are run in.
+          *
+    +     * <p>Work added to the synchronization context might not run immediately, so LB implementations
+    +     * must be careful to ensure that any assumptions still hold when it is executed. In particular,
+    +     * the LB might have been shut down or subchannels might have changed state.
+    +     *
+          * <p>Pro-tip: in order to call {@link SynchronizationContext#schedule}, you need to provide a
+          * {@link ScheduledExecutorService}.  {@link #getScheduledExecutorService} is provided for your
+          * convenience.
+    diff --git a/core/src/main/java/io/grpc/internal/ManagedChannelImpl.java b/core/src/main/java/io/grpc/internal/ManagedChannelImpl.java
+    --- a/core/src/main/java/io/grpc/internal/ManagedChannelImpl.java
+    +++ b/core/src/main/java/io/grpc/internal/ManagedChannelImpl.java
+    @@ -1969,6 +1969,9 @@ final class ManagedChannelImpl extends ManagedChannel implements
+         public void requestConnection() {
+           syncContext.throwIfNotInThisSynchronizationContext();
+           checkState(started, "not started");
+    +      if (shutdown) {
+    +        return;
+    +      }
+           subchannel.obtainActiveTransport();
+         }
+     
+    diff --git a/core/src/main/java/io/grpc/internal/PickFirstLoadBalancer.java b/core/src/main/java/io/grpc/internal/PickFirstLoadBalancer.java
+    --- a/core/src/main/java/io/grpc/internal/PickFirstLoadBalancer.java
+    +++ b/core/src/main/java/io/grpc/internal/PickFirstLoadBalancer.java
+    @@ -134,7 +134,7 @@ final class PickFirstLoadBalancer extends LoadBalancer {
+         SubchannelPicker picker;
+         switch (newState) {
+           case IDLE:
+    -        picker = new RequestConnectionPicker(subchannel);
+    +        picker = new RequestConnectionPicker();
+             break;
+           case CONNECTING:
+             // It's safe to use RequestConnectionPicker here, so when coming from IDLE we could leave
+    @@ -197,22 +197,12 @@ final class PickFirstLoadBalancer extends LoadBalancer {
+     
+       /** Picker that requests connection during the first pick, and returns noResult. */
+       private final class RequestConnectionPicker extends SubchannelPicker {
+    -    private final Subchannel subchannel;
+         private final AtomicBoolean connectionRequested = new AtomicBoolean(false);
+     
+    -    RequestConnectionPicker(Subchannel subchannel) {
+    -      this.subchannel = checkNotNull(subchannel, "subchannel");
+    -    }
+    -
+         @Override
+         public PickResult pickSubchannel(PickSubchannelArgs args) {
+           if (connectionRequested.compareAndSet(false, true)) {
+    -        helper.getSynchronizationContext().execute(new Runnable() {
+    -            @Override
+    -            public void run() {
+    -              subchannel.requestConnection();
+    -            }
+    -          });
+    +        helper.getSynchronizationContext().execute(PickFirstLoadBalancer.this::requestConnection);
+           }
+           return PickResult.withNoResult();
+         }
+    diff --git a/core/src/test/java/io/grpc/internal/ManagedChannelImplTest.java b/core/src/test/java/io/grpc/internal/ManagedChannelImplTest.java
+    --- a/core/src/test/java/io/grpc/internal/ManagedChannelImplTest.java
+    +++ b/core/src/test/java/io/grpc/internal/ManagedChannelImplTest.java
+    @@ -1769,6 +1769,19 @@ public class ManagedChannelImplTest {
+                 any(SocketAddress.class), any(ClientTransportOptions.class), any(ChannelLogger.class));
+       }
+     
+    +  @Test
+    +  public void subchannelsRequestConnectionNoopAfterShutdown() {
+    +    createChannel();
+    +    Subchannel sub1 =
+    +        createSubchannelSafely(helper, addressGroup, Attributes.EMPTY, subchannelStateListener);
+    +
+    +    shutdownSafely(helper, sub1);
+    +    requestConnectionSafely(helper, sub1);
+    +    verify(mockTransportFactory, never())
+    +        .newClientTransport(
+    +            any(SocketAddress.class), any(ClientTransportOptions.class), any(ChannelLogger.class));
+    +  }
+    +
+       @Test
+       public void subchannelsNoConnectionShutdownNow() {
+         createChannel();
+    diff --git a/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java b/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java
+    --- a/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java
+    +++ b/examples/src/main/java/io/grpc/examples/customloadbalance/ShufflingPickFirstLoadBalancer.java
+    @@ -122,7 +122,7 @@ class ShufflingPickFirstLoadBalancer extends LoadBalancer {
+         SubchannelPicker picker;
+         switch (currentState) {
+           case IDLE:
+    -        picker = new RequestConnectionPicker(subchannel);
+    +        picker = new RequestConnectionPicker();
+             break;
+           case CONNECTING:
+             picker = new Picker(PickResult.withNoResult());
+    @@ -182,24 +182,15 @@ class ShufflingPickFirstLoadBalancer extends LoadBalancer {
+        */
+       private final class RequestConnectionPicker extends SubchannelPicker {
+     
+    -    private final Subchannel subchannel;
+         private final AtomicBoolean connectionRequested = new AtomicBoolean(false);
+     
+    -    RequestConnectionPicker(Subchannel subchannel) {
+    -      this.subchannel = checkNotNull(subchannel, "subchannel");
+    -    }
+    -
+         @Override
+         public PickResult pickSubchannel(PickSubchannelArgs args) {
+           if (connectionRequested.compareAndSet(false, true)) {
+    -        helper.getSynchronizationContext().execute(new Runnable() {
+    -          @Override
+    -          public void run() {
+    -            subchannel.requestConnection();
+    -          }
+    -        });
+    +        helper.getSynchronizationContext().execute(
+    +            ShufflingPickFirstLoadBalancer.this::requestConnection);
+           }
+           return PickResult.withNoResult();
+         }
+       }
+     }
+    diff --git a/xds/src/main/java/io/grpc/xds/LazyLoadBalancer.java b/xds/src/main/java/io/grpc/xds/LazyLoadBalancer.java
+    --- a/xds/src/main/java/io/grpc/xds/LazyLoadBalancer.java
+    +++ b/xds/src/main/java/io/grpc/xds/LazyLoadBalancer.java
+    @@ -100,11 +100,13 @@ final class LazyLoadBalancer extends ForwardingLoadBalancer {
+     
+         @Override
+         public void shutdown() {
+    +      delegate = new NoopLoadBalancer();
+         }
+     
+         private final class LazyPicker extends SubchannelPicker {
+           @Override
+           public PickResult pickSubchannel(PickSubchannelArgs args) {
+    +        // activate() is a no-op after shutdown()
+             helper.getSynchronizationContext().execute(LazyDelegate.this::activate);
+             return PickResult.withNoResult();
+           }
+    @@ -121,4 +123,17 @@ final class LazyLoadBalancer extends ForwardingLoadBalancer {
+           return new LazyLoadBalancer(helper, delegate);
+         }
+       }
+    +
+    +  private static final class NoopLoadBalancer extends LoadBalancer {
+    +    @Override
+    +    public Status acceptResolvedAddresses(ResolvedAddresses resolvedAddresses) {
+    +      return Status.OK;
+    +    }
+    +
+    +    @Override
+    +    public void handleNameResolutionError(Status error) {}
+    +
+    +    @Override
+    +    public void shutdown() {}
+    +  }
+     }
+    diff --git a/xds/src/main/java/io/grpc/xds/RingHashLoadBalancer.java b/xds/src/main/java/io/grpc/xds/RingHashLoadBalancer.java
+    --- a/xds/src/main/java/io/grpc/xds/RingHashLoadBalancer.java
+    +++ b/xds/src/main/java/io/grpc/xds/RingHashLoadBalancer.java
+    @@ -438,7 +438,9 @@ final class RingHashLoadBalancer extends MultiChildLoadBalancer {
+     
+               if (subchannelView.connectivityState == IDLE) {
+                 syncContext.execute(() -> {
+    -              childLbState.getLb().requestConnection();
+    +              if (childLbState.getCurrentState() == IDLE) {
+    +                childLbState.getLb().requestConnection();
+    +              }
+                 });
+     
+                 return PickResult.withNoResult(); // Indicates that this should be retried after backoff
+    @@ -456,10 +458,11 @@ final class RingHashLoadBalancer extends MultiChildLoadBalancer {
+                 return childLbState.getCurrentPicker().pickSubchannel(args);
+               }
+               if (!requestedConnection && subchannelView.connectivityState == IDLE) {
+    -            syncContext.execute(
+    -                () -> {
+    -                  childLbState.getLb().requestConnection();
+    -                });
+    +            syncContext.execute(() -> {
+    +              if (childLbState.getCurrentState() == IDLE) {
+    +                childLbState.getLb().requestConnection();
+    +              }
+    +            });
+                 requestedConnection = true;
+               }
+             }
+    diff --git a/xds/src/test/java/io/grpc/xds/LazyLoadBalancerTest.java b/xds/src/test/java/io/grpc/xds/LazyLoadBalancerTest.java
+    new file mode 100644
+    --- /dev/null
+    +++ b/xds/src/test/java/io/grpc/xds/LazyLoadBalancerTest.java
+    @@ -0,0 +1,94 @@
+    +/*
+    + * Copyright 2025 The gRPC Authors
+    + *
+    + * Licensed under the Apache License, Version 2.0 (the "License");
+    + * you may not use this file except in compliance with the License.
+    + * You may obtain a copy of the License at
+    + *
+    + *     http://www.apache.org/licenses/LICENSE-2.0
+    + *
+    + * Unless required by applicable law or agreed to in writing, software
+    + * distributed under the License is distributed on an "AS IS" BASIS,
+    + * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    + * See the License for the specific language governing permissions and
+    + * limitations under the License.
+    + */
+    +
+    +package io.grpc.xds;
+    +
+    +import static com.google.common.truth.Truth.assertThat;
+    +
+    +import io.grpc.CallOptions;
+    +import io.grpc.ConnectivityState;
+    +import io.grpc.EquivalentAddressGroup;
+    +import io.grpc.LoadBalancer;
+    +import io.grpc.LoadBalancer.ResolvedAddresses;
+    +import io.grpc.LoadBalancer.SubchannelPicker;
+    +import io.grpc.ManagedChannel;
+    +import io.grpc.Metadata;
+    +import io.grpc.SynchronizationContext;
+    +import io.grpc.internal.PickSubchannelArgsImpl;
+    +import io.grpc.testing.TestMethodDescriptors;
+    +import java.util.Arrays;
+    +import org.junit.Test;
+    +import org.junit.runner.RunWith;
+    +import org.junit.runners.JUnit4;
+    +
+    +/** Unit test for {@link io.grpc.xds.LazyLoadBalancer}. */
+    +@RunWith(JUnit4.class)
+    +public final class LazyLoadBalancerTest {
+    +  private SynchronizationContext syncContext =
+    +      new SynchronizationContext((t, e) -> {
+    +        throw new AssertionError(e);
+    +      });
+    +  private LoadBalancer.PickSubchannelArgs args = new PickSubchannelArgsImpl(
+    +      TestMethodDescriptors.voidMethod(),
+    +      new Metadata(),
+    +      CallOptions.DEFAULT,
+    +      new LoadBalancer.PickDetailsConsumer() {});
+    +  private FakeHelper helper = new FakeHelper();
+    +
+    +  @Test
+    +  public void pickerIsNoopAfterEarlyShutdown() {
+    +    LazyLoadBalancer lb = new LazyLoadBalancer(helper, new LoadBalancer.Factory() {
+    +      @Override
+    +      public LoadBalancer newLoadBalancer(LoadBalancer.Helper helper) {
+    +        throw new AssertionError("unexpected");
+    +      }
+    +    });
+    +    lb.acceptResolvedAddresses(ResolvedAddresses.newBuilder()
+    +        .setAddresses(Arrays.asList())
+    +        .build());
+    +    SubchannelPicker picker = helper.picker;
+    +    assertThat(picker).isNotNull();
+    +    lb.shutdown();
+    +
+    +    picker.pickSubchannel(args);
+    +  }
+    +
+    +  class FakeHelper extends LoadBalancer.Helper {
+    +    ConnectivityState state;
+    +    SubchannelPicker picker;
+    +
+    +    @Override
+    +    public ManagedChannel createOobChannel(EquivalentAddressGroup eag, String authority) {
+    +      throw new UnsupportedOperationException();
+    +    }
+    +
+    +    @Override
+    +    public void updateBalancingState(ConnectivityState newState, SubchannelPicker newPicker) {
+    +      this.state = newState;
+    +      this.picker = newPicker;
+    +    }
+    +
+    +    @Override
+    +    public SynchronizationContext getSynchronizationContext() {
+    +      return syncContext;
+    +    }
+    +
+    +    @Override
+    +    public String getAuthority() {
+    +      return "localhost";
+    +    }
+    +  }
+    +}
+    diff --git a/xds/src/test/java/io/grpc/xds/RingHashLoadBalancerTest.java b/xds/src/test/java/io/grpc/xds/RingHashLoadBalancerTest.java
+    --- a/xds/src/test/java/io/grpc/xds/RingHashLoadBalancerTest.java
+    +++ b/xds/src/test/java/io/grpc/xds/RingHashLoadBalancerTest.java
+    @@ -261,7 +261,7 @@ public class RingHashLoadBalancerTest {
+       private void verifyConnection(int times) {
+         for (int i = 0; i < times; i++) {
+           Subchannel connectOnce = connectionRequestedQueue.poll();
+    -      assertWithMessage("Null connection is at (%s) of (%s)", i, times)
+    +      assertWithMessage("Expected %s new connections, but found %s", times, i)
+               .that(connectOnce).isNotNull();
+           clearInvocations(connectOnce);
+         }
+    @@ -648,7 +648,7 @@ public class RingHashLoadBalancerTest {
+             getSubchannel(servers, 2),
+             ConnectivityStateInfo.forTransientFailure(
+                 Status.PERMISSION_DENIED.withDescription("permission denied")));
+    -    verify(helper).updateBalancingState(eq(CONNECTING), pickerCaptor.capture());
+    +    verify(helper).updateBalancingState(eq(TRANSIENT_FAILURE), pickerCaptor.capture());
+         verifyConnection(0);
+         PickResult result = pickerCaptor.getValue().pickSubchannel(args); // activate last subchannel
+         assertThat(result.getStatus().isOk()).isTrue();
+  notes: >
+    Backported the shutdown-safe deferred LB connection changes to v1.74.x and validated each hunk with validate mode=hunk; full validation was intentionally skipped.
+```
+
+--- END CLI OUTPUT ---
+[14:34:52]   Done in 331.3s | status=success

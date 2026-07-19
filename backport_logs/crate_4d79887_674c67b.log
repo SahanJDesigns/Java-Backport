@@ -1,0 +1,13 @@
+[16:34:44] === Row 3: crate  4d798870 -> 674c67b3  [TYPE-II] ===
+[16:34:44]   Resolving parent of backport commit 674c67b3...
+[16:34:44]   Backport parent (target ref): 4a35dcbe90f2963bd9e55a0439d95c9841decbb1
+[16:34:44]   Extracting new-version patch for 4d798870...
+[16:34:44]   New-version patch size: 4107 chars
+[16:34:44]   Checking out backport parent 4a35dcbe...
+[16:34:44]   ERROR: Could not checkout backport parent 4a35dcbe90f2963bd9e55a0439d95c9841decbb1: error: Your local changes to the following files would be overwritten by checkout:
+	docs/appendices/release-notes/5.5.3.rst
+	server/src/main/java/io/crate/expression/tablefunctions/UnnestFunction.java
+	server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java
+	server/src/test/java/io/crate/integrationtests/TransportSQLActionSingleNodeTest.java
+Please commit your changes or stash them before you switch branches.
+Aborting

@@ -1,0 +1,663 @@
+[15:45:29] === Row 56: hbase  30ce21bc -> c1c2e986  [TYPE-I] ===
+[15:45:29]   Resolving parent of backport commit c1c2e986...
+[15:45:30]   Backport parent (target ref): 18a28f8dd7613f1415c10044ddf292d0318a0bf1
+[15:45:30]   Extracting new-version patch for 30ce21bc...
+[15:45:30]   New-version patch size: 12026 chars
+[15:45:30]   Checking out backport parent 18a28f8d...
+[15:45:30]   Invoking OpenCode CLI (15930 chars)...
+[15:45:30]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the target branch context for the touched classes and confirm whether the test APIs exist in `branch-2.6`, then construct and hunk-validate a minimal backport diff.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target branch code context
+[ ] Construct branch-2.6 backport patch
+[ ] Validate each patch hunk applies cleanly
+[ ] Return YAML result
+[0m
+[0m⚙ [0mlocate_symbol {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","symbol":"TestRowIndexV1RoundTrip"}
+[0m⚙ [0mlocate_symbol {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","symbol":"ByteBufferKeyOnlyKeyValue"}
+[0m⚙ [0mgit_show {"ref":"30ce21bcadb403feef1007c22c5549fdcf8d13d9"}
+[0m⚙ [0mlocate_symbol {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","symbol":"RowIndexSeekerV1"}
+The commit is HBASE-29252, reducing allocations by reusing the key-only `ByteBuffer` cell and tracking key offsets explicitly. Some git helper calls hit an existing `.git/index.lock`; I’ll avoid branch switching and inspect the checked-out files directly.
+[0m✱ [0mGlob "hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestRowIndexV1RoundTrip.java"[90m 0 matches[0m
+[0m→ [0mRead hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java[90m [offset=250, limit=80][0m
+[0m→ [0mRead hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java[90m [offset=1, limit=380][0m
+[0m✱ [0mGrep "class ByteBuffAllocator|MIN_ALLOCATE_SIZE_KEY|ByteBuffAllocator.create|CacheConfig\(conf, null, null, allocator\)"[90m in . · 30 matches[0m
+The target code closely matches the original diff, but `RowIndexSeekerV1` returns `Cell` rather than `ExtendedCell` in this branch. The new test file does not exist, and the allocator/cache APIs referenced by the test are present.
+[0m⚙ [0mgit_history {"filepath":"hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java","start_line":248,"end_line":331,"start_commit":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","end_commit":"18a28f8dd7613f1415c10044ddf292d0318a0bf1"}
+[0m⚙ [0mgit_history {"filepath":"hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java","start_line":292,"end_line":299,"start_commit":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","end_commit":"18a28f8dd7613f1415c10044ddf292d0318a0bf1"}
+[0m⚙ [0mviewcode {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","path":"hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java","startline":280,"endline":305}
+[0m⚙ [0mviewcode {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","path":"hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java","startline":80,"endline":335}
+[0m✱ [0mGrep "public CacheConfig\(|CacheConfig\(Configuration conf,.*ByteBuffAllocator"[90m in hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile · 4 matches[0m
+[0m✱ [0mGrep "new HFile\.WriterFactory|withPath\(fs|getScanner\(conf, false, false\)"[90m in hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile · 18 matches[0m
+[0m✱ [0mGrep "interface HFileScanner|class HFileScanner|getKey\(\)|getCell\(\)"[90m in hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile · 57 matches[0m
+[0m→ [0mRead hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/CacheConfig.java[90m [offset=160, limit=60][0m
+I’m going to make the backport edits in the working tree now, then use the resulting diff for hunk validation and final YAML.
+[0m% [0mPatch 3 files
+The code edits are in place. I’ll capture the unified diff and validate the patch application hunk-by-hunk against the specified parent ref.
+[0m
+[0m$ [0mgit diff -- hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestRowIndexV1RoundTrip.java
+warning: in the working copy of 'hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java', LF will be replaced by CRLF the next time Git touches it
+diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java
+index a29a98a8c0..8e453fdb98 100644
+--- a/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java
++++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java
+@@ -296,4 +296,15 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {
+     }
+     return ClassSize.align(FIXED_OVERHEAD);
+   }
++
++  /**
++   * Completely clears the state of this cell. Useful if you want to reuse this object to avoid
++   * allocations.
++   */
++  public void clear() {
++    this.buf = null;
++    this.offset = 0;
++    this.length = 0;
++    this.rowLen = 0;
++  }
+ }
+diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java
+index e283803a14..55096a91fa 100644
+--- a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java
++++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java
+@@ -84,10 +84,10 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
+   public Cell getKey() {
+     if (current.keyBuffer.hasArray()) {
+       return new KeyValue.KeyOnlyKeyValue(current.keyBuffer.array(),
+-        current.keyBuffer.arrayOffset() + current.keyBuffer.position(), current.keyLength);
++        current.keyBuffer.arrayOffset() + current.keyOffset, current.keyLength);
+     } else {
+       final byte[] key = new byte[current.keyLength];
+-      ByteBufferUtils.copyFromBufferToArray(key, current.keyBuffer, current.keyBuffer.position(), 0,
++      ByteBufferUtils.copyFromBufferToArray(key, current.keyBuffer, current.keyOffset, 0,
+         current.keyLength);
+       return new KeyValue.KeyOnlyKeyValue(key, 0, current.keyLength);
+     }
+@@ -254,9 +254,8 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
+     currentBuffer.skip(Bytes.SIZEOF_LONG);
+     // key part
+     currentBuffer.asSubByteBuffer(currentBuffer.position(), current.keyLength, tmpPair);
+-    ByteBuffer key = tmpPair.getFirst().duplicate();
+-    key.position(tmpPair.getSecond()).limit(tmpPair.getSecond() + current.keyLength);
+-    current.keyBuffer = key;
++    current.keyBuffer = tmpPair.getFirst();
++    current.keyOffset = tmpPair.getSecond();
+     currentBuffer.skip(current.keyLength);
+     // value part
+     current.valueOffset = currentBuffer.position();
+@@ -270,13 +269,12 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
+       current.memstoreTS = 0;
+     }
+     current.nextKvOffset = currentBuffer.position();
+-    current.currentKey.setKey(current.keyBuffer, tmpPair.getSecond(), current.keyLength);
++    current.currentKey.setKey(current.keyBuffer, current.keyOffset, current.keyLength);
+   }
+ 
+   protected void decodeTags() {
+     current.tagsLength = currentBuffer.getShortAfterPosition(0);
+     currentBuffer.skip(Bytes.SIZEOF_SHORT);
+-    current.tagsOffset = currentBuffer.position();
+     currentBuffer.skip(current.tagsLength);
+   }
+ 
+@@ -286,19 +284,35 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
+      */
+     public final static int KEY_VALUE_LEN_SIZE = 2 * Bytes.SIZEOF_INT;
+ 
++    // RowIndexSeekerV1 reads one cell at a time from a ByteBuff and uses SeekerState's fields to
++    // record the structure of the cell within the ByteBuff.
++
++    // The source of bytes that our cell is backed by
+     protected ByteBuff currentBuffer;
++    // Row structure starts at startOffset
+     protected int startOffset = -1;
+-    protected int valueOffset = -1;
++    // Key starts at keyOffset
++    protected int keyOffset = -1;
++    // Key ends at keyOffset + keyLength
+     protected int keyLength;
++    // Value starts at valueOffset
++    protected int valueOffset = -1;
++    // Value ends at valueOffset + valueLength
+     protected int valueLength;
++    // Tags start after values and end after tagsLength
+     protected int tagsLength = 0;
+-    protected int tagsOffset = -1;
+ 
++    // A ByteBuffer version of currentBuffer that we use to access the key. position and limit
++    // are not adjusted so you must use keyOffset and keyLength to know where in this ByteBuffer to
++    // read.
+     protected ByteBuffer keyBuffer = null;
++    // seqId of the cell being read
+     protected long memstoreTS;
++    // Start of the next row structure in currentBuffer
+     protected int nextKvOffset;
+-    // buffer backed keyonlyKV
+-    private ByteBufferKeyOnlyKeyValue currentKey = new ByteBufferKeyOnlyKeyValue();
++    // Buffer backed keyonlyKV, cheaply reset and re-used as necessary to avoid allocations.
++    // Fed to a comparator in RowIndexSeekerV1#binarySearch().
++    private final ByteBufferKeyOnlyKeyValue currentKey = new ByteBufferKeyOnlyKeyValue();
+ 
+     protected boolean isValid() {
+       return valueOffset != -1;
+@@ -306,7 +320,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
+ 
+     protected void invalidate() {
+       valueOffset = -1;
+-      currentKey = new ByteBufferKeyOnlyKeyValue();
++      currentKey.clear();
+       currentBuffer = null;
+     }
+ 
+@@ -320,13 +334,13 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
+         nextState.currentKey.getRowPosition() - Bytes.SIZEOF_SHORT, nextState.keyLength);
+ 
+       startOffset = nextState.startOffset;
++      keyOffset = nextState.keyOffset;
+       valueOffset = nextState.valueOffset;
+       keyLength = nextState.keyLength;
+       valueLength = nextState.valueLength;
+       nextKvOffset = nextState.nextKvOffset;
+       memstoreTS = nextState.memstoreTS;
+       currentBuffer = nextState.currentBuffer;
+-      tagsOffset = nextState.tagsOffset;
+       tagsLength = nextState.tagsLength;
+     }
+ 
+warning: in the working copy of 'hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java', LF will be replaced by CRLF the next time Git touches it
+[0m
+[0m⚙ [0mvalidate {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","mode":"hunk","patch":"diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java\nindex a29a98a8c0..8e453fdb98 100644\n--- a/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java\n+++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java\n@@ -296,4 +296,15 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {\n     }\n     return ClassSize.align(FIXED_OVERHEAD);\n   }\n+\n+  /**\n+   * Completely clears the state of this cell. Useful if you want to reuse this object to avoid\n+   * allocations.\n+   */\n+  public void clear() {\n+    this.buf = null;\n+    this.offset = 0;\n+    this.length = 0;\n+    this.rowLen = 0;\n+  }\n }\n"}
+The first validation reported a context-format issue at EOF despite matching content, so I’ll widen the EOF hunk context and validate revised hunks.
+[0m⚙ [0mvalidate {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","mode":"hunk","patch":"diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java\n--- a/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java\n+++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java\n@@ -290,10 +290,21 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {\n   }\n \n   @Override\n   public long heapSize() {\n     if (this.buf.hasArray()) {\n       return ClassSize.align(FIXED_OVERHEAD + length);\n     }\n     return ClassSize.align(FIXED_OVERHEAD);\n   }\n+\n+  /**\n+   * Completely clears the state of this cell. Useful if you want to reuse this object to avoid\n+   * allocations.\n+   */\n+  public void clear() {\n+    this.buf = null;\n+    this.offset = 0;\n+    this.length = 0;\n+    this.rowLen = 0;\n+  }\n }\n"}
+The validator is showing 100% similarity but still failing, likely because this checkout/ref is stored with CRLF line endings for these files. I’ll rerun validation with context revision enabled, then validate the complete patch shape.
+[0m⚙ [0mvalidate {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","mode":"hunk","revise_context":true,"patch":"diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java\n--- a/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java\n+++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java\n@@ -290,10 +290,21 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {\n   }\n \n   @Override\n   public long heapSize() {\n     if (this.buf.hasArray()) {\n       return ClassSize.align(FIXED_OVERHEAD + length);\n     }\n     return ClassSize.align(FIXED_OVERHEAD);\n   }\n+\n+  /**\n+   * Completely clears the state of this cell. Useful if you want to reuse this object to avoid\n+   * allocations.\n+   */\n+  public void clear() {\n+    this.buf = null;\n+    this.offset = 0;\n+    this.length = 0;\n+    this.rowLen = 0;\n+  }\n }\n"}
+[0m⚙ [0mvalidate {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","mode":"hunk","patch":"diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java\n--- a/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java\n+++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java\n@@ -297,3 +297,14 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {\n     return ClassSize.align(FIXED_OVERHEAD);\n   }\n+\n+  /**\n+   * Completely clears the state of this cell. Useful if you want to reuse this object to avoid\n+   * allocations.\n+   */\n+  public void clear() {\n+    this.buf = null;\n+    this.offset = 0;\n+    this.length = 0;\n+    this.rowLen = 0;\n+  }\n }\n"}
+The validation mismatch is line-ending sensitive. I’ll validate using CRLF-terminated patch text to match the target checkout’s file normalization.
+[0m⚙ [0mvalidate {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","mode":"hunk","patch":"diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java\r\n--- a/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java\r\n+++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java\r\n@@ -296,4 +296,15 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {\r\n     }\r\n     return ClassSize.align(FIXED_OVERHEAD);\r\n   }\r\n+\r\n+  /**\r\n+   * Completely clears the state of this cell. Useful if you want to reuse this object to avoid\r\n+   * allocations.\r\n+   */\r\n+  public void clear() {\r\n+    this.buf = null;\r\n+    this.offset = 0;\r\n+    this.length = 0;\r\n+    this.rowLen = 0;\r\n+  }\r\n }\r\n"}
+[0m⚙ [0mvalidate {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","mode":"hunk","patch":"diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n--- a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n+++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n@@ -84,10 +84,10 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {\n   public Cell getKey() {\n     if (current.keyBuffer.hasArray()) {\n       return new KeyValue.KeyOnlyKeyValue(current.keyBuffer.array(),\n-        current.keyBuffer.arrayOffset() + current.keyBuffer.position(), current.keyLength);\n+        current.keyBuffer.arrayOffset() + current.keyOffset, current.keyLength);\n     } else {\n       final byte[] key = new byte[current.keyLength];\n-      ByteBufferUtils.copyFromBufferToArray(key, current.keyBuffer, current.keyBuffer.position(), 0,\n+      ByteBufferUtils.copyFromBufferToArray(key, current.keyBuffer, current.keyOffset, 0,\n         current.keyLength);\n       return new KeyValue.KeyOnlyKeyValue(key, 0, current.keyLength);\n     }\n"}
+[0m
+[0m$ [0mgit diff --no-index -- "NUL" "hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestRowIndexV1RoundTrip.java"
+warning: in the working copy of 'hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestRowIndexV1RoundTrip.java', LF will be replaced by CRLF the next time Git touches it
+diff --git a/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestRowIndexV1RoundTrip.java b/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestRowIndexV1RoundTrip.java
+new file mode 100644
+index 0000000000..508d7ce14a
+--- /dev/null
++++ b/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestRowIndexV1RoundTrip.java
+@@ -0,0 +1,144 @@
++/*
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.apache.hadoop.hbase.io.hfile;
++
++import static org.apache.hadoop.hbase.io.ByteBuffAllocator.MIN_ALLOCATE_SIZE_KEY;
++import static org.junit.Assert.assertArrayEquals;
++import static org.junit.Assert.assertEquals;
++import static org.junit.Assert.assertTrue;
++
++import java.io.IOException;
++import java.nio.ByteBuffer;
++import java.util.ArrayList;
++import java.util.List;
++import org.apache.hadoop.conf.Configuration;
++import org.apache.hadoop.fs.FileSystem;
++import org.apache.hadoop.fs.Path;
++import org.apache.hadoop.hbase.CellComparatorImpl;
++import org.apache.hadoop.hbase.CellUtil;
++import org.apache.hadoop.hbase.HBaseClassTestRule;
++import org.apache.hadoop.hbase.HBaseTestingUtil;
++import org.apache.hadoop.hbase.KeyValue;
++import org.apache.hadoop.hbase.SizeCachedNoTagsByteBufferKeyValue;
++import org.apache.hadoop.hbase.SizeCachedNoTagsKeyValue;
++import org.apache.hadoop.hbase.io.ByteBuffAllocator;
++import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
++import org.apache.hadoop.hbase.testclassification.IOTests;
++import org.apache.hadoop.hbase.testclassification.MediumTests;
++import org.apache.hadoop.hbase.util.Bytes;
++import org.junit.Before;
++import org.junit.ClassRule;
++import org.junit.Test;
++import org.junit.experimental.categories.Category;
++
++@Category({ IOTests.class, MediumTests.class })
++public class TestRowIndexV1RoundTrip {
++  @ClassRule
++  public static final HBaseClassTestRule CLASS_RULE =
++    HBaseClassTestRule.forClass(TestRowIndexV1RoundTrip.class);
++  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
++  private static final DataBlockEncoding DATA_BLOCK_ENCODING = DataBlockEncoding.ROW_INDEX_V1;
++  private static final int ENTRY_COUNT = 100;
++
++  private Configuration conf;
++  private FileSystem fs;
++
++  @Before
++  public void setUp() throws IOException {
++    conf = TEST_UTIL.getConfiguration();
++    conf.setLong(MIN_ALLOCATE_SIZE_KEY, 0);
++    fs = FileSystem.get(conf);
++  }
++
++  @Test
++  public void testReadMyWritesOnHeap() throws IOException {
++    Path hfilePath = new Path(TEST_UTIL.getDataTestDir(), "testHFileFormatV3");
++    writeDataToHFile(hfilePath, ENTRY_COUNT);
++    readDataFromHFile(hfilePath, ENTRY_COUNT, true);
++  }
++
++  @Test
++  public void testReadMyWritesOnDirectMem() throws IOException {
++    Path hfilePath = new Path(TEST_UTIL.getDataTestDir(), "testHFileFormatV3");
++    writeDataToHFile(hfilePath, ENTRY_COUNT);
++    readDataFromHFile(hfilePath, ENTRY_COUNT, false);
++  }
++
++  private void writeDataToHFile(Path hfilePath, int entryCount) throws IOException {
++    HFileContext context =
++      new HFileContextBuilder().withBlockSize(1024).withDataBlockEncoding(DATA_BLOCK_ENCODING)
++        .withCellComparator(CellComparatorImpl.COMPARATOR).build();
++    CacheConfig cacheConfig = new CacheConfig(conf);
++    HFile.Writer writer = new HFile.WriterFactory(conf, cacheConfig).withPath(fs, hfilePath)
++      .withFileContext(context).create();
++
++    List<KeyValue> keyValues = new ArrayList<>(entryCount);
++
++    writeKeyValues(entryCount, writer, keyValues);
++  }
++
++  private void writeKeyValues(int entryCount, HFile.Writer writer, List<KeyValue> keyValues)
++    throws IOException {
++    for (int i = 0; i < entryCount; ++i) {
++      byte[] keyBytes = intToBytes(i);
++
++      byte[] valueBytes = Bytes.toBytes(String.format("value %d", i));
++      KeyValue keyValue = new KeyValue(keyBytes, null, null, valueBytes);
++
++      writer.append(keyValue);
++      keyValues.add(keyValue);
++    }
++    writer.close();
++  }
++
++  private void readDataFromHFile(Path hfilePath, int entryCount, boolean onHeap)
++    throws IOException {
++    CacheConfig cacheConfig;
++    if (onHeap) {
++      cacheConfig = new CacheConfig(conf);
++    } else {
++      ByteBuffAllocator allocator = ByteBuffAllocator.create(conf, true);
++      cacheConfig = new CacheConfig(conf, null, null, allocator);
++    }
++    HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConfig, false, conf);
++    HFileScanner scanner = reader.getScanner(conf, false, false);
++    scanner.seekTo();
++    int i = 1;
++    while (scanner.next()) {
++      byte[] keyBytes = intToBytes(i);
++      // check row key from getKey() and getCell() separately because they use different code paths
++      assertArrayEquals(keyBytes, CellUtil.cloneRow(scanner.getKey()));
++      assertArrayEquals(keyBytes, CellUtil.cloneRow(scanner.getCell()));
++      assertArrayEquals(Bytes.toBytes(String.format("value %d", i)),
++        CellUtil.cloneValue(scanner.getCell()));
++      if (onHeap) {
++        assertTrue(scanner.getCell() instanceof SizeCachedNoTagsKeyValue);
++      } else {
++        assertTrue(scanner.getCell() instanceof SizeCachedNoTagsByteBufferKeyValue);
++      }
++      i += 1;
++    }
++    assertEquals(entryCount, i);
++  }
++
++  private byte[] intToBytes(final int i) {
++    ByteBuffer bb = ByteBuffer.allocate(4);
++    bb.putInt(i);
++    return bb.array();
++  }
++}
+[0m
+[0m⚙ [0mvalidate {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","mode":"hunk","patch":"diff --git a/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestRowIndexV1RoundTrip.java b/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestRowIndexV1RoundTrip.java\nnew file mode 100644\n--- /dev/null\n+++ b/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestRowIndexV1RoundTrip.java\n@@ -0,0 +1,3 @@\n+/*\n+ * Licensed to the Apache Software Foundation (ASF) under one\n+ * or more contributor license agreements.  See the NOTICE file\n"}
+The validator applies against the current worktree, so my working-tree edits are interfering with hunk checks. I’ll temporarily remove my local edits, validate the patch against the clean target state, and still return the same backport diff.
+[0m% [0mPatch 3 files
+[0m
+[0m$ [0mgit diff -- hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java; if ($?) { git status --short -- hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestRowIndexV1RoundTrip.java }
+warning: in the working copy of 'hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java', LF will be replaced by CRLF the next time Git touches it
+[0m
+[0m⚙ [0mvalidate {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","mode":"hunk","patch":"diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java\nindex a29a98a8c0..8e453fdb98 100644\n--- a/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java\n+++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java\n@@ -296,4 +296,15 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {\n     }\n     return ClassSize.align(FIXED_OVERHEAD);\n   }\n+\n+  /**\n+   * Completely clears the state of this cell. Useful if you want to reuse this object to avoid\n+   * allocations.\n+   */\n+  public void clear() {\n+    this.buf = null;\n+    this.offset = 0;\n+    this.length = 0;\n+    this.rowLen = 0;\n+  }\n }\n"}
+[0m⚙ [0mvalidate {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","mode":"hunk","patch":"diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\nindex e283803a14..55096a91fa 100644\n--- a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n+++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n@@ -84,10 +84,10 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {\n   public Cell getKey() {\n     if (current.keyBuffer.hasArray()) {\n       return new KeyValue.KeyOnlyKeyValue(current.keyBuffer.array(),\n-        current.keyBuffer.arrayOffset() + current.keyBuffer.position(), current.keyLength);\n+        current.keyBuffer.arrayOffset() + current.keyOffset, current.keyLength);\n     } else {\n       final byte[] key = new byte[current.keyLength];\n-      ByteBufferUtils.copyFromBufferToArray(key, current.keyBuffer, current.keyBuffer.position(), 0,\n+      ByteBufferUtils.copyFromBufferToArray(key, current.keyBuffer, current.keyOffset, 0,\n         current.keyLength);\n       return new KeyValue.KeyOnlyKeyValue(key, 0, current.keyLength);\n     }\n@@ -254,9 +254,8 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {\n     currentBuffer.skip(Bytes.SIZEOF_LONG);\n     // key part\n     currentBuffer.asSubByteBuffer(currentBuffer.position(), current.keyLength, tmpPair);\n-    ByteBuffer key = tmpPair.getFirst().duplicate();\n-    key.position(tmpPair.getSecond()).limit(tmpPair.getSecond() + current.keyLength);\n-    current.keyBuffer = key;\n+    current.keyBuffer = tmpPair.getFirst();\n+    current.keyOffset = tmpPair.getSecond();\n     currentBuffer.skip(current.keyLength);\n     // value part\n     current.valueOffset = currentBuffer.position();\n@@ -270,13 +269,12 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {\n       current.memstoreTS = 0;\n     }\n     current.nextKvOffset = currentBuffer.position();\n-    current.currentKey.setKey(current.keyBuffer, tmpPair.getSecond(), current.keyLength);\n+    current.currentKey.setKey(current.keyBuffer, current.keyOffset, current.keyLength);\n   }\n \n   protected void decodeTags() {\n     current.tagsLength = currentBuffer.getShortAfterPosition(0);\n     currentBuffer.skip(Bytes.SIZEOF_SHORT);\n-    current.tagsOffset = currentBuffer.position();\n     currentBuffer.skip(current.tagsLength);\n   }\n \n@@ -286,19 +284,35 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {\n      */\n     public final static int KEY_VALUE_LEN_SIZE = 2 * Bytes.SIZEOF_INT;\n \n+    // RowIndexSeekerV1 reads one cell at a time from a ByteBuff and uses SeekerState's fields to\n+    // record the structure of the cell within the ByteBuff.\n+\n+    // The source of bytes that our cell is backed by\n     protected ByteBuff currentBuffer;\n+    // Row structure starts at startOffset\n     protected int startOffset = -1;\n-    protected int valueOffset = -1;\n+    // Key starts at keyOffset\n+    protected int keyOffset = -1;\n+    // Key ends at keyOffset + keyLength\n     protected int keyLength;\n+    // Value starts at valueOffset\n+    protected int valueOffset = -1;\n+    // Value ends at valueOffset + valueLength\n     protected int valueLength;\n+    // Tags start after values and end after tagsLength\n     protected int tagsLength = 0;\n-    protected int tagsOffset = -1;\n \n+    // A ByteBuffer version of currentBuffer that we use to access the key. position and limit\n+    // are not adjusted so you must use keyOffset and keyLength to know where in this ByteBuffer to\n+    // read.\n     protected ByteBuffer keyBuffer = null;\n+    // seqId of the cell being read\n     protected long memstoreTS;\n+    // Start of the next row structure in currentBuffer\n     protected int nextKvOffset;\n-    // buffer backed keyonlyKV\n-    private ByteBufferKeyOnlyKeyValue currentKey = new ByteBufferKeyOnlyKeyValue();\n+    // Buffer backed keyonlyKV, cheaply reset and re-used as necessary to avoid allocations.\n+    // Fed to a comparator in RowIndexSeekerV1#binarySearch().\n+    private final ByteBufferKeyOnlyKeyValue currentKey = new ByteBufferKeyOnlyKeyValue();\n \n     protected boolean isValid() {\n       return valueOffset != -1;\n@@ -306,7 +320,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {\n \n     protected void invalidate() {\n       valueOffset = -1;\n-      currentKey = new ByteBufferKeyOnlyKeyValue();\n+      currentKey.clear();\n       currentBuffer = null;\n     }\n \n@@ -320,13 +334,13 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {\n         nextState.currentKey.getRowPosition() - Bytes.SIZEOF_SHORT, nextState.keyLength);\n \n       startOffset = nextState.startOffset;\n+      keyOffset = nextState.keyOffset;\n       valueOffset = nextState.valueOffset;\n       keyLength = nextState.keyLength;\n       valueLength = nextState.valueLength;\n       nextKvOffset = nextState.nextKvOffset;\n       memstoreTS = nextState.memstoreTS;\n       currentBuffer = nextState.currentBuffer;\n-      tagsOffset = nextState.tagsOffset;\n       tagsLength = nextState.tagsLength;\n     }\n"}
+[0m⚙ [0mvalidate {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","mode":"hunk","patch":"diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n--- a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n+++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n@@ -84,10 +84,10 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {\n   public Cell getKey() {\n     if (current.keyBuffer.hasArray()) {\n       return new KeyValue.KeyOnlyKeyValue(current.keyBuffer.array(),\n-        current.keyBuffer.arrayOffset() + current.keyBuffer.position(), current.keyLength);\n+        current.keyBuffer.arrayOffset() + current.keyOffset, current.keyLength);\n     } else {\n       final byte[] key = new byte[current.keyLength];\n-      ByteBufferUtils.copyFromBufferToArray(key, current.keyBuffer, current.keyBuffer.position(), 0,\n+      ByteBufferUtils.copyFromBufferToArray(key, current.keyBuffer, current.keyOffset, 0,\n         current.keyLength);\n       return new KeyValue.KeyOnlyKeyValue(key, 0, current.keyLength);\n     }\n"}
+[0m⚙ [0mvalidate {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","mode":"hunk","patch":"diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n--- a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n+++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n@@ -254,9 +254,8 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {\n     currentBuffer.skip(Bytes.SIZEOF_LONG);\n     // key part\n     currentBuffer.asSubByteBuffer(currentBuffer.position(), current.keyLength, tmpPair);\n-    ByteBuffer key = tmpPair.getFirst().duplicate();\n-    key.position(tmpPair.getSecond()).limit(tmpPair.getSecond() + current.keyLength);\n-    current.keyBuffer = key;\n+    current.keyBuffer = tmpPair.getFirst();\n+    current.keyOffset = tmpPair.getSecond();\n     currentBuffer.skip(current.keyLength);\n     // value part\n     current.valueOffset = currentBuffer.position();\n"}
+The initial hunks validate cleanly once the worktree is clean. I’ll continue validating the remaining RowIndexSeekerV1 state hunks and the new test-file hunk.
+[0m⚙ [0mvalidate {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","mode":"hunk","patch":"diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n--- a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n+++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n@@ -270,13 +270,12 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {\n       current.memstoreTS = 0;\n     }\n     current.nextKvOffset = currentBuffer.position();\n-    current.currentKey.setKey(current.keyBuffer, tmpPair.getSecond(), current.keyLength);\n+    current.currentKey.setKey(current.keyBuffer, current.keyOffset, current.keyLength);\n   }\n \n   protected void decodeTags() {\n     current.tagsLength = currentBuffer.getShortAfterPosition(0);\n     currentBuffer.skip(Bytes.SIZEOF_SHORT);\n-    current.tagsOffset = currentBuffer.position();\n     currentBuffer.skip(current.tagsLength);\n   }\n"}
+[0m⚙ [0mvalidate {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","mode":"hunk","patch":"diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n--- a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n+++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n@@ -286,19 +286,35 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {\n      */\n     public final static int KEY_VALUE_LEN_SIZE = 2 * Bytes.SIZEOF_INT;\n \n+    // RowIndexSeekerV1 reads one cell at a time from a ByteBuff and uses SeekerState's fields to\n+    // record the structure of the cell within the ByteBuff.\n+\n+    // The source of bytes that our cell is backed by\n     protected ByteBuff currentBuffer;\n+    // Row structure starts at startOffset\n     protected int startOffset = -1;\n-    protected int valueOffset = -1;\n+    // Key starts at keyOffset\n+    protected int keyOffset = -1;\n+    // Key ends at keyOffset + keyLength\n     protected int keyLength;\n+    // Value starts at valueOffset\n+    protected int valueOffset = -1;\n+    // Value ends at valueOffset + valueLength\n     protected int valueLength;\n+    // Tags start after values and end after tagsLength\n     protected int tagsLength = 0;\n-    protected int tagsOffset = -1;\n \n+    // A ByteBuffer version of currentBuffer that we use to access the key. position and limit\n+    // are not adjusted so you must use keyOffset and keyLength to know where in this ByteBuffer to\n+    // read.\n     protected ByteBuffer keyBuffer = null;\n+    // seqId of the cell being read\n     protected long memstoreTS;\n+    // Start of the next row structure in currentBuffer\n     protected int nextKvOffset;\n-    // buffer backed keyonlyKV\n-    private ByteBufferKeyOnlyKeyValue currentKey = new ByteBufferKeyOnlyKeyValue();\n+    // Buffer backed keyonlyKV, cheaply reset and re-used as necessary to avoid allocations.\n+    // Fed to a comparator in RowIndexSeekerV1#binarySearch().\n+    private final ByteBufferKeyOnlyKeyValue currentKey = new ByteBufferKeyOnlyKeyValue();\n \n     protected boolean isValid() {\n       return valueOffset != -1;\n"}
+[0m⚙ [0mvalidate {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","mode":"hunk","patch":"diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n--- a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n+++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n@@ -270,13 +270,12 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {\n       current.memstoreTS = 0;\n     }\n     current.nextKvOffset = currentBuffer.position();\n-    current.currentKey.setKey(current.keyBuffer, tmpPair.getSecond(), current.keyLength);\n+    current.currentKey.setKey(current.keyBuffer, current.keyOffset, current.keyLength);\n   }\n \n   protected void decodeTags() {\n     current.tagsLength = currentBuffer.getShortAfterPosition(0);\n     currentBuffer.skip(Bytes.SIZEOF_SHORT);\n-    current.tagsOffset = currentBuffer.position();\n     currentBuffer.skip(current.tagsLength);\n   }\n"}
+[0m⚙ [0mvalidate {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","mode":"hunk","patch":"diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n--- a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n+++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n@@ -270,7 +270,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {\n       current.memstoreTS = 0;\n     }\n     current.nextKvOffset = currentBuffer.position();\n-    current.currentKey.setKey(current.keyBuffer, tmpPair.getSecond(), current.keyLength);\n+    current.currentKey.setKey(current.keyBuffer, current.keyOffset, current.keyLength);\n   }\n \n   protected void decodeTags() {\n"}
+One combined hunk was rejected by the validator’s patch parser, so I split it into smaller equivalent hunks. The setKey hunk validates; I’ll validate the tag-offset removal and copy/invalidate hunks separately.
+[0m⚙ [0mvalidate {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","mode":"hunk","patch":"diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n--- a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n+++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n@@ -276,9 +276,8 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {\n   protected void decodeTags() {\n     current.tagsLength = currentBuffer.getShortAfterPosition(0);\n     currentBuffer.skip(Bytes.SIZEOF_SHORT);\n-    current.tagsOffset = currentBuffer.position();\n     currentBuffer.skip(current.tagsLength);\n   }\n \n"}
+[0m⚙ [0mvalidate {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","mode":"hunk","patch":"diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n--- a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n+++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n@@ -306,7 +320,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {\n \n     protected void invalidate() {\n       valueOffset = -1;\n-      currentKey = new ByteBufferKeyOnlyKeyValue();\n+      currentKey.clear();\n       currentBuffer = null;\n     }\n \n"}
+[0m⚙ [0mvalidate {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","mode":"hunk","patch":"diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n--- a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n+++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n@@ -320,13 +334,13 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {\n         nextState.currentKey.getRowPosition() - Bytes.SIZEOF_SHORT, nextState.keyLength);\n \n       startOffset = nextState.startOffset;\n+      keyOffset = nextState.keyOffset;\n       valueOffset = nextState.valueOffset;\n       keyLength = nextState.keyLength;\n       valueLength = nextState.valueLength;\n       nextKvOffset = nextState.nextKvOffset;\n       memstoreTS = nextState.memstoreTS;\n       currentBuffer = nextState.currentBuffer;\n-      tagsOffset = nextState.tagsOffset;\n       tagsLength = nextState.tagsLength;\n     }\n"}
+[0m⚙ [0mvalidate {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","mode":"hunk","patch":"diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n--- a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n+++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n@@ -276,7 +276,6 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {\n   protected void decodeTags() {\n     current.tagsLength = currentBuffer.getShortAfterPosition(0);\n     currentBuffer.skip(Bytes.SIZEOF_SHORT);\n-    current.tagsOffset = currentBuffer.position();\n     currentBuffer.skip(current.tagsLength);\n   }\n"}
+The validator parser errors on a couple of split hunks were from incorrect hunk line counts in my validation snippets, not from the final patch. I’ll correct the counts and finish validation.
+[0m⚙ [0mvalidate {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","mode":"hunk","patch":"diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n--- a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n+++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n@@ -276,6 +276,5 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {\n   protected void decodeTags() {\n     current.tagsLength = currentBuffer.getShortAfterPosition(0);\n     currentBuffer.skip(Bytes.SIZEOF_SHORT);\n-    current.tagsOffset = currentBuffer.position();\n     currentBuffer.skip(current.tagsLength);\n   }\n"}
+[0m⚙ [0mvalidate {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","mode":"hunk","patch":"diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n--- a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n+++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java\n@@ -320,12 +320,12 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {\n         nextState.currentKey.getRowPosition() - Bytes.SIZEOF_SHORT, nextState.keyLength);\n \n       startOffset = nextState.startOffset;\n+      keyOffset = nextState.keyOffset;\n       valueOffset = nextState.valueOffset;\n       keyLength = nextState.keyLength;\n       valueLength = nextState.valueLength;\n       nextKvOffset = nextState.nextKvOffset;\n       memstoreTS = nextState.memstoreTS;\n       currentBuffer = nextState.currentBuffer;\n-      tagsOffset = nextState.tagsOffset;\n       tagsLength = nextState.tagsLength;\n     }\n"}
+[0m⚙ [0mvalidate {"ref":"18a28f8dd7613f1415c10044ddf292d0318a0bf1","mode":"hunk","patch":"diff --git a/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestRowIndexV1RoundTrip.java b/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestRowIndexV1RoundTrip.java\nnew file mode 100644\nindex 0000000000..508d7ce14a\n--- /dev/null\n+++ b/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestRowIndexV1RoundTrip.java\n@@ -0,0 +1,144 @@\n+/*\n+ * Licensed to the Apache Software Foundation (ASF) under one\n+ * or more contributor license agreements.  See the NOTICE file\n+ * distributed with this work for additional information\n+ * regarding copyright ownership.  The ASF licenses this file\n+ * to you under the Apache License, Version 2.0 (the\n+ * \"License\"); you may not use this file except in compliance\n+ * with the License.  You may obtain a copy of the License at\n+ *\n+ *     http://www.apache.org/licenses/LICENSE-2.0\n+ *\n+ * Unless required by applicable law or agreed to in writing, software\n+ * distributed under the License is distributed on an \"AS IS\" BASIS,\n+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n+ * See the License for the specific language governing permissions and\n+ * limitations under the License.\n+ */\n+package org.apache.hadoop.hbase.io.hfile;\n+\n+import static org.apache.hadoop.hbase.io.ByteBuffAllocator.MIN_ALLOCATE_SIZE_KEY;\n+import static org.junit.Assert.assertArrayEquals;\n+import static org.junit.Assert.assertEquals;\n+import static org.junit.Assert.assertTrue;\n+\n+import java.io.IOException;\n+import java.nio.ByteBuffer;\n+import java.util.ArrayList;\n+import java.util.List;\n+import org.apache.hadoop.conf.Configuration;\n+import org.apache.hadoop.fs.FileSystem;\n+import org.apache.hadoop.fs.Path;\n+import org.apache.hadoop.hbase.CellComparatorImpl;\n+import org.apache.hadoop.hbase.CellUtil;\n+import org.apache.hadoop.hbase.HBaseClassTestRule;\n+import org.apache.hadoop.hbase.HBaseTestingUtil;\n+import org.apache.hadoop.hbase.KeyValue;\n+import org.apache.hadoop.hbase.SizeCachedNoTagsByteBufferKeyValue;\n+import org.apache.hadoop.hbase.SizeCachedNoTagsKeyValue;\n+import org.apache.hadoop.hbase.io.ByteBuffAllocator;\n+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;\n+import org.apache.hadoop.hbase.testclassification.IOTests;\n+import org.apache.hadoop.hbase.testclassification.MediumTests;\n+import org.apache.hadoop.hbase.util.Bytes;\n+import org.junit.Before;\n+import org.junit.ClassRule;\n+import org.junit.Test;\n+import org.junit.experimental.categories.Category;\n+\n+@Category({ IOTests.class, MediumTests.class })\n+public class TestRowIndexV1RoundTrip {\n+  @ClassRule\n+  public static final HBaseClassTestRule CLASS_RULE =\n+    HBaseClassTestRule.forClass(TestRowIndexV1RoundTrip.class);\n+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();\n+  private static final DataBlockEncoding DATA_BLOCK_ENCODING = DataBlockEncoding.ROW_INDEX_V1;\n+  private static final int ENTRY_COUNT = 100;\n+\n+  private Configuration conf;\n+  private FileSystem fs;\n+\n+  @Before\n+  public void setUp() throws IOException {\n+    conf = TEST_UTIL.getConfiguration();\n+    conf.setLong(MIN_ALLOCATE_SIZE_KEY, 0);\n+    fs = FileSystem.get(conf);\n+  }\n+\n+  @Test\n+  public void testReadMyWritesOnHeap() throws IOException {\n+    Path hfilePath = new Path(TEST_UTIL.getDataTestDir(), \"testHFileFormatV3\");\n+    writeDataToHFile(hfilePath, ENTRY_COUNT);\n+    readDataFromHFile(hfilePath, ENTRY_COUNT, true);\n+  }\n+\n+  @Test\n+  public void testReadMyWritesOnDirectMem() throws IOException {\n+    Path hfilePath = new Path(TEST_UTIL.getDataTestDir(), \"testHFileFormatV3\");\n+    writeDataToHFile(hfilePath, ENTRY_COUNT);\n+    readDataFromHFile(hfilePath, ENTRY_COUNT, false);\n+  }\n+\n+  private void writeDataToHFile(Path hfilePath, int entryCount) throws IOException {\n+    HFileContext context =\n+      new HFileContextBuilder().withBlockSize(1024).withDataBlockEncoding(DATA_BLOCK_ENCODING)\n+        .withCellComparator(CellComparatorImpl.COMPARATOR).build();\n+    CacheConfig cacheConfig = new CacheConfig(conf);\n+    HFile.Writer writer = new HFile.WriterFactory(conf, cacheConfig).withPath(fs, hfilePath)\n+      .withFileContext(context).create();\n+\n+    List<KeyValue> keyValues = new ArrayList<>(entryCount);\n+\n+    writeKeyValues(entryCount, writer, keyValues);\n+  }\n+\n+  private void writeKeyValues(int entryCount, HFile.Writer writer, List<KeyValue> keyValues)\n+    throws IOException {\n+    for (int i = 0; i < entryCount; ++i) {\n+      byte[] keyBytes = intToBytes(i);\n+\n+      byte[] valueBytes = Bytes.toBytes(String.format(\"value %d\", i));\n+      KeyValue keyValue = new KeyValue(keyBytes, null, null, valueBytes);\n+\n+      writer.append(keyValue);\n+      keyValues.add(keyValue);\n+    }\n+    writer.close();\n+  }\n+\n+  private void readDataFromHFile(Path hfilePath, int entryCount, boolean onHeap)\n+    throws IOException {\n+    CacheConfig cacheConfig;\n+    if (onHeap) {\n+      cacheConfig = new CacheConfig(conf);\n+    } else {\n+      ByteBuffAllocator allocator = ByteBuffAllocator.create(conf, true);\n+      cacheConfig = new CacheConfig(conf, null, null, allocator);\n+    }\n+    HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConfig, false, conf);\n+    HFileScanner scanner = reader.getScanner(conf, false, false);\n+    scanner.seekTo();\n+    int i = 1;\n+    while (scanner.next()) {\n+      byte[] keyBytes = intToBytes(i);\n+      // check row key from getKey() and getCell() separately because they use different code paths\n+      assertArrayEquals(keyBytes, CellUtil.cloneRow(scanner.getKey()));\n+      assertArrayEquals(keyBytes, CellUtil.cloneRow(scanner.getCell()));\n+      assertArrayEquals(Bytes.toBytes(String.format(\"value %d\", i)),\n+        CellUtil.cloneValue(scanner.getCell()));\n+      if (onHeap) {\n+        assertTrue(scanner.getCell() instanceof SizeCachedNoTagsKeyValue);\n+      } else {\n+        assertTrue(scanner.getCell() instanceof SizeCachedNoTagsByteBufferKeyValue);\n+      }\n+      i += 1;\n+    }\n+    assertEquals(entryCount, i);\n+  }\n+\n+  private byte[] intToBytes(final int i) {\n+    ByteBuffer bb = ByteBuffer.allocate(4);\n+    bb.putInt(i);\n+    return bb.array();\n+  }\n+}\n"}
+[0m
+[0m$ [0mgit status --short -- hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestRowIndexV1RoundTrip.java
+M hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java
+ M hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java
+[0m
+All intended hunks, including the new test file, validated successfully with `mode=hunk`. The temporary cleanup left only line-ending/stat noise in the two inspected files, with no content diff.
+[0m$ [0mgit update-index --refresh -- "hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java" "hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java"; if ($?) { git status --short -- "hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java" "hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java" }
+warning: in the working copy of 'hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java', LF will be replaced by CRLF the next time Git touches it
+hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java: needs update
+hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java: needs update
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java
+    index a29a98a8c0..8e453fdb98 100644
+    --- a/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java
+    +++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/ByteBufferKeyOnlyKeyValue.java
+    @@ -296,4 +296,15 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {
+         }
+         return ClassSize.align(FIXED_OVERHEAD);
+       }
+    +
+    +  /**
+    +   * Completely clears the state of this cell. Useful if you want to reuse this object to avoid
+    +   * allocations.
+    +   */
+    +  public void clear() {
+    +    this.buf = null;
+    +    this.offset = 0;
+    +    this.length = 0;
+    +    this.rowLen = 0;
+    +  }
+     }
+    diff --git a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java
+    index e283803a14..55096a91fa 100644
+    --- a/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java
+    +++ b/hbase-common/src/main/java/org/apache/hadoop/hbase/io/encoding/RowIndexSeekerV1.java
+    @@ -84,10 +84,10 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
+       public Cell getKey() {
+         if (current.keyBuffer.hasArray()) {
+           return new KeyValue.KeyOnlyKeyValue(current.keyBuffer.array(),
+    -        current.keyBuffer.arrayOffset() + current.keyBuffer.position(), current.keyLength);
+    +        current.keyBuffer.arrayOffset() + current.keyOffset, current.keyLength);
+         } else {
+           final byte[] key = new byte[current.keyLength];
+    -      ByteBufferUtils.copyFromBufferToArray(key, current.keyBuffer, current.keyBuffer.position(), 0,
+    +      ByteBufferUtils.copyFromBufferToArray(key, current.keyBuffer, current.keyOffset, 0,
+             current.keyLength);
+           return new KeyValue.KeyOnlyKeyValue(key, 0, current.keyLength);
+         }
+    @@ -254,9 +254,8 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
+         currentBuffer.skip(Bytes.SIZEOF_LONG);
+         // key part
+         currentBuffer.asSubByteBuffer(currentBuffer.position(), current.keyLength, tmpPair);
+    -    ByteBuffer key = tmpPair.getFirst().duplicate();
+    -    key.position(tmpPair.getSecond()).limit(tmpPair.getSecond() + current.keyLength);
+    -    current.keyBuffer = key;
+    +    current.keyBuffer = tmpPair.getFirst();
+    +    current.keyOffset = tmpPair.getSecond();
+         currentBuffer.skip(current.keyLength);
+         // value part
+         current.valueOffset = currentBuffer.position();
+    @@ -270,13 +269,12 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
+           current.memstoreTS = 0;
+         }
+         current.nextKvOffset = currentBuffer.position();
+    -    current.currentKey.setKey(current.keyBuffer, tmpPair.getSecond(), current.keyLength);
+    +    current.currentKey.setKey(current.keyBuffer, current.keyOffset, current.keyLength);
+       }
+     
+       protected void decodeTags() {
+         current.tagsLength = currentBuffer.getShortAfterPosition(0);
+         currentBuffer.skip(Bytes.SIZEOF_SHORT);
+    -    current.tagsOffset = currentBuffer.position();
+         currentBuffer.skip(current.tagsLength);
+       }
+     
+    @@ -286,19 +284,35 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
+          */
+         public final static int KEY_VALUE_LEN_SIZE = 2 * Bytes.SIZEOF_INT;
+     
+    +    // RowIndexSeekerV1 reads one cell at a time from a ByteBuff and uses SeekerState's fields to
+    +    // record the structure of the cell within the ByteBuff.
+    +
+    +    // The source of bytes that our cell is backed by
+         protected ByteBuff currentBuffer;
+    +    // Row structure starts at startOffset
+         protected int startOffset = -1;
+    -    protected int valueOffset = -1;
+    +    // Key starts at keyOffset
+    +    protected int keyOffset = -1;
+    +    // Key ends at keyOffset + keyLength
+         protected int keyLength;
+    +    // Value starts at valueOffset
+    +    protected int valueOffset = -1;
+    +    // Value ends at valueOffset + valueLength
+         protected int valueLength;
+    +    // Tags start after values and end after tagsLength
+         protected int tagsLength = 0;
+    -    protected int tagsOffset = -1;
+     
+    +    // A ByteBuffer version of currentBuffer that we use to access the key. position and limit
+    +    // are not adjusted so you must use keyOffset and keyLength to know where in this ByteBuffer to
+    +    // read.
+         protected ByteBuffer keyBuffer = null;
+    +    // seqId of the cell being read
+         protected long memstoreTS;
+    +    // Start of the next row structure in currentBuffer
+         protected int nextKvOffset;
+    -    // buffer backed keyonlyKV
+    -    private ByteBufferKeyOnlyKeyValue currentKey = new ByteBufferKeyOnlyKeyValue();
+    +    // Buffer backed keyonlyKV, cheaply reset and re-used as necessary to avoid allocations.
+    +    // Fed to a comparator in RowIndexSeekerV1#binarySearch().
+    +    private final ByteBufferKeyOnlyKeyValue currentKey = new ByteBufferKeyOnlyKeyValue();
+     
+         protected boolean isValid() {
+           return valueOffset != -1;
+    @@ -306,7 +320,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
+     
+         protected void invalidate() {
+           valueOffset = -1;
+    -      currentKey = new ByteBufferKeyOnlyKeyValue();
+    +      currentKey.clear();
+           currentBuffer = null;
+         }
+     
+    @@ -320,13 +334,13 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
+             nextState.currentKey.getRowPosition() - Bytes.SIZEOF_SHORT, nextState.keyLength);
+     
+           startOffset = nextState.startOffset;
+    +      keyOffset = nextState.keyOffset;
+           valueOffset = nextState.valueOffset;
+           keyLength = nextState.keyLength;
+           valueLength = nextState.valueLength;
+           nextKvOffset = nextState.nextKvOffset;
+           memstoreTS = nextState.memstoreTS;
+           currentBuffer = nextState.currentBuffer;
+    -      tagsOffset = nextState.tagsOffset;
+           tagsLength = nextState.tagsLength;
+         }
+     
+    diff --git a/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestRowIndexV1RoundTrip.java b/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestRowIndexV1RoundTrip.java
+    new file mode 100644
+    index 0000000000..508d7ce14a
+    --- /dev/null
+    +++ b/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestRowIndexV1RoundTrip.java
+    @@ -0,0 +1,144 @@
+    +/*
+    + * Licensed to the Apache Software Foundation (ASF) under one
+    + * or more contributor license agreements.  See the NOTICE file
+    + * distributed with this work for additional information
+    + * regarding copyright ownership.  The ASF licenses this file
+    + * to you under the Apache License, Version 2.0 (the
+    + * "License"); you may not use this file except in compliance
+    + * with the License.  You may obtain a copy of the License at
+    + *
+    + *     http://www.apache.org/licenses/LICENSE-2.0
+    + *
+    + * Unless required by applicable law or agreed to in writing, software
+    + * distributed under the License is distributed on an "AS IS" BASIS,
+    + * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    + * See the License for the specific language governing permissions and
+    + * limitations under the License.
+    + */
+    +package org.apache.hadoop.hbase.io.hfile;
+    +
+    +import static org.apache.hadoop.hbase.io.ByteBuffAllocator.MIN_ALLOCATE_SIZE_KEY;
+    +import static org.junit.Assert.assertArrayEquals;
+    +import static org.junit.Assert.assertEquals;
+    +import static org.junit.Assert.assertTrue;
+    +
+    +import java.io.IOException;
+    +import java.nio.ByteBuffer;
+    +import java.util.ArrayList;
+    +import java.util.List;
+    +import org.apache.hadoop.conf.Configuration;
+    +import org.apache.hadoop.fs.FileSystem;
+    +import org.apache.hadoop.fs.Path;
+    +import org.apache.hadoop.hbase.CellComparatorImpl;
+    +import org.apache.hadoop.hbase.CellUtil;
+    +import org.apache.hadoop.hbase.HBaseClassTestRule;
+    +import org.apache.hadoop.hbase.HBaseTestingUtil;
+    +import org.apache.hadoop.hbase.KeyValue;
+    +import org.apache.hadoop.hbase.SizeCachedNoTagsByteBufferKeyValue;
+    +import org.apache.hadoop.hbase.SizeCachedNoTagsKeyValue;
+    +import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+    +import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+    +import org.apache.hadoop.hbase.testclassification.IOTests;
+    +import org.apache.hadoop.hbase.testclassification.MediumTests;
+    +import org.apache.hadoop.hbase.util.Bytes;
+    +import org.junit.Before;
+    +import org.junit.ClassRule;
+    +import org.junit.Test;
+    +import org.junit.experimental.categories.Category;
+    +
+    +@Category({ IOTests.class, MediumTests.class })
+    +public class TestRowIndexV1RoundTrip {
+    +  @ClassRule
+    +  public static final HBaseClassTestRule CLASS_RULE =
+    +    HBaseClassTestRule.forClass(TestRowIndexV1RoundTrip.class);
+    +  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+    +  private static final DataBlockEncoding DATA_BLOCK_ENCODING = DataBlockEncoding.ROW_INDEX_V1;
+    +  private static final int ENTRY_COUNT = 100;
+    +
+    +  private Configuration conf;
+    +  private FileSystem fs;
+    +
+    +  @Before
+    +  public void setUp() throws IOException {
+    +    conf = TEST_UTIL.getConfiguration();
+    +    conf.setLong(MIN_ALLOCATE_SIZE_KEY, 0);
+    +    fs = FileSystem.get(conf);
+    +  }
+    +
+    +  @Test
+    +  public void testReadMyWritesOnHeap() throws IOException {
+    +    Path hfilePath = new Path(TEST_UTIL.getDataTestDir(), "testHFileFormatV3");
+    +    writeDataToHFile(hfilePath, ENTRY_COUNT);
+    +    readDataFromHFile(hfilePath, ENTRY_COUNT, true);
+    +  }
+    +
+    +  @Test
+    +  public void testReadMyWritesOnDirectMem() throws IOException {
+    +    Path hfilePath = new Path(TEST_UTIL.getDataTestDir(), "testHFileFormatV3");
+    +    writeDataToHFile(hfilePath, ENTRY_COUNT);
+    +    readDataFromHFile(hfilePath, ENTRY_COUNT, false);
+    +  }
+    +
+    +  private void writeDataToHFile(Path hfilePath, int entryCount) throws IOException {
+    +    HFileContext context =
+    +      new HFileContextBuilder().withBlockSize(1024).withDataBlockEncoding(DATA_BLOCK_ENCODING)
+    +        .withCellComparator(CellComparatorImpl.COMPARATOR).build();
+    +    CacheConfig cacheConfig = new CacheConfig(conf);
+    +    HFile.Writer writer = new HFile.WriterFactory(conf, cacheConfig).withPath(fs, hfilePath)
+    +      .withFileContext(context).create();
+    +
+    +    List<KeyValue> keyValues = new ArrayList<>(entryCount);
+    +
+    +    writeKeyValues(entryCount, writer, keyValues);
+    +  }
+    +
+    +  private void writeKeyValues(int entryCount, HFile.Writer writer, List<KeyValue> keyValues)
+    +    throws IOException {
+    +    for (int i = 0; i < entryCount; ++i) {
+    +      byte[] keyBytes = intToBytes(i);
+    +
+    +      byte[] valueBytes = Bytes.toBytes(String.format("value %d", i));
+    +      KeyValue keyValue = new KeyValue(keyBytes, null, null, valueBytes);
+    +
+    +      writer.append(keyValue);
+    +      keyValues.add(keyValue);
+    +    }
+    +    writer.close();
+    +  }
+    +
+    +  private void readDataFromHFile(Path hfilePath, int entryCount, boolean onHeap)
+    +    throws IOException {
+    +    CacheConfig cacheConfig;
+    +    if (onHeap) {
+    +      cacheConfig = new CacheConfig(conf);
+    +    } else {
+    +      ByteBuffAllocator allocator = ByteBuffAllocator.create(conf, true);
+    +      cacheConfig = new CacheConfig(conf, null, null, allocator);
+    +    }
+    +    HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConfig, false, conf);
+    +    HFileScanner scanner = reader.getScanner(conf, false, false);
+    +    scanner.seekTo();
+    +    int i = 1;
+    +    while (scanner.next()) {
+    +      byte[] keyBytes = intToBytes(i);
+    +      // check row key from getKey() and getCell() separately because they use different code paths
+    +      assertArrayEquals(keyBytes, CellUtil.cloneRow(scanner.getKey()));
+    +      assertArrayEquals(keyBytes, CellUtil.cloneRow(scanner.getCell()));
+    +      assertArrayEquals(Bytes.toBytes(String.format("value %d", i)),
+    +        CellUtil.cloneValue(scanner.getCell()));
+    +      if (onHeap) {
+    +        assertTrue(scanner.getCell() instanceof SizeCachedNoTagsKeyValue);
+    +      } else {
+    +        assertTrue(scanner.getCell() instanceof SizeCachedNoTagsByteBufferKeyValue);
+    +      }
+    +      i += 1;
+    +    }
+    +    assertEquals(entryCount, i);
+    +  }
+    +
+    +  private byte[] intToBytes(final int i) {
+    +    ByteBuffer bb = ByteBuffer.allocate(4);
+    +    bb.putInt(i);
+    +    return bb.array();
+    +  }
+    +}
+  notes: >
+    Backported HBASE-29252 allocation reduction to branch-2.6 context; all hunks were validated with mode=hunk and full validation was skipped as requested.
+```
+
+--- END CLI OUTPUT ---
+[15:54:49]   Done in 559.2s | status=success

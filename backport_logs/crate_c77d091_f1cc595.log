@@ -1,0 +1,240 @@
+[11:26:39] === Row 1: crate  c77d0911 -> f1cc5954  [TYPE-II] ===
+[11:26:39]   Resolving parent of backport commit f1cc5954...
+[11:26:39]   Backport parent (target ref): 10c3cacf8e0b2805e2524dde424b21168a835ba4
+[11:26:39]   Extracting new-version patch for c77d0911...
+[11:26:40]   New-version patch size: 8983 chars
+[11:26:40]   Checking out backport parent 10c3cacf...
+[11:26:41]   Invoking OpenCode CLI (12839 chars)...
+[11:26:41]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll map each original hunk onto the checked-out `5.6` parent, then validate the resulting unified diff hunk-by-hunk without switching refs.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target branch code context
+[ ] Construct adapted backport patch
+[ ] Validate each hunk applies to target ref
+[ ] Return parseable YAML result
+[0m
+[0m⚙ [0mviewcode {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","path":"server/src/main/java/io/crate/analyze/DeleteAnalyzer.java","startline":45,"endline":85}
+[0m⚙ [0mviewcode {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","path":"server/src/main/java/io/crate/analyze/CopyAnalyzer.java","startline":55,"endline":135}
+[0m⚙ [0mviewcode {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","path":"server/src/main/java/io/crate/analyze/InsertAnalyzer.java","startline":295,"endline":330}
+[0m⚙ [0mgit_show {"ref":"c77d091150e74221bf13b8df3d8735649e544fdc"}
+[0m⚙ [0mviewcode {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","path":"server/src/main/java/io/crate/analyze/UpdateAnalyzer.java","startline":95,"endline":120}
+[0m⚙ [0mviewcode {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","path":"server/src/main/java/io/crate/analyze/where/WhereClauseAnalyzer.java","startline":100,"endline":125}
+The analyzer hunks map directly to the `5.6` parent. I’m checking the release-note/test contexts and the normalizer constructor API before assembling the diff.
+[0m⚙ [0mviewcode {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","path":"docs/appendices/release-notes/5.6.5.rst","startline":65,"endline":90}
+[0m⚙ [0mviewcode {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","path":"docs/appendices/release-notes/5.7.1.rst","startline":65,"endline":90}
+[0m⚙ [0mviewcode {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","path":"server/src/test/java/io/crate/integrationtests/DeleteIntegrationTest.java","startline":1,"endline":45}
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/analyze/DeleteAnalyzer.java","start_line":60,"end_line":68,"start_commit":"10c3cacf8e0b2805e2524dde424b21168a835ba4","end_commit":"10c3cacf8e0b2805e2524dde424b21168a835ba4"}
+[0m⚙ [0mviewcode {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","path":"server/src/test/java/io/crate/integrationtests/DeleteIntegrationTest.java","startline":285,"endline":320}
+[0m⚙ [0mlocate_symbol {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","symbol":"EvaluatingNormalizer"}
+`docs/appendices/release-notes/5.7.1.rst` does not exist in this target ref, so that release-note hunk has no target file and will be omitted as not applicable to `5.6`. The `5.6.5` note exists but the surrounding fixes are ordered differently, so I’ll anchor it near the existing prepared-statements fix.
+[0m✱ [0mGrep "5\.7\.1"[90m in docs/appendices/release-notes · 0 matches[0m
+[0m✱ [0mGrep "new EvaluatingNormalizer\("[90m in server/src/main/java · 16 matches[0m
+[0m⚙ [0mviewcode {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","path":"server/src/main/java/io/crate/expression/eval/EvaluatingNormalizer.java","startline":60,"endline":130}
+[0m⚙ [0mlocate_symbol {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","symbol":"DeleteAnalyzer"}
+[0m⚙ [0mlocate_symbol {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","symbol":"InsertAnalyzer"}
+[0m⚙ [0mlocate_symbol {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","symbol":"UpdateAnalyzer"}
+[0m⚙ [0mlocate_symbol {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","symbol":"WhereClauseAnalyzer"}
+[0m⚙ [0mlocate_symbol {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","symbol":"DeleteIntegrationTest"}
+[0m⚙ [0mlocate_symbol {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","symbol":"CopyAnalyzer"}
+A parallel symbol lookup collided on `.git/index.lock`; this appears to be a transient tool lock, not a source change. I’ll avoid further parallel git-ref symbol lookups and continue with the already confirmed code locations.
+I’m preparing a minimal patch: analyzer normalizers get the deterministic-function predicate, the delete integration test is added, and only the existing `5.6.5` release note is updated.
+[0m⚙ [0mvalidate {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.6.5.rst b/docs/appendices/release-notes/5.6.5.rst\n--- a/docs/appendices/release-notes/5.6.5.rst\n+++ b/docs/appendices/release-notes/5.6.5.rst\n@@ -77,7 +77,10 @@ Fixes\n - Fixed an issue that caused queries on partitioned tables via prepared\n   statements to return invalid results if the partitions of the table changed\n   after preparing the statements.\n+\n+- Fixed an issue that caused prepared statements to cache values of\n+  non-deterministic functions and use the same value for each execution.\n"}
+[0m⚙ [0mvalidate {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.6.5.rst b/docs/appendices/release-notes/5.6.5.rst\n--- a/docs/appendices/release-notes/5.6.5.rst\n+++ b/docs/appendices/release-notes/5.6.5.rst\n@@ -77,7 +77,10 @@ Fixes\n - Fixed an issue that caused queries on partitioned tables via prepared\n   statements to return invalid results if the partitions of the table changed\n   after preparing the statements.\n+\n+- Fixed an issue that caused prepared statements to cache values of\n+  non-deterministic functions and use the same value for each execution.\n"}
+[0m⚙ [0mvalidate {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.6.5.rst b/docs/appendices/release-notes/5.6.5.rst\n--- a/docs/appendices/release-notes/5.6.5.rst\n+++ b/docs/appendices/release-notes/5.6.5.rst\n@@ -77,7 +77,10 @@ Fixes\n - Fixed an issue that caused queries on partitioned tables via prepared\n   statements to return invalid results if the partitions of the table changed\n   after preparing the statements.\n+\n+- Fixed an issue that caused prepared statements to cache values of\n+  non-deterministic functions and use the same value for each execution.\n"}
+[0m⚙ [0mvalidate {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.6.5.rst b/docs/appendices/release-notes/5.6.5.rst\n--- a/docs/appendices/release-notes/5.6.5.rst\n+++ b/docs/appendices/release-notes/5.6.5.rst\n@@ -77,3 +77,6 @@ Fixes\n  - Fixed an issue that caused queries on partitioned tables via prepared\n    statements to return invalid results if the partitions of the table changed\n    after preparing the statements.\n+\n+- Fixed an issue that caused prepared statements to cache values of\n+  non-deterministic functions and use the same value for each execution.\n"}
+[0m⚙ [0mvalidate {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.6.5.rst b/docs/appendices/release-notes/5.6.5.rst\n--- a/docs/appendices/release-notes/5.6.5.rst\n+++ b/docs/appendices/release-notes/5.6.5.rst\n@@ -80,3 +80,6 @@ Fixes\n - Fixed an issue that caused queries on partitioned tables via prepared\n   statements to return invalid results if the partitions of the table changed\n   after preparing the statements.\n+\n+- Fixed an issue that caused prepared statements to cache values of\n+  non-deterministic functions and use the same value for each execution.\n"}
+The release-note hunk validates after adjusting indentation to the actual `5.6.5` file. I’m validating the Java hunks next.
+[0m⚙ [0mvalidate {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/analyze/CopyAnalyzer.java b/server/src/main/java/io/crate/analyze/CopyAnalyzer.java\n--- a/server/src/main/java/io/crate/analyze/CopyAnalyzer.java\n+++ b/server/src/main/java/io/crate/analyze/CopyAnalyzer.java\n@@ -72,7 +72,8 @@ class CopyAnalyzer {\n             nodeCtx,\n             RowGranularity.CLUSTER,\n             null,\n-            new TableRelation(tableInfo));\n+            new TableRelation(tableInfo),\n+            f -> f.signature().isDeterministic());\n \n         Table<Symbol> table = node.table().map(t -> exprAnalyzerWithFieldsAsString.convert(t, exprCtx));\n         GenericProperties<Symbol> properties = node.properties().map(t -> exprAnalyzerWithoutFields.convert(t,\n@@ -115,7 +116,8 @@ class CopyAnalyzer {\n             nodeCtx,\n             RowGranularity.CLUSTER,\n             null,\n-            tableRelation);\n+            tableRelation,\n+            f -> f.signature().isDeterministic());\n \n         var exprCtx = new ExpressionAnalysisContext(txnCtx.sessionSettings());\n         var expressionAnalyzer = new ExpressionAnalyzer(\n"}
+[0m⚙ [0mvalidate {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/analyze/DeleteAnalyzer.java b/server/src/main/java/io/crate/analyze/DeleteAnalyzer.java\n--- a/server/src/main/java/io/crate/analyze/DeleteAnalyzer.java\n+++ b/server/src/main/java/io/crate/analyze/DeleteAnalyzer.java\n@@ -60,11 +60,15 @@ final class DeleteAnalyzer {\n         MaybeAliasedStatement maybeAliasedStatement = MaybeAliasedStatement.analyze(relation);\n         relation = maybeAliasedStatement.nonAliasedRelation();\n \n-        if (!(relation instanceof DocTableRelation)) {\n+        if (!(relation instanceof DocTableRelation table)) {\n             throw new UnsupportedOperationException(\"Cannot delete from relations other than base tables\");\n         }\n-        DocTableRelation table = (DocTableRelation) relation;\n-        EvaluatingNormalizer normalizer = new EvaluatingNormalizer(nodeCtx, RowGranularity.CLUSTER, null, table);\n+        EvaluatingNormalizer normalizer = new EvaluatingNormalizer(\n+            nodeCtx,\n+            RowGranularity.CLUSTER,\n+            null,\n+            table,\n+            f -> f.signature().isDeterministic());\n         ExpressionAnalyzer expressionAnalyzer = new ExpressionAnalyzer(\n             txnContext,\n             nodeCtx,\n"}
+[0m⚙ [0mvalidate {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/analyze/InsertAnalyzer.java b/server/src/main/java/io/crate/analyze/InsertAnalyzer.java\n--- a/server/src/main/java/io/crate/analyze/InsertAnalyzer.java\n+++ b/server/src/main/java/io/crate/analyze/InsertAnalyzer.java\n@@ -313,7 +313,12 @@ class InsertAnalyzer {\n             fieldProvider = new NameFieldProvider(targetTable);\n         }\n         var expressionAnalyzer = new ExpressionAnalyzer(txnCtx, nodeCtx, paramTypeHints, fieldProvider, null);\n-        var normalizer = new EvaluatingNormalizer(nodeCtx, RowGranularity.CLUSTER, null, targetTable);\n+        var normalizer = new EvaluatingNormalizer(\n+            nodeCtx,\n+            RowGranularity.CLUSTER,\n+            null,\n+            targetTable,\n+            f -> f.signature().isDeterministic());\n         Map<Reference, Symbol> updateAssignments = new HashMap<>(duplicateKeyContext.getAssignments().size());\n         for (Assignment<Expression> assignment : duplicateKeyContext.getAssignments()) {\n             Reference targetCol = (Reference) exprAnalyzer.convert(assignment.columnName(), exprCtx);\n"}
+[0m⚙ [0mvalidate {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/analyze/UpdateAnalyzer.java b/server/src/main/java/io/crate/analyze/UpdateAnalyzer.java\n--- a/server/src/main/java/io/crate/analyze/UpdateAnalyzer.java\n+++ b/server/src/main/java/io/crate/analyze/UpdateAnalyzer.java\n@@ -107,7 +107,12 @@ public final class UpdateAnalyzer {\n             throw new UnsupportedOperationException(\"UPDATE is only supported on base-tables\");\n         }\n         AbstractTableRelation<?> table = (AbstractTableRelation<?>) relation;\n-        EvaluatingNormalizer normalizer = new EvaluatingNormalizer(nodeCtx, RowGranularity.CLUSTER, null, table);\n+        EvaluatingNormalizer normalizer = new EvaluatingNormalizer(\n+            nodeCtx,\n+            RowGranularity.CLUSTER,\n+            null,\n+            table,\n+            f -> f.signature().isDeterministic());\n         SubqueryAnalyzer subqueryAnalyzer =\n             new SubqueryAnalyzer(relationAnalyzer, new StatementAnalysisContext(typeHints, Operation.READ, txnCtx));\n \n"}
+[0m⚙ [0mvalidate {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/analyze/where/WhereClauseAnalyzer.java b/server/src/main/java/io/crate/analyze/where/WhereClauseAnalyzer.java\n--- a/server/src/main/java/io/crate/analyze/where/WhereClauseAnalyzer.java\n+++ b/server/src/main/java/io/crate/analyze/where/WhereClauseAnalyzer.java\n@@ -111,7 +111,11 @@ public class WhereClauseAnalyzer {\n         PartitionReferenceResolver partitionReferenceResolver = preparePartitionResolver(\n             tableInfo.partitionedByColumns());\n         EvaluatingNormalizer normalizer = new EvaluatingNormalizer(\n-            nodeCtx, RowGranularity.PARTITION, partitionReferenceResolver, null);\n+            nodeCtx,\n+            RowGranularity.PARTITION,\n+            partitionReferenceResolver,\n+            null,\n+            f -> f.signature().isDeterministic());\n \n         Symbol normalized;\n         Map<Symbol, List<Literal<?>>> queryPartitionMap = new HashMap<>();\n"}
+[0m⚙ [0mvalidate {"ref":"10c3cacf8e0b2805e2524dde424b21168a835ba4","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/integrationtests/DeleteIntegrationTest.java b/server/src/test/java/io/crate/integrationtests/DeleteIntegrationTest.java\n--- a/server/src/test/java/io/crate/integrationtests/DeleteIntegrationTest.java\n+++ b/server/src/test/java/io/crate/integrationtests/DeleteIntegrationTest.java\n@@ -24,9 +24,12 @@ package io.crate.integrationtests;\n \n import static io.crate.testing.Asserts.assertThat;\n \n+import java.util.List;\n+\n import org.elasticsearch.test.IntegTestCase;\n import org.junit.Test;\n \n+import io.crate.action.sql.BaseResultReceiver;\n import io.crate.common.unit.TimeValue;\n import io.crate.execution.dsl.projection.AbstractIndexWriterProjection;\n import io.crate.testing.UseJdbc;\n@@ -303,4 +306,31 @@ public class DeleteIntegrationTest extends IntegTestCase {\n             \"1\"\n         );\n     }\n+\n+    @Test\n+    public void test_can_reuse_prepared_statement_for_delete_containing_non_deterministic_function() throws Exception {\n+        execute(\"CREATE TABLE doc.t (a timestamp with time zone)\");\n+\n+        try (var session = sqlExecutor.newSession()) {\n+            session.parse(\n+                \"preparedStatement\",\n+                \"DELETE FROM doc.t WHERE a < now() - '3 minute'::INTERVAL\",\n+                List.of()\n+            );\n+\n+            // insert a value that the prepared statement will delete\n+            execute(\"INSERT INTO doc.t SELECT now() - '3 minute'::INTERVAL\");\n+            refresh();\n+\n+            // execute the prepared statement to delete the inserted value\n+            session.bind(\"portalName\", \"preparedStatement\", List.of(), null);\n+            session.execute(\"portalName\", 0, new BaseResultReceiver());\n+            session.sync().get();\n+        }\n+        refresh();\n+\n+        // empty rows implies that the now() in the prepared statement is evaluated during execution\n+        execute(\"SELECT * FROM doc.t\");\n+        assertThat(response).isEmpty();\n+    }\n }\n"}
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch code context
+[✓] Construct adapted backport patch
+[✓] Validate each hunk applies to target ref
+[•] Return parseable YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/docs/appendices/release-notes/5.6.5.rst b/docs/appendices/release-notes/5.6.5.rst
+    --- a/docs/appendices/release-notes/5.6.5.rst
+    +++ b/docs/appendices/release-notes/5.6.5.rst
+    @@ -80,3 +80,6 @@ Fixes
+     - Fixed an issue that caused queries on partitioned tables via prepared
+       statements to return invalid results if the partitions of the table changed
+       after preparing the statements.
+    +
+    +- Fixed an issue that caused prepared statements to cache values of
+    +  non-deterministic functions and use the same value for each execution.
+    diff --git a/server/src/main/java/io/crate/analyze/CopyAnalyzer.java b/server/src/main/java/io/crate/analyze/CopyAnalyzer.java
+    --- a/server/src/main/java/io/crate/analyze/CopyAnalyzer.java
+    +++ b/server/src/main/java/io/crate/analyze/CopyAnalyzer.java
+    @@ -72,7 +72,8 @@ class CopyAnalyzer {
+                 nodeCtx,
+                 RowGranularity.CLUSTER,
+                 null,
+    -            new TableRelation(tableInfo));
+    +            new TableRelation(tableInfo),
+    +            f -> f.signature().isDeterministic());
+     
+             Table<Symbol> table = node.table().map(t -> exprAnalyzerWithFieldsAsString.convert(t, exprCtx));
+             GenericProperties<Symbol> properties = node.properties().map(t -> exprAnalyzerWithoutFields.convert(t,
+    @@ -115,7 +116,8 @@ class CopyAnalyzer {
+                 nodeCtx,
+                 RowGranularity.CLUSTER,
+                 null,
+    -            tableRelation);
+    +            tableRelation,
+    +            f -> f.signature().isDeterministic());
+     
+             var exprCtx = new ExpressionAnalysisContext(txnCtx.sessionSettings());
+             var expressionAnalyzer = new ExpressionAnalyzer(
+    diff --git a/server/src/main/java/io/crate/analyze/DeleteAnalyzer.java b/server/src/main/java/io/crate/analyze/DeleteAnalyzer.java
+    --- a/server/src/main/java/io/crate/analyze/DeleteAnalyzer.java
+    +++ b/server/src/main/java/io/crate/analyze/DeleteAnalyzer.java
+    @@ -60,11 +60,15 @@ final class DeleteAnalyzer {
+             MaybeAliasedStatement maybeAliasedStatement = MaybeAliasedStatement.analyze(relation);
+             relation = maybeAliasedStatement.nonAliasedRelation();
+     
+    -        if (!(relation instanceof DocTableRelation)) {
+    +        if (!(relation instanceof DocTableRelation table)) {
+                 throw new UnsupportedOperationException("Cannot delete from relations other than base tables");
+             }
+    -        DocTableRelation table = (DocTableRelation) relation;
+    -        EvaluatingNormalizer normalizer = new EvaluatingNormalizer(nodeCtx, RowGranularity.CLUSTER, null, table);
+    +        EvaluatingNormalizer normalizer = new EvaluatingNormalizer(
+    +            nodeCtx,
+    +            RowGranularity.CLUSTER,
+    +            null,
+    +            table,
+    +            f -> f.signature().isDeterministic());
+             ExpressionAnalyzer expressionAnalyzer = new ExpressionAnalyzer(
+                 txnContext,
+                 nodeCtx,
+    diff --git a/server/src/main/java/io/crate/analyze/InsertAnalyzer.java b/server/src/main/java/io/crate/analyze/InsertAnalyzer.java
+    --- a/server/src/main/java/io/crate/analyze/InsertAnalyzer.java
+    +++ b/server/src/main/java/io/crate/analyze/InsertAnalyzer.java
+    @@ -313,7 +313,12 @@ class InsertAnalyzer {
+                 fieldProvider = new NameFieldProvider(targetTable);
+             }
+             var expressionAnalyzer = new ExpressionAnalyzer(txnCtx, nodeCtx, paramTypeHints, fieldProvider, null);
+    -        var normalizer = new EvaluatingNormalizer(nodeCtx, RowGranularity.CLUSTER, null, targetTable);
+    +        var normalizer = new EvaluatingNormalizer(
+    +            nodeCtx,
+    +            RowGranularity.CLUSTER,
+    +            null,
+    +            targetTable,
+    +            f -> f.signature().isDeterministic());
+             Map<Reference, Symbol> updateAssignments = new HashMap<>(duplicateKeyContext.getAssignments().size());
+             for (Assignment<Expression> assignment : duplicateKeyContext.getAssignments()) {
+                 Reference targetCol = (Reference) exprAnalyzer.convert(assignment.columnName(), exprCtx);
+    diff --git a/server/src/main/java/io/crate/analyze/UpdateAnalyzer.java b/server/src/main/java/io/crate/analyze/UpdateAnalyzer.java
+    --- a/server/src/main/java/io/crate/analyze/UpdateAnalyzer.java
+    +++ b/server/src/main/java/io/crate/analyze/UpdateAnalyzer.java
+    @@ -107,7 +107,12 @@ public final class UpdateAnalyzer {
+                 throw new UnsupportedOperationException("UPDATE is only supported on base-tables");
+             }
+             AbstractTableRelation<?> table = (AbstractTableRelation<?>) relation;
+    -        EvaluatingNormalizer normalizer = new EvaluatingNormalizer(nodeCtx, RowGranularity.CLUSTER, null, table);
+    +        EvaluatingNormalizer normalizer = new EvaluatingNormalizer(
+    +            nodeCtx,
+    +            RowGranularity.CLUSTER,
+    +            null,
+    +            table,
+    +            f -> f.signature().isDeterministic());
+             SubqueryAnalyzer subqueryAnalyzer =
+                 new SubqueryAnalyzer(relationAnalyzer, new StatementAnalysisContext(typeHints, Operation.READ, txnCtx));
+     
+    diff --git a/server/src/main/java/io/crate/analyze/where/WhereClauseAnalyzer.java b/server/src/main/java/io/crate/analyze/where/WhereClauseAnalyzer.java
+    --- a/server/src/main/java/io/crate/analyze/where/WhereClauseAnalyzer.java
+    +++ b/server/src/main/java/io/crate/analyze/where/WhereClauseAnalyzer.java
+    @@ -111,7 +111,11 @@ public class WhereClauseAnalyzer {
+             PartitionReferenceResolver partitionReferenceResolver = preparePartitionResolver(
+                 tableInfo.partitionedByColumns());
+             EvaluatingNormalizer normalizer = new EvaluatingNormalizer(
+    -            nodeCtx, RowGranularity.PARTITION, partitionReferenceResolver, null);
+    +            nodeCtx,
+    +            RowGranularity.PARTITION,
+    +            partitionReferenceResolver,
+    +            null,
+    +            f -> f.signature().isDeterministic());
+     
+             Symbol normalized;
+             Map<Symbol, List<Literal<?>>> queryPartitionMap = new HashMap<>();
+    diff --git a/server/src/test/java/io/crate/integrationtests/DeleteIntegrationTest.java b/server/src/test/java/io/crate/integrationtests/DeleteIntegrationTest.java
+    --- a/server/src/test/java/io/crate/integrationtests/DeleteIntegrationTest.java
+    +++ b/server/src/test/java/io/crate/integrationtests/DeleteIntegrationTest.java
+    @@ -24,9 +24,12 @@ package io.crate.integrationtests;
+     
+     import static io.crate.testing.Asserts.assertThat;
+     
+    +import java.util.List;
+    +
+     import org.elasticsearch.test.IntegTestCase;
+     import org.junit.Test;
+     
+    +import io.crate.action.sql.BaseResultReceiver;
+     import io.crate.common.unit.TimeValue;
+     import io.crate.execution.dsl.projection.AbstractIndexWriterProjection;
+     import io.crate.testing.UseJdbc;
+    @@ -303,4 +306,31 @@ public class DeleteIntegrationTest extends IntegTestCase {
+                 "1"
+             );
+         }
+    +
+    +    @Test
+    +    public void test_can_reuse_prepared_statement_for_delete_containing_non_deterministic_function() throws Exception {
+    +        execute("CREATE TABLE doc.t (a timestamp with time zone)");
+    +
+    +        try (var session = sqlExecutor.newSession()) {
+    +            session.parse(
+    +                "preparedStatement",
+    +                "DELETE FROM doc.t WHERE a < now() - '3 minute'::INTERVAL",
+    +                List.of()
+    +            );
+    +
+    +            // insert a value that the prepared statement will delete
+    +            execute("INSERT INTO doc.t SELECT now() - '3 minute'::INTERVAL");
+    +            refresh();
+    +
+    +            // execute the prepared statement to delete the inserted value
+    +            session.bind("portalName", "preparedStatement", List.of(), null);
+    +            session.execute("portalName", 0, new BaseResultReceiver());
+    +            session.sync().get();
+    +        }
+    +        refresh();
+    +
+    +        // empty rows implies that the now() in the prepared statement is evaluated during execution
+    +        execute("SELECT * FROM doc.t");
+    +        assertThat(response).isEmpty();
+    +    }
+     }
+  notes: >
+    Backported deterministic-only analysis normalization to 5.6 and added the delete prepared-statement regression test; the 5.7.1 release-note hunk was omitted because that file does not exist in the target ref.
+```
+
+--- END CLI OUTPUT ---
+[11:31:12]   Done in 272.9s | status=success
+[12:53:14] === Row 32: crate  c77d0911 -> f1cc5954  [TYPE-II] ===
+[12:53:14]   Resolving parent of backport commit f1cc5954...
+[12:53:14]   Backport parent (target ref): 10c3cacf8e0b2805e2524dde424b21168a835ba4
+[12:53:14]   Extracting new-version patch for c77d0911...
+[12:53:14]   New-version patch size: 8983 chars
+[12:53:14]   Checking out backport parent 10c3cacf...
+[12:53:15]   ERROR: Could not checkout backport parent 10c3cacf8e0b2805e2524dde424b21168a835ba4: error: Your local changes to the following files would be overwritten by checkout:
+	docs/appendices/release-notes/5.5.3.rst
+	server/src/main/java/io/crate/expression/tablefunctions/UnnestFunction.java
+	server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java
+	server/src/test/java/io/crate/integrationtests/TransportSQLActionSingleNodeTest.java
+Please commit your changes or stash them before you switch branches.
+Aborting

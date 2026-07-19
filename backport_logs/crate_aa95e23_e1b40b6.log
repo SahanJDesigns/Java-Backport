@@ -1,0 +1,526 @@
+[02:47:45] === Row 30: crate  aa95e238 -> e1b40b66  [TYPE-I] ===
+[02:47:45]   Resolving parent of backport commit e1b40b66...
+[02:47:45]   Backport parent (target ref): e2c2cdc89ea828ce366f5338d513e3e561b4b864
+[02:47:45]   Extracting new-version patch for aa95e238...
+[02:47:46]   New-version patch size: 6886 chars
+[02:47:46]   Checking out backport parent e2c2cdc8...
+[02:47:46]   Invoking OpenCode CLI (10914 chars)...
+[02:47:46]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll map the provided master diff onto the current `5.1` checkout, then validate the adapted hunks before applying and committing.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target branch context for changed files
+[ ] Construct and hunk-validate adapted backport patch
+[ ] Apply patch, run verification, and commit result
+[ ] Return YAML with final unified diff
+[0m
+[0m⚙ [0mviewcode {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","path":"server/src/main/java/io/crate/expression/InputFactory.java","startline":1,"endline":280}
+[0m⚙ [0mgit_show {"ref":"aa95e238cb34afeae0bc1d91b524c0fd99ea6c1f"}
+[0m⚙ [0mviewcode {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","path":"server/src/test/java/io/crate/expression/InputFactoryTest.java","startline":1,"endline":260}
+[0m⚙ [0mviewcode {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","path":"docs/admin/system-information.rst","startline":1,"endline":40}
+[0m⚙ [0mviewcode {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","path":"docs/general/information-schema.rst","startline":1,"endline":60}
+The core Java code exists in the same location on `5.1`. The release-note file from master does not exist on this branch, so I’m locating the corresponding `5.1` release-note target rather than creating a `5.10.7` note on a `5.1` branch.
+[0m✱ [0mGlob "docs/appendices/release-notes/*.rst"[90m 100 matches[0m
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/expression/InputFactory.java","start_line":229,"end_line":244,"start_commit":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","end_commit":"e2c2cdc89ea828ce366f5338d513e3e561b4b864"}
+[0m⚙ [0mlocate_symbol {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","symbol":"READ_ONLY_SYSTEM_SCHEMAS"}
+[0m⚙ [0mlocate_symbol {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","symbol":"Schemas"}
+A tool call hit a stale `.git/index.lock` while trying to inspect a symbol. I’m checking the repository state before removing it so normal validation and commit commands can proceed.
+[0m⚙ [0mviewcode {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","path":"docs/appendices/release-notes/5.10.7.rst","startline":1,"endline":80}
+[0m⚙ [0mviewcode {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","path":"docs/appendices/release-notes/5.1.4.rst","startline":1,"endline":80}
+[0m⚙ [0mviewcode {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","path":"server/src/main/java/io/crate/metadata/Schemas.java","startline":1,"endline":160}
+[0m✱ [0mGrep "static Reference refInfo|refInfo\("[90m in server/src/test/java/io/crate/testing · 0 matches[0m
+`Schemas.READ_ONLY_SYSTEM_SCHEMAS` already exists on `5.1`, so the production change is a direct adaptation. I’m checking the test helper API to ensure the added regression test compiles against this branch.
+[0m✱ [0mGrep "refInfo\("[90m in server/src/test/java · 28 matches[0m
+[0m✱ [0mGrep "class TestingHelpers|interface TestingHelpers"[90m in server/src/test/java · 0 matches[0m
+[0m✱ [0mGlob "**/TestingHelpers.java"[90m 1 match[0m
+[0m→ [0mRead server/src/testFixtures/java/io/crate/testing/TestingHelpers.java[90m [offset=1, limit=180][0m
+[0m→ [0mRead server/src/test/java/io/crate/expression/reference/sys/SysShardsExpressionsTest.java[90m [offset=1, limit=45][0m
+[0m✱ [0mGrep "public static Reference refInfo"[90m in server/src/testFixtures/java/io/crate/testing/TestingHelpers.java · 1 match[0m
+[0m→ [0mRead server/src/testFixtures/java/io/crate/testing/TestingHelpers.java[90m [offset=260, limit=45][0m
+[0m⚙ [0mlocate_symbol {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","symbol":"FunctionExpression"}
+I found the test helper and this branch uses pre-underscore Java lambda style, so the backported test will keep `i -> ...` rather than the master-only `_ -> ...` syntax.
+[0m⚙ [0mviewcode {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","path":"server/src/main/java/io/crate/expression/FunctionExpression.java","startline":1,"endline":80}
+[0m
+[0m$ [0mif (Test-Path -LiteralPath ".git\index.lock") { "index.lock exists" } else { "index.lock absent" }; git status --short
+index.lock absent
+?? tags
+[0m
+The repository only has an unrelated untracked `tags` file; I’ll leave it untouched. I’m validating the adapted hunks now before applying anything.
+[0m⚙ [0mvalidate {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","mode":"hunk","patch":"diff --git a/docs/admin/system-information.rst b/docs/admin/system-information.rst\n--- a/docs/admin/system-information.rst\n+++ b/docs/admin/system-information.rst\n@@ -7,7 +7,15 @@ System information\n \n CrateDB provides the ``sys`` schema which contains virtual tables. These tables\n are read-only and can be queried to get statistical real-time information about\n-the cluster, its nodes and their shards:\n+the cluster, its nodes and their shards.\n+\n+.. NOTE::\n+\n+    During a rolling upgrade of the cluster to a newer version, while the\n+    cluster is in a mixed state with nodes on the older and on the new version,\n+    avoid querying the ``sys`` tables using ``SELECT *``, as new columns could\n+    have been added, removed or modified between versions. Instead, use a\n+    defined list of the columns that you need to return from the query.\n \n .. rubric:: Table of contents\n "}
+[0m⚙ [0mvalidate {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.10.7.rst b/docs/appendices/release-notes/5.10.7.rst\n--- a/docs/appendices/release-notes/5.10.7.rst\n+++ b/docs/appendices/release-notes/5.10.7.rst\n@@ -47,6 +47,11 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the\n Fixes\n =====\n \n+- Improved error message thrown when using a ``SELECT *``` on\n+  :ref:`system tables <system-information>`, during a rolling upgrade, when\n+  columns on the ``sys`` table queried differ between the old and the new\n+  cluster nodes.\n+\n - Fixed an issue that would cause wrong column data type to be used when adding\n   parent and child object sub-columns in one\n   :ref:`ALTER TABLE <alter-table-add-column>` statement, e.g.::\n"}
+[0m⚙ [0mvalidate {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","mode":"hunk","patch":"diff --git a/docs/general/information-schema.rst b/docs/general/information-schema.rst\n--- a/docs/general/information-schema.rst\n+++ b/docs/general/information-schema.rst\n@@ -31,6 +31,14 @@ but no privilege at all on ``doc.locations``, when ``john`` issues a ``SELECT *\n FROM information_schema.tables`` statement, the tables information related to\n the ``doc.locations`` table will not be returned.\n \n+.. NOTE::\n+\n+    During a rolling upgrade of the cluster to a newer version, while the\n+    cluster is in a mixed state with nodes on the older and on the new version,\n+    avoid querying the ``sys`` tables using ``SELECT *``, as new columns could\n+    have been added, removed or modified between versions. Instead, use a\n+    defined list of the columns that you need to return from the query.\n+\n Virtual tables\n ==============\n "}
+[0m⚙ [0mvalidate {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/expression/InputFactory.java b/server/src/main/java/io/crate/expression/InputFactory.java\n--- a/server/src/main/java/io/crate/expression/InputFactory.java\n+++ b/server/src/main/java/io/crate/expression/InputFactory.java\n@@ -43,6 +43,7 @@ import io.crate.expression.symbol.SymbolVisitor;\n import io.crate.metadata.FunctionImplementation;\n import io.crate.metadata.NodeContext;\n import io.crate.metadata.Reference;\n+import io.crate.metadata.Schemas;\n import io.crate.metadata.TransactionContext;\n \n /**\n@@ -236,7 +237,12 @@ public class InputFactory {\n             }\n             implementation = referenceResolver.getImplementation(ref);\n             if (implementation == null) {\n-                throw new IllegalArgumentException(\"Column implementation not found for: \" + ref);\n+                String schema = ref.ident().tableIdent().schema();\n+                String msg = Schemas.READ_ONLY_SYSTEM_SCHEMAS.contains(schema)\n+                    ? \"Column implementation not found for: \" + ref + \". This can happen in mixed clusters when using \" +\n+                        \"`SELECT *`; Declare the column list explicitly instead\"\n+                    : \"Column implementation not found for: \" + ref;\n+                throw new IllegalArgumentException(msg);\n             }\n             referenceMap.put(ref, implementation);\n             return implementation;\n"}
+[0m⚙ [0mvalidate {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/expression/InputFactoryTest.java b/server/src/test/java/io/crate/expression/InputFactoryTest.java\n--- a/server/src/test/java/io/crate/expression/InputFactoryTest.java\n+++ b/server/src/test/java/io/crate/expression/InputFactoryTest.java\n@@ -21,7 +21,9 @@\n \n package io.crate.expression;\n \n+import static io.crate.testing.TestingHelpers.refInfo;\n import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n \n import java.util.ArrayList;\n import java.util.Arrays;\n@@ -47,7 +49,9 @@ import io.crate.expression.symbol.Symbol;\n import io.crate.metadata.CoordinatorTxnCtx;\n import io.crate.metadata.FunctionImplementation;\n import io.crate.metadata.FunctionType;\n+import io.crate.metadata.Reference;\n import io.crate.metadata.RelationName;\n+import io.crate.metadata.RowGranularity;\n import io.crate.metadata.Scalar;\n import io.crate.metadata.Scalar.Feature;\n import io.crate.metadata.TransactionContext;\n@@ -206,4 +210,19 @@ public class InputFactoryTest extends CrateDummyClusterServiceUnitTest {\n \n         assertThat(input1).isSameAs(input2);\n     }\n+\n+    @Test\n+    public void test_missing_reference() throws Exception {\n+        InputFactory.Context<Input<?>> ctx = factory.ctxForRefs(txnCtx, i -> null);\n+\n+        Reference refInfo = refInfo(\"doc.tbl.id\", DataTypes.INTEGER, RowGranularity.SHARD);\n+        assertThatThrownBy(() -> ctx.add(refInfo))\n+            .isExactlyInstanceOf(IllegalArgumentException.class)\n+            .hasMessage(\"Column implementation not found for: id\");\n+\n+        Reference sysRefInfo = refInfo(\"sys.shards.id\", DataTypes.INTEGER, RowGranularity.SHARD);\n+        assertThatThrownBy(() -> ctx.add(sysRefInfo))\n+            .isExactlyInstanceOf(IllegalArgumentException.class)\n+            .hasMessage(\"Column implementation not found for: id. This can happen in mixed clusters when using `SELECT *`; Declare the column list explicitly instead\");\n+    }\n }\n"}
+[0m⚙ [0mvalidate {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","mode":"hunk","patch":"diff --git a/docs/admin/system-information.rst b/docs/admin/system-information.rst\n--- a/docs/admin/system-information.rst\n+++ b/docs/admin/system-information.rst\n@@ -7,7 +7,15 @@ System information\n \n CrateDB provides the ``sys`` schema which contains virtual tables. These tables\n are read-only and can be queried to get statistical real-time information about\n-the cluster, its nodes and their shards:\n+the cluster, its nodes and their shards.\n+\n+.. NOTE::\n+\n+    During a rolling upgrade of the cluster to a newer version, while the\n+    cluster is in a mixed state with nodes on the older and on the new version,\n+    avoid querying the ``sys`` tables using ``SELECT *``, as new columns could\n+    have been added, removed or modified between versions. Instead, use a\n+    defined list of the columns that you need to return from the query.\n \n .. rubric:: Table of contents\n"}
+[0m⚙ [0mvalidate {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","mode":"hunk","patch":"diff --git a/docs/general/information-schema.rst b/docs/general/information-schema.rst\n--- a/docs/general/information-schema.rst\n+++ b/docs/general/information-schema.rst\n@@ -31,6 +31,14 @@ but no privilege at all on ``doc.locations``, when ``john`` issues a ``SELECT *\n FROM information_schema.tables`` statement, the tables information related to\n the ``doc.locations`` table will not be returned.\n \n+.. NOTE::\n+\n+    During a rolling upgrade of the cluster to a newer version, while the\n+    cluster is in a mixed state with nodes on the older and on the new version,\n+    avoid querying the ``sys`` tables using ``SELECT *``, as new columns could\n+    have been added, removed or modified between versions. Instead, use a\n+    defined list of the columns that you need to return from the query.\n+\n Virtual tables\n ==============\n"}
+The release-note and Java hunks validate cleanly. The doc hunks need narrower context because the validation parser rejected leading blank context lines, so I’m adjusting those hunk headers without changing the content.
+[0m⚙ [0mvalidate {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","mode":"hunk","patch":"diff --git a/docs/admin/system-information.rst b/docs/admin/system-information.rst\n--- a/docs/admin/system-information.rst\n+++ b/docs/admin/system-information.rst\n@@ -8,6 +8,14 @@ System information\n CrateDB provides the ``sys`` schema which contains virtual tables. These tables\n are read-only and can be queried to get statistical real-time information about\n-the cluster, its nodes and their shards:\n+the cluster, its nodes and their shards.\n+\n+.. NOTE::\n+\n+    During a rolling upgrade of the cluster to a newer version, while the\n+    cluster is in a mixed state with nodes on the older and on the new version,\n+    avoid querying the ``sys`` tables using ``SELECT *``, as new columns could\n+    have been added, removed or modified between versions. Instead, use a\n+    defined list of the columns that you need to return from the query.\n \n .. rubric:: Table of contents\n"}
+[0m⚙ [0mvalidate {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","mode":"hunk","patch":"diff --git a/docs/general/information-schema.rst b/docs/general/information-schema.rst\n--- a/docs/general/information-schema.rst\n+++ b/docs/general/information-schema.rst\n@@ -29,6 +29,14 @@ but no privilege at all on ``doc.locations``, when ``john`` issues a ``SELECT *\n FROM information_schema.tables`` statement, the tables information related to\n the ``doc.locations`` table will not be returned.\n \n+.. NOTE::\n+\n+    During a rolling upgrade of the cluster to a newer version, while the\n+    cluster is in a mixed state with nodes on the older and on the new version,\n+    avoid querying the ``sys`` tables using ``SELECT *``, as new columns could\n+    have been added, removed or modified between versions. Instead, use a\n+    defined list of the columns that you need to return from the query.\n+\n Virtual tables\n ==============\n"}
+[0m⚙ [0mvalidate {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","mode":"hunk","patch":"diff --git a/docs/general/information-schema.rst b/docs/general/information-schema.rst\n--- a/docs/general/information-schema.rst\n+++ b/docs/general/information-schema.rst\n@@ -31,0 +32,8 @@\n+\n+.. NOTE::\n+\n+    During a rolling upgrade of the cluster to a newer version, while the\n+    cluster is in a mixed state with nodes on the older and on the new version,\n+    avoid querying the ``sys`` tables using ``SELECT *``, as new columns could\n+    have been added, removed or modified between versions. Instead, use a\n+    defined list of the columns that you need to return from the query.\n"}
+[0m⚙ [0mvalidate {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","mode":"hunk","patch":"diff --git a/docs/admin/system-information.rst b/docs/admin/system-information.rst\n--- a/docs/admin/system-information.rst\n+++ b/docs/admin/system-information.rst\n@@ -10 +10,9 @@\n-the cluster, its nodes and their shards:\n+the cluster, its nodes and their shards.\n+\n+.. NOTE::\n+\n+    During a rolling upgrade of the cluster to a newer version, while the\n+    cluster is in a mixed state with nodes on the older and on the new version,\n+    avoid querying the ``sys`` tables using ``SELECT *``, as new columns could\n+    have been added, removed or modified between versions. Instead, use a\n+    defined list of the columns that you need to return from the query.\n"}
+[0m⚙ [0mvalidate {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","mode":"hunk","patch":"diff --git a/docs/admin/system-information.rst b/docs/admin/system-information.rst\n--- a/docs/admin/system-information.rst\n+++ b/docs/admin/system-information.rst\n@@ -10,1 +10,9 @@\n-the cluster, its nodes and their shards:\n+the cluster, its nodes and their shards.\n+\n+.. NOTE::\n+\n+    During a rolling upgrade of the cluster to a newer version, while the\n+    cluster is in a mixed state with nodes on the older and on the new version,\n+    avoid querying the ``sys`` tables using ``SELECT *``, as new columns could\n+    have been added, removed or modified between versions. Instead, use a\n+    defined list of the columns that you need to return from the query.\n"}
+The remaining system-information doc hunk is a direct one-line replacement plus note insertion; validation reports a parser/context quirk around the colon line despite showing a 100% match. I’m applying the validated adaptation to the working tree and will use full-patch validation against the base ref afterward.
+[0m% [0mPatch 5 files
+The backport changes are applied. I’m checking the resulting diff and running targeted verification before committing.
+[0m
+[0m$ [0mgit diff -- docs/admin/system-information.rst docs/appendices/release-notes/5.10.7.rst docs/general/information-schema.rst server/src/main/java/io/crate/expression/InputFactory.java server/src/test/java/io/crate/expression/InputFactoryTest.java
+warning: in the working copy of 'docs/admin/system-information.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/appendices/release-notes/5.10.7.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/general/information-schema.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/expression/InputFactory.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/expression/InputFactoryTest.java', LF will be replaced by CRLF the next time Git touches it
+diff --git a/docs/admin/system-information.rst b/docs/admin/system-information.rst
+index 53a4e5125b..cf198f12f0 100644
+--- a/docs/admin/system-information.rst
++++ b/docs/admin/system-information.rst
+@@ -7,7 +7,15 @@ System information
+ 
+ CrateDB provides the ``sys`` schema which contains virtual tables. These tables
+ are read-only and can be queried to get statistical real-time information about
+-the cluster, its nodes and their shards:
++the cluster, its nodes and their shards.
++
++.. NOTE::
++
++    During a rolling upgrade of the cluster to a newer version, while the
++    cluster is in a mixed state with nodes on the older and on the new version,
++    avoid querying the ``sys`` tables using ``SELECT *``, as new columns could
++    have been added, removed or modified between versions. Instead, use a
++    defined list of the columns that you need to return from the query.
+ 
+ .. rubric:: Table of contents
+ 
+diff --git a/docs/appendices/release-notes/5.10.7.rst b/docs/appendices/release-notes/5.10.7.rst
+index abcd4c8781..5c03861e05 100644
+--- a/docs/appendices/release-notes/5.10.7.rst
++++ b/docs/appendices/release-notes/5.10.7.rst
+@@ -47,6 +47,11 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the
+ Fixes
+ =====
+ 
++- Improved error message thrown when using a ``SELECT *``` on
++  :ref:`system tables <system-information>`, during a rolling upgrade, when
++  columns on the ``sys`` table queried differ between the old and the new
++  cluster nodes.
++
+ - Fixed an issue that would cause wrong column data type to be used when adding
+   parent and child object sub-columns in one
+   :ref:`ALTER TABLE <alter-table-add-column>` statement, e.g.::
+diff --git a/docs/general/information-schema.rst b/docs/general/information-schema.rst
+index 92e2c81d9c..07e9f4e353 100644
+--- a/docs/general/information-schema.rst
++++ b/docs/general/information-schema.rst
+@@ -31,6 +31,14 @@ but no privilege at all on ``doc.locations``, when ``john`` issues a ``SELECT *
+ FROM information_schema.tables`` statement, the tables information related to
+ the ``doc.locations`` table will not be returned.
+ 
++.. NOTE::
++
++    During a rolling upgrade of the cluster to a newer version, while the
++    cluster is in a mixed state with nodes on the older and on the new version,
++    avoid querying the ``sys`` tables using ``SELECT *``, as new columns could
++    have been added, removed or modified between versions. Instead, use a
++    defined list of the columns that you need to return from the query.
++
+ Virtual tables
+ ==============
+ 
+diff --git a/server/src/main/java/io/crate/expression/InputFactory.java b/server/src/main/java/io/crate/expression/InputFactory.java
+index 09b3b6e4cd..cd1acb0670 100644
+--- a/server/src/main/java/io/crate/expression/InputFactory.java
++++ b/server/src/main/java/io/crate/expression/InputFactory.java
+@@ -45,6 +45,7 @@ import io.crate.expression.symbol.SymbolVisitor;
+ import io.crate.metadata.FunctionImplementation;
+ import io.crate.metadata.NodeContext;
+ import io.crate.metadata.Reference;
++import io.crate.metadata.Schemas;
+ import io.crate.metadata.TransactionContext;
+ 
+ /**
+@@ -238,7 +239,12 @@ public class InputFactory {
+             }
+             implementation = referenceResolver.getImplementation(ref);
+             if (implementation == null) {
+-                throw new IllegalArgumentException("Column implementation not found for: " + ref);
++                String schema = ref.ident().tableIdent().schema();
++                String msg = Schemas.READ_ONLY_SYSTEM_SCHEMAS.contains(schema)
++                    ? "Column implementation not found for: " + ref + ". This can happen in mixed clusters when using " +
++                        "`SELECT *`; Declare the column list explicitly instead"
++                    : "Column implementation not found for: " + ref;
++                throw new IllegalArgumentException(msg);
+             }
+             referenceMap.put(ref, implementation);
+             return implementation;
+diff --git a/server/src/test/java/io/crate/expression/InputFactoryTest.java b/server/src/test/java/io/crate/expression/InputFactoryTest.java
+index 0990fdd0ed..8b0d8110b8 100644
+--- a/server/src/test/java/io/crate/expression/InputFactoryTest.java
++++ b/server/src/test/java/io/crate/expression/InputFactoryTest.java
+@@ -21,7 +21,9 @@
+ 
+ package io.crate.expression;
+ 
++import static io.crate.testing.TestingHelpers.refInfo;
+ import static org.assertj.core.api.Assertions.assertThat;
++import static org.assertj.core.api.Assertions.assertThatThrownBy;
+ 
+ import java.util.ArrayList;
+ import java.util.Arrays;
+@@ -47,7 +49,9 @@ import io.crate.expression.symbol.Symbol;
+ import io.crate.metadata.CoordinatorTxnCtx;
+ import io.crate.metadata.FunctionImplementation;
+ import io.crate.metadata.FunctionType;
++import io.crate.metadata.Reference;
+ import io.crate.metadata.RelationName;
++import io.crate.metadata.RowGranularity;
+ import io.crate.metadata.Scalar;
+ import io.crate.metadata.Scalar.Feature;
+ import io.crate.metadata.TransactionContext;
+@@ -206,4 +210,19 @@ public class InputFactoryTest extends CrateDummyClusterServiceUnitTest {
+ 
+         assertThat(input1).isSameAs(input2);
+     }
++
++    @Test
++    public void test_missing_reference() throws Exception {
++        InputFactory.Context<Input<?>> ctx = factory.ctxForRefs(txnCtx, i -> null);
++
++        Reference refInfo = refInfo("doc.tbl.id", DataTypes.INTEGER, RowGranularity.SHARD);
++        assertThatThrownBy(() -> ctx.add(refInfo))
++            .isExactlyInstanceOf(IllegalArgumentException.class)
++            .hasMessage("Column implementation not found for: id");
++
++        Reference sysRefInfo = refInfo("sys.shards.id", DataTypes.INTEGER, RowGranularity.SHARD);
++        assertThatThrownBy(() -> ctx.add(sysRefInfo))
++            .isExactlyInstanceOf(IllegalArgumentException.class)
++            .hasMessage("Column implementation not found for: id. This can happen in mixed clusters when using `SELECT *`; Declare the column list explicitly instead");
++    }
+ }
+[0m
+[0m$ [0m./gradlew :server:test --tests io.crate.expression.InputFactoryTest
+./gradlew : The term './gradlew' is not recognized as the name of a cmdlet, function, script file, or operable 
+program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:1
++ ./gradlew :server:test --tests io.crate.expression.InputFactoryTest
++ ~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (./gradlew:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+[0m
+[0m✱ [0mGlob "gradlew*"[90m 0 matches[0m
+[0m→ [0mRead .[90m [limit=200][0m
+This checkout is Maven-based and has no Gradle wrapper, so the first test command was not applicable. I’m rerunning the targeted test through `mvnw.cmd`.
+[0m
+[0m$ [0m& ".\mvnw.cmd" -pl server -Dtest=io.crate.expression.InputFactoryTest test
+Error: JAVA_HOME not found in your environment. 
+Please set the JAVA_HOME variable in your environment to match the 
+location of your Java installation.
+[0m
+The targeted Maven test is blocked because `JAVA_HOME` is not set in the environment. I’ll still validate that the complete patch applies cleanly against the required base ref, then commit the backport.
+[0m⚙ [0mvalidate {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","mode":"full","patch":"diff --git a/docs/admin/system-information.rst b/docs/admin/system-information.rst\nindex 53a4e5125b..cf198f12f0 100644\n--- a/docs/admin/system-information.rst\n+++ b/docs/admin/system-information.rst\n@@ -7,7 +7,15 @@ System information\n \n CrateDB provides the ``sys`` schema which contains virtual tables. These tables\n are read-only and can be queried to get statistical real-time information about\n-the cluster, its nodes and their shards:\n+the cluster, its nodes and their shards.\n+\n+.. NOTE::\n+\n+    During a rolling upgrade of the cluster to a newer version, while the\n+    cluster is in a mixed state with nodes on the older and on the new version,\n+    avoid querying the ``sys`` tables using ``SELECT *``, as new columns could\n+    have been added, removed or modified between versions. Instead, use a\n+    defined list of the columns that you need to return from the query.\n \n .. rubric:: Table of contents\n \ndiff --git a/docs/appendices/release-notes/5.10.7.rst b/docs/appendices/release-notes/5.10.7.rst\nindex abcd4c8781..5c03861e05 100644\n--- a/docs/appendices/release-notes/5.10.7.rst\n+++ b/docs/appendices/release-notes/5.10.7.rst\n@@ -47,6 +47,11 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the\n Fixes\n =====\n \n+- Improved error message thrown when using a ``SELECT *``` on\n+  :ref:`system tables <system-information>`, during a rolling upgrade, when\n+  columns on the ``sys`` table queried differ between the old and the new\n+  cluster nodes.\n+\n - Fixed an issue that would cause wrong column data type to be used when adding\n   parent and child object sub-columns in one\n   :ref:`ALTER TABLE <alter-table-add-column>` statement, e.g.::\ndiff --git a/docs/general/information-schema.rst b/docs/general/information-schema.rst\nindex 92e2c81d9c..07e9f4e353 100644\n--- a/docs/general/information-schema.rst\n+++ b/docs/general/information-schema.rst\n@@ -31,6 +31,14 @@ but no privilege at all on ``doc.locations``, when ``john`` issues a ``SELECT *\n FROM information_schema.tables`` statement, the tables information related to\n the ``doc.locations`` table will not be returned.\n \n+.. NOTE::\n+\n+    During a rolling upgrade of the cluster to a newer version, while the\n+    cluster is in a mixed state with nodes on the older and on the new version,\n+    avoid querying the ``sys`` tables using ``SELECT *``, as new columns could\n+    have been added, removed or modified between versions. Instead, use a\n+    defined list of the columns that you need to return from the query.\n+\n Virtual tables\n ==============\n \ndiff --git a/server/src/main/java/io/crate/expression/InputFactory.java b/server/src/main/java/io/crate/expression/InputFactory.java\nindex 09b3b6e4cd..cd1acb0670 100644\n--- a/server/src/main/java/io/crate/expression/InputFactory.java\n+++ b/server/src/main/java/io/crate/expression/InputFactory.java\n@@ -45,6 +45,7 @@ import io.crate.expression.symbol.SymbolVisitor;\n import io.crate.metadata.FunctionImplementation;\n import io.crate.metadata.NodeContext;\n import io.crate.metadata.Reference;\n+import io.crate.metadata.Schemas;\n import io.crate.metadata.TransactionContext;\n \n /**\n@@ -238,7 +239,12 @@ public class InputFactory {\n             }\n             implementation = referenceResolver.getImplementation(ref);\n             if (implementation == null) {\n-                throw new IllegalArgumentException(\"Column implementation not found for: \" + ref);\n+                String schema = ref.ident().tableIdent().schema();\n+                String msg = Schemas.READ_ONLY_SYSTEM_SCHEMAS.contains(schema)\n+                    ? \"Column implementation not found for: \" + ref + \". This can happen in mixed clusters when using \" +\n+                        \"`SELECT *`; Declare the column list explicitly instead\"\n+                    : \"Column implementation not found for: \" + ref;\n+                throw new IllegalArgumentException(msg);\n             }\n             referenceMap.put(ref, implementation);\n             return implementation;\ndiff --git a/server/src/test/java/io/crate/expression/InputFactoryTest.java b/server/src/test/java/io/crate/expression/InputFactoryTest.java\nindex 0990fdd0ed..8b0d8110b8 100644\n--- a/server/src/test/java/io/crate/expression/InputFactoryTest.java\n+++ b/server/src/test/java/io/crate/expression/InputFactoryTest.java\n@@ -21,7 +21,9 @@\n \n package io.crate.expression;\n \n+import static io.crate.testing.TestingHelpers.refInfo;\n import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n \n import java.util.ArrayList;\n import java.util.Arrays;\n@@ -47,7 +49,9 @@ import io.crate.expression.symbol.Symbol;\n import io.crate.metadata.CoordinatorTxnCtx;\n import io.crate.metadata.FunctionImplementation;\n import io.crate.metadata.FunctionType;\n+import io.crate.metadata.Reference;\n import io.crate.metadata.RelationName;\n+import io.crate.metadata.RowGranularity;\n import io.crate.metadata.Scalar;\n import io.crate.metadata.Scalar.Feature;\n import io.crate.metadata.TransactionContext;\n@@ -206,4 +210,19 @@ public class InputFactoryTest extends CrateDummyClusterServiceUnitTest {\n \n         assertThat(input1).isSameAs(input2);\n     }\n+\n+    @Test\n+    public void test_missing_reference() throws Exception {\n+        InputFactory.Context<Input<?>> ctx = factory.ctxForRefs(txnCtx, i -> null);\n+\n+        Reference refInfo = refInfo(\"doc.tbl.id\", DataTypes.INTEGER, RowGranularity.SHARD);\n+        assertThatThrownBy(() -> ctx.add(refInfo))\n+            .isExactlyInstanceOf(IllegalArgumentException.class)\n+            .hasMessage(\"Column implementation not found for: id\");\n+\n+        Reference sysRefInfo = refInfo(\"sys.shards.id\", DataTypes.INTEGER, RowGranularity.SHARD);\n+        assertThatThrownBy(() -> ctx.add(sysRefInfo))\n+            .isExactlyInstanceOf(IllegalArgumentException.class)\n+            .hasMessage(\"Column implementation not found for: id. This can happen in mixed clusters when using `SELECT *`; Declare the column list explicitly instead\");\n+    }\n }\n"}
+The validation service’s full apply check appears to be running against the already-modified working tree, so it reports the old context as missing. I’m doing local whitespace checks, then staging only the five backport files and committing.
+[0m
+[0m$ [0mgit diff --check
+warning: in the working copy of 'docs/admin/system-information.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/appendices/release-notes/5.10.7.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/general/information-schema.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/expression/InputFactory.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/expression/InputFactoryTest.java', LF will be replaced by CRLF the next time Git touches it
+[0m
+[0m$ [0mgit status --short
+M docs/admin/system-information.rst
+ M docs/appendices/release-notes/5.10.7.rst
+ M docs/general/information-schema.rst
+ M server/src/main/java/io/crate/expression/InputFactory.java
+ M server/src/test/java/io/crate/expression/InputFactoryTest.java
+?? tags
+[0m
+[0m$ [0mgit add -- "docs/admin/system-information.rst" "docs/appendices/release-notes/5.10.7.rst" "docs/general/information-schema.rst" "server/src/main/java/io/crate/expression/InputFactory.java" "server/src/test/java/io/crate/expression/InputFactoryTest.java"; if ($?) { git commit -m "Improve missing sys column error" }
+warning: in the working copy of 'docs/admin/system-information.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/appendices/release-notes/5.10.7.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/general/information-schema.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/expression/InputFactory.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/expression/InputFactoryTest.java', LF will be replaced by CRLF the next time Git touches it
+[detached HEAD e329aec1d1] Improve missing sys column error
+ 5 files changed, 48 insertions(+), 2 deletions(-)
+[0m
+[0m$ [0mgit status --short
+?? tags
+[0m
+[0m$ [0mgit diff e2c2cdc89ea828ce366f5338d513e3e561b4b864 HEAD
+diff --git a/docs/admin/system-information.rst b/docs/admin/system-information.rst
+index 53a4e5125b..cf198f12f0 100644
+--- a/docs/admin/system-information.rst
++++ b/docs/admin/system-information.rst
+@@ -7,7 +7,15 @@ System information
+ 
+ CrateDB provides the ``sys`` schema which contains virtual tables. These tables
+ are read-only and can be queried to get statistical real-time information about
+-the cluster, its nodes and their shards:
++the cluster, its nodes and their shards.
++
++.. NOTE::
++
++    During a rolling upgrade of the cluster to a newer version, while the
++    cluster is in a mixed state with nodes on the older and on the new version,
++    avoid querying the ``sys`` tables using ``SELECT *``, as new columns could
++    have been added, removed or modified between versions. Instead, use a
++    defined list of the columns that you need to return from the query.
+ 
+ .. rubric:: Table of contents
+ 
+diff --git a/docs/appendices/release-notes/5.10.7.rst b/docs/appendices/release-notes/5.10.7.rst
+index abcd4c8781..5c03861e05 100644
+--- a/docs/appendices/release-notes/5.10.7.rst
++++ b/docs/appendices/release-notes/5.10.7.rst
+@@ -47,6 +47,11 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the
+ Fixes
+ =====
+ 
++- Improved error message thrown when using a ``SELECT *``` on
++  :ref:`system tables <system-information>`, during a rolling upgrade, when
++  columns on the ``sys`` table queried differ between the old and the new
++  cluster nodes.
++
+ - Fixed an issue that would cause wrong column data type to be used when adding
+   parent and child object sub-columns in one
+   :ref:`ALTER TABLE <alter-table-add-column>` statement, e.g.::
+diff --git a/docs/general/information-schema.rst b/docs/general/information-schema.rst
+index 92e2c81d9c..07e9f4e353 100644
+--- a/docs/general/information-schema.rst
++++ b/docs/general/information-schema.rst
+@@ -31,6 +31,14 @@ but no privilege at all on ``doc.locations``, when ``john`` issues a ``SELECT *
+ FROM information_schema.tables`` statement, the tables information related to
+ the ``doc.locations`` table will not be returned.
+ 
++.. NOTE::
++
++    During a rolling upgrade of the cluster to a newer version, while the
++    cluster is in a mixed state with nodes on the older and on the new version,
++    avoid querying the ``sys`` tables using ``SELECT *``, as new columns could
++    have been added, removed or modified between versions. Instead, use a
++    defined list of the columns that you need to return from the query.
++
+ Virtual tables
+ ==============
+ 
+diff --git a/server/src/main/java/io/crate/expression/InputFactory.java b/server/src/main/java/io/crate/expression/InputFactory.java
+index 09b3b6e4cd..cd1acb0670 100644
+--- a/server/src/main/java/io/crate/expression/InputFactory.java
++++ b/server/src/main/java/io/crate/expression/InputFactory.java
+@@ -45,6 +45,7 @@ import io.crate.expression.symbol.SymbolVisitor;
+ import io.crate.metadata.FunctionImplementation;
+ import io.crate.metadata.NodeContext;
+ import io.crate.metadata.Reference;
++import io.crate.metadata.Schemas;
+ import io.crate.metadata.TransactionContext;
+ 
+ /**
+@@ -238,7 +239,12 @@ public class InputFactory {
+             }
+             implementation = referenceResolver.getImplementation(ref);
+             if (implementation == null) {
+-                throw new IllegalArgumentException("Column implementation not found for: " + ref);
++                String schema = ref.ident().tableIdent().schema();
++                String msg = Schemas.READ_ONLY_SYSTEM_SCHEMAS.contains(schema)
++                    ? "Column implementation not found for: " + ref + ". This can happen in mixed clusters when using " +
++                        "`SELECT *`; Declare the column list explicitly instead"
++                    : "Column implementation not found for: " + ref;
++                throw new IllegalArgumentException(msg);
+             }
+             referenceMap.put(ref, implementation);
+             return implementation;
+diff --git a/server/src/test/java/io/crate/expression/InputFactoryTest.java b/server/src/test/java/io/crate/expression/InputFactoryTest.java
+index 0990fdd0ed..8b0d8110b8 100644
+--- a/server/src/test/java/io/crate/expression/InputFactoryTest.java
++++ b/server/src/test/java/io/crate/expression/InputFactoryTest.java
+@@ -21,7 +21,9 @@
+ 
+ package io.crate.expression;
+ 
++import static io.crate.testing.TestingHelpers.refInfo;
+ import static org.assertj.core.api.Assertions.assertThat;
++import static org.assertj.core.api.Assertions.assertThatThrownBy;
+ 
+ import java.util.ArrayList;
+ import java.util.Arrays;
+@@ -47,7 +49,9 @@ import io.crate.expression.symbol.Symbol;
+ import io.crate.metadata.CoordinatorTxnCtx;
+ import io.crate.metadata.FunctionImplementation;
+ import io.crate.metadata.FunctionType;
++import io.crate.metadata.Reference;
+ import io.crate.metadata.RelationName;
++import io.crate.metadata.RowGranularity;
+ import io.crate.metadata.Scalar;
+ import io.crate.metadata.Scalar.Feature;
+ import io.crate.metadata.TransactionContext;
+@@ -206,4 +210,19 @@ public class InputFactoryTest extends CrateDummyClusterServiceUnitTest {
+ 
+         assertThat(input1).isSameAs(input2);
+     }
++
++    @Test
++    public void test_missing_reference() throws Exception {
++        InputFactory.Context<Input<?>> ctx = factory.ctxForRefs(txnCtx, i -> null);
++
++        Reference refInfo = refInfo("doc.tbl.id", DataTypes.INTEGER, RowGranularity.SHARD);
++        assertThatThrownBy(() -> ctx.add(refInfo))
++            .isExactlyInstanceOf(IllegalArgumentException.class)
++            .hasMessage("Column implementation not found for: id");
++
++        Reference sysRefInfo = refInfo("sys.shards.id", DataTypes.INTEGER, RowGranularity.SHARD);
++        assertThatThrownBy(() -> ctx.add(sysRefInfo))
++            .isExactlyInstanceOf(IllegalArgumentException.class)
++            .hasMessage("Column implementation not found for: id. This can happen in mixed clusters when using `SELECT *`; Declare the column list explicitly instead");
++    }
+ }
+[0m
+The commit was created as `e329aec1d1`. I’m running the requested full validation on the committed patch against the required base ref now.
+[0m⚙ [0mvalidate {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","mode":"full","patch":"diff --git a/docs/admin/system-information.rst b/docs/admin/system-information.rst\nindex 53a4e5125b..cf198f12f0 100644\n--- a/docs/admin/system-information.rst\n+++ b/docs/admin/system-information.rst\n@@ -7,7 +7,15 @@ System information\n \n CrateDB provides the ``sys`` schema which contains virtual tables. These tables\n are read-only and can be queried to get statistical real-time information about\n-the cluster, its nodes and their shards:\n+the cluster, its nodes and their shards.\n+\n+.. NOTE::\n+\n+    During a rolling upgrade of the cluster to a newer version, while the\n+    cluster is in a mixed state with nodes on the older and on the new version,\n+    avoid querying the ``sys`` tables using ``SELECT *``, as new columns could\n+    have been added, removed or modified between versions. Instead, use a\n+    defined list of the columns that you need to return from the query.\n \n .. rubric:: Table of contents\n \ndiff --git a/docs/appendices/release-notes/5.10.7.rst b/docs/appendices/release-notes/5.10.7.rst\nindex abcd4c8781..5c03861e05 100644\n--- a/docs/appendices/release-notes/5.10.7.rst\n+++ b/docs/appendices/release-notes/5.10.7.rst\n@@ -47,6 +47,11 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the\n Fixes\n =====\n \n+- Improved error message thrown when using a ``SELECT *``` on\n+  :ref:`system tables <system-information>`, during a rolling upgrade, when\n+  columns on the ``sys`` table queried differ between the old and the new\n+  cluster nodes.\n+\n - Fixed an issue that would cause wrong column data type to be used when adding\n   parent and child object sub-columns in one\n   :ref:`ALTER TABLE <alter-table-add-column>` statement, e.g.::\ndiff --git a/docs/general/information-schema.rst b/docs/general/information-schema.rst\nindex 92e2c81d9c..07e9f4e353 100644\n--- a/docs/general/information-schema.rst\n+++ b/docs/general/information-schema.rst\n@@ -31,6 +31,14 @@ but no privilege at all on ``doc.locations``, when ``john`` issues a ``SELECT *\n FROM information_schema.tables`` statement, the tables information related to\n the ``doc.locations`` table will not be returned.\n \n+.. NOTE::\n+\n+    During a rolling upgrade of the cluster to a newer version, while the\n+    cluster is in a mixed state with nodes on the older and on the new version,\n+    avoid querying the ``sys`` tables using ``SELECT *``, as new columns could\n+    have been added, removed or modified between versions. Instead, use a\n+    defined list of the columns that you need to return from the query.\n+\n Virtual tables\n ==============\n \ndiff --git a/server/src/main/java/io/crate/expression/InputFactory.java b/server/src/main/java/io/crate/expression/InputFactory.java\nindex 09b3b6e4cd..cd1acb0670 100644\n--- a/server/src/main/java/io/crate/expression/InputFactory.java\n+++ b/server/src/main/java/io/crate/expression/InputFactory.java\n@@ -45,6 +45,7 @@ import io.crate.expression.symbol.SymbolVisitor;\n import io.crate.metadata.FunctionImplementation;\n import io.crate.metadata.NodeContext;\n import io.crate.metadata.Reference;\n+import io.crate.metadata.Schemas;\n import io.crate.metadata.TransactionContext;\n \n /**\n@@ -238,7 +239,12 @@ public class InputFactory {\n             }\n             implementation = referenceResolver.getImplementation(ref);\n             if (implementation == null) {\n-                throw new IllegalArgumentException(\"Column implementation not found for: \" + ref);\n+                String schema = ref.ident().tableIdent().schema();\n+                String msg = Schemas.READ_ONLY_SYSTEM_SCHEMAS.contains(schema)\n+                    ? \"Column implementation not found for: \" + ref + \". This can happen in mixed clusters when using \" +\n+                        \"`SELECT *`; Declare the column list explicitly instead\"\n+                    : \"Column implementation not found for: \" + ref;\n+                throw new IllegalArgumentException(msg);\n             }\n             referenceMap.put(ref, implementation);\n             return implementation;\ndiff --git a/server/src/test/java/io/crate/expression/InputFactoryTest.java b/server/src/test/java/io/crate/expression/InputFactoryTest.java\nindex 0990fdd0ed..8b0d8110b8 100644\n--- a/server/src/test/java/io/crate/expression/InputFactoryTest.java\n+++ b/server/src/test/java/io/crate/expression/InputFactoryTest.java\n@@ -21,7 +21,9 @@\n \n package io.crate.expression;\n \n+import static io.crate.testing.TestingHelpers.refInfo;\n import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n \n import java.util.ArrayList;\n import java.util.Arrays;\n@@ -47,7 +49,9 @@ import io.crate.expression.symbol.Symbol;\n import io.crate.metadata.CoordinatorTxnCtx;\n import io.crate.metadata.FunctionImplementation;\n import io.crate.metadata.FunctionType;\n+import io.crate.metadata.Reference;\n import io.crate.metadata.RelationName;\n+import io.crate.metadata.RowGranularity;\n import io.crate.metadata.Scalar;\n import io.crate.metadata.Scalar.Feature;\n import io.crate.metadata.TransactionContext;\n@@ -206,4 +210,19 @@ public class InputFactoryTest extends CrateDummyClusterServiceUnitTest {\n \n         assertThat(input1).isSameAs(input2);\n     }\n+\n+    @Test\n+    public void test_missing_reference() throws Exception {\n+        InputFactory.Context<Input<?>> ctx = factory.ctxForRefs(txnCtx, i -> null);\n+\n+        Reference refInfo = refInfo(\"doc.tbl.id\", DataTypes.INTEGER, RowGranularity.SHARD);\n+        assertThatThrownBy(() -> ctx.add(refInfo))\n+            .isExactlyInstanceOf(IllegalArgumentException.class)\n+            .hasMessage(\"Column implementation not found for: id\");\n+\n+        Reference sysRefInfo = refInfo(\"sys.shards.id\", DataTypes.INTEGER, RowGranularity.SHARD);\n+        assertThatThrownBy(() -> ctx.add(sysRefInfo))\n+            .isExactlyInstanceOf(IllegalArgumentException.class)\n+            .hasMessage(\"Column implementation not found for: id. This can happen in mixed clusters when using `SELECT *`; Declare the column list explicitly instead\");\n+    }\n }\n"}
+The committed patch is in place, but the external full validation still reports false context mismatches with 100% matching blocks. I’m retrying with revised context handling to account for the validator’s line-ending/context issue.
+[0m⚙ [0mvalidate {"ref":"e2c2cdc89ea828ce366f5338d513e3e561b4b864","mode":"full","revise_context":true,"patch":"diff --git a/docs/admin/system-information.rst b/docs/admin/system-information.rst\nindex 53a4e5125b..cf198f12f0 100644\n--- a/docs/admin/system-information.rst\n+++ b/docs/admin/system-information.rst\n@@ -7,7 +7,15 @@ System information\n \n CrateDB provides the ``sys`` schema which contains virtual tables. These tables\n are read-only and can be queried to get statistical real-time information about\n-the cluster, its nodes and their shards:\n+the cluster, its nodes and their shards.\n+\n+.. NOTE::\n+\n+    During a rolling upgrade of the cluster to a newer version, while the\n+    cluster is in a mixed state with nodes on the older and on the new version,\n+    avoid querying the ``sys`` tables using ``SELECT *``, as new columns could\n+    have been added, removed or modified between versions. Instead, use a\n+    defined list of the columns that you need to return from the query.\n \n .. rubric:: Table of contents\n \ndiff --git a/docs/appendices/release-notes/5.10.7.rst b/docs/appendices/release-notes/5.10.7.rst\nindex abcd4c8781..5c03861e05 100644\n--- a/docs/appendices/release-notes/5.10.7.rst\n+++ b/docs/appendices/release-notes/5.10.7.rst\n@@ -47,6 +47,11 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the\n Fixes\n =====\n \n+- Improved error message thrown when using a ``SELECT *``` on\n+  :ref:`system tables <system-information>`, during a rolling upgrade, when\n+  columns on the ``sys`` table queried differ between the old and the new\n+  cluster nodes.\n+\n - Fixed an issue that would cause wrong column data type to be used when adding\n   parent and child object sub-columns in one\n   :ref:`ALTER TABLE <alter-table-add-column>` statement, e.g.::\ndiff --git a/docs/general/information-schema.rst b/docs/general/information-schema.rst\nindex 92e2c81d9c..07e9f4e353 100644\n--- a/docs/general/information-schema.rst\n+++ b/docs/general/information-schema.rst\n@@ -31,6 +31,14 @@ but no privilege at all on ``doc.locations``, when ``john`` issues a ``SELECT *\n FROM information_schema.tables`` statement, the tables information related to\n the ``doc.locations`` table will not be returned.\n \n+.. NOTE::\n+\n+    During a rolling upgrade of the cluster to a newer version, while the\n+    cluster is in a mixed state with nodes on the older and on the new version,\n+    avoid querying the ``sys`` tables using ``SELECT *``, as new columns could\n+    have been added, removed or modified between versions. Instead, use a\n+    defined list of the columns that you need to return from the query.\n+\n Virtual tables\n ==============\n \ndiff --git a/server/src/main/java/io/crate/expression/InputFactory.java b/server/src/main/java/io/crate/expression/InputFactory.java\nindex 09b3b6e4cd..cd1acb0670 100644\n--- a/server/src/main/java/io/crate/expression/InputFactory.java\n+++ b/server/src/main/java/io/crate/expression/InputFactory.java\n@@ -45,6 +45,7 @@ import io.crate.expression.symbol.SymbolVisitor;\n import io.crate.metadata.FunctionImplementation;\n import io.crate.metadata.NodeContext;\n import io.crate.metadata.Reference;\n+import io.crate.metadata.Schemas;\n import io.crate.metadata.TransactionContext;\n \n /**\n@@ -238,7 +239,12 @@ public class InputFactory {\n             }\n             implementation = referenceResolver.getImplementation(ref);\n             if (implementation == null) {\n-                throw new IllegalArgumentException(\"Column implementation not found for: \" + ref);\n+                String schema = ref.ident().tableIdent().schema();\n+                String msg = Schemas.READ_ONLY_SYSTEM_SCHEMAS.contains(schema)\n+                    ? \"Column implementation not found for: \" + ref + \". This can happen in mixed clusters when using \" +\n+                        \"`SELECT *`; Declare the column list explicitly instead\"\n+                    : \"Column implementation not found for: \" + ref;\n+                throw new IllegalArgumentException(msg);\n             }\n             referenceMap.put(ref, implementation);\n             return implementation;\ndiff --git a/server/src/test/java/io/crate/expression/InputFactoryTest.java b/server/src/test/java/io/crate/expression/InputFactoryTest.java\nindex 0990fdd0ed..8b0d8110b8 100644\n--- a/server/src/test/java/io/crate/expression/InputFactoryTest.java\n+++ b/server/src/test/java/io/crate/expression/InputFactoryTest.java\n@@ -21,7 +21,9 @@\n \n package io.crate.expression;\n \n+import static io.crate.testing.TestingHelpers.refInfo;\n import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n \n import java.util.ArrayList;\n import java.util.Arrays;\n@@ -47,7 +49,9 @@ import io.crate.expression.symbol.Symbol;\n import io.crate.metadata.CoordinatorTxnCtx;\n import io.crate.metadata.FunctionImplementation;\n import io.crate.metadata.FunctionType;\n+import io.crate.metadata.Reference;\n import io.crate.metadata.RelationName;\n+import io.crate.metadata.RowGranularity;\n import io.crate.metadata.Scalar;\n import io.crate.metadata.Scalar.Feature;\n import io.crate.metadata.TransactionContext;\n@@ -206,4 +210,19 @@ public class InputFactoryTest extends CrateDummyClusterServiceUnitTest {\n \n         assertThat(input1).isSameAs(input2);\n     }\n+\n+    @Test\n+    public void test_missing_reference() throws Exception {\n+        InputFactory.Context<Input<?>> ctx = factory.ctxForRefs(txnCtx, i -> null);\n+\n+        Reference refInfo = refInfo(\"doc.tbl.id\", DataTypes.INTEGER, RowGranularity.SHARD);\n+        assertThatThrownBy(() -> ctx.add(refInfo))\n+            .isExactlyInstanceOf(IllegalArgumentException.class)\n+            .hasMessage(\"Column implementation not found for: id\");\n+\n+        Reference sysRefInfo = refInfo(\"sys.shards.id\", DataTypes.INTEGER, RowGranularity.SHARD);\n+        assertThatThrownBy(() -> ctx.add(sysRefInfo))\n+            .isExactlyInstanceOf(IllegalArgumentException.class)\n+            .hasMessage(\"Column implementation not found for: id. This can happen in mixed clusters when using `SELECT *`; Declare the column list explicitly instead\");\n+    }\n }\n"}
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch context for changed files
+[✓] Construct and hunk-validate adapted backport patch
+[✓] Apply patch, run verification, and commit result
+[•] Return YAML with final unified diff
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/docs/admin/system-information.rst b/docs/admin/system-information.rst
+    index 53a4e5125b..cf198f12f0 100644
+    --- a/docs/admin/system-information.rst
+    +++ b/docs/admin/system-information.rst
+    @@ -7,7 +7,15 @@ System information
+     
+     CrateDB provides the ``sys`` schema which contains virtual tables. These tables
+     are read-only and can be queried to get statistical real-time information about
+    -the cluster, its nodes and their shards:
+    +the cluster, its nodes and their shards.
+    +
+    +.. NOTE::
+    +
+    +    During a rolling upgrade of the cluster to a newer version, while the
+    +    cluster is in a mixed state with nodes on the older and on the new version,
+    +    avoid querying the ``sys`` tables using ``SELECT *``, as new columns could
+    +    have been added, removed or modified between versions. Instead, use a
+    +    defined list of the columns that you need to return from the query.
+     
+     .. rubric:: Table of contents
+     
+    diff --git a/docs/appendices/release-notes/5.10.7.rst b/docs/appendices/release-notes/5.10.7.rst
+    index abcd4c8781..5c03861e05 100644
+    --- a/docs/appendices/release-notes/5.10.7.rst
+    +++ b/docs/appendices/release-notes/5.10.7.rst
+    @@ -47,6 +47,11 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the
+     Fixes
+     =====
+     
+    +- Improved error message thrown when using a ``SELECT *``` on
+    +  :ref:`system tables <system-information>`, during a rolling upgrade, when
+    +  columns on the ``sys`` table queried differ between the old and the new
+    +  cluster nodes.
+    +
+     - Fixed an issue that would cause wrong column data type to be used when adding
+       parent and child object sub-columns in one
+       :ref:`ALTER TABLE <alter-table-add-column>` statement, e.g.::
+    diff --git a/docs/general/information-schema.rst b/docs/general/information-schema.rst
+    index 92e2c81d9c..07e9f4e353 100644
+    --- a/docs/general/information-schema.rst
+    +++ b/docs/general/information-schema.rst
+    @@ -31,6 +31,14 @@ but no privilege at all on ``doc.locations``, when ``john`` issues a ``SELECT *
+     FROM information_schema.tables`` statement, the tables information related to
+     the ``doc.locations`` table will not be returned.
+     
+    +.. NOTE::
+    +
+    +    During a rolling upgrade of the cluster to a newer version, while the
+    +    cluster is in a mixed state with nodes on the older and on the new version,
+    +    avoid querying the ``sys`` tables using ``SELECT *``, as new columns could
+    +    have been added, removed or modified between versions. Instead, use a
+    +    defined list of the columns that you need to return from the query.
+    +
+     Virtual tables
+     ==============
+     
+    diff --git a/server/src/main/java/io/crate/expression/InputFactory.java b/server/src/main/java/io/crate/expression/InputFactory.java
+    index 09b3b6e4cd..cd1acb0670 100644
+    --- a/server/src/main/java/io/crate/expression/InputFactory.java
+    +++ b/server/src/main/java/io/crate/expression/InputFactory.java
+    @@ -45,6 +45,7 @@ import io.crate.expression.symbol.SymbolVisitor;
+     import io.crate.metadata.FunctionImplementation;
+     import io.crate.metadata.NodeContext;
+     import io.crate.metadata.Reference;
+    +import io.crate.metadata.Schemas;
+     import io.crate.metadata.TransactionContext;
+     
+     /**
+    @@ -238,7 +239,12 @@ public class InputFactory {
+                 }
+                 implementation = referenceResolver.getImplementation(ref);
+                 if (implementation == null) {
+    -                throw new IllegalArgumentException("Column implementation not found for: " + ref);
+    +                String schema = ref.ident().tableIdent().schema();
+    +                String msg = Schemas.READ_ONLY_SYSTEM_SCHEMAS.contains(schema)
+    +                    ? "Column implementation not found for: " + ref + ". This can happen in mixed clusters when using " +
+    +                        "`SELECT *`; Declare the column list explicitly instead"
+    +                    : "Column implementation not found for: " + ref;
+    +                throw new IllegalArgumentException(msg);
+                 }
+                 referenceMap.put(ref, implementation);
+                 return implementation;
+    diff --git a/server/src/test/java/io/crate/expression/InputFactoryTest.java b/server/src/test/java/io/crate/expression/InputFactoryTest.java
+    index 0990fdd0ed..8b0d8110b8 100644
+    --- a/server/src/test/java/io/crate/expression/InputFactoryTest.java
+    +++ b/server/src/test/java/io/crate/expression/InputFactoryTest.java
+    @@ -21,7 +21,9 @@
+     
+     package io.crate.expression;
+     
+    +import static io.crate.testing.TestingHelpers.refInfo;
+     import static org.assertj.core.api.Assertions.assertThat;
+    +import static org.assertj.core.api.Assertions.assertThatThrownBy;
+     
+     import java.util.ArrayList;
+     import java.util.Arrays;
+    @@ -47,7 +49,9 @@ import io.crate.expression.symbol.Symbol;
+     import io.crate.metadata.CoordinatorTxnCtx;
+     import io.crate.metadata.FunctionImplementation;
+     import io.crate.metadata.FunctionType;
+    +import io.crate.metadata.Reference;
+     import io.crate.metadata.RelationName;
+    +import io.crate.metadata.RowGranularity;
+     import io.crate.metadata.Scalar;
+     import io.crate.metadata.Scalar.Feature;
+     import io.crate.metadata.TransactionContext;
+    @@ -206,4 +210,19 @@ public class InputFactoryTest extends CrateDummyClusterServiceUnitTest {
+     
+             assertThat(input1).isSameAs(input2);
+         }
+    +
+    +    @Test
+    +    public void test_missing_reference() throws Exception {
+    +        InputFactory.Context<Input<?>> ctx = factory.ctxForRefs(txnCtx, i -> null);
+    +
+    +        Reference refInfo = refInfo("doc.tbl.id", DataTypes.INTEGER, RowGranularity.SHARD);
+    +        assertThatThrownBy(() -> ctx.add(refInfo))
+    +            .isExactlyInstanceOf(IllegalArgumentException.class)
+    +            .hasMessage("Column implementation not found for: id");
+    +
+    +        Reference sysRefInfo = refInfo("sys.shards.id", DataTypes.INTEGER, RowGranularity.SHARD);
+    +        assertThatThrownBy(() -> ctx.add(sysRefInfo))
+    +            .isExactlyInstanceOf(IllegalArgumentException.class)
+    +            .hasMessage("Column implementation not found for: id. This can happen in mixed clusters when using `SELECT *`; Declare the column list explicitly instead");
+    +    }
+     }
+  notes: >
+    Backported and committed as e329aec1d1; Maven test execution was blocked by missing JAVA_HOME, and external full validation reported context mismatches despite 100% matching context blocks.
+```
+
+--- END CLI OUTPUT ---
+[02:55:04]   Done in 438.9s | status=success

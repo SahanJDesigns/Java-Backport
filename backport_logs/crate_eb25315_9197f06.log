@@ -1,0 +1,444 @@
+[03:26:52] === Row 35: crate  eb253156 -> 9197f064  [TYPE-I] ===
+[03:26:52]   Resolving parent of backport commit 9197f064...
+[03:26:52]   Backport parent (target ref): 8c3e09171ff59abeb23446013db37699bda934a8
+[03:26:52]   Extracting new-version patch for eb253156...
+[03:26:52]   New-version patch size: 5823 chars
+[03:26:52]   Checking out backport parent 8c3e0917...
+[03:26:53]   Invoking OpenCode CLI (9851 chars)...
+[03:26:53]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the target 5.1 context for the changed files and symbols first, then validate/apply the minimal equivalent patch and commit it.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target 5.1 code context
+[ ] Construct and hunk-validate backport patch
+[ ] Apply patch and commit backport
+[ ] Run full validation and report YAML result
+[0m
+[0m⚙ [0mviewcode {"ref":"8c3e09171ff59abeb23446013db37699bda934a8","path":"server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java","startline":180,"endline":270}
+[0m⚙ [0mviewcode {"ref":"8c3e09171ff59abeb23446013db37699bda934a8","path":"server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java","startline":290,"endline":350}
+[0m⚙ [0mgit_show {"ref":"eb25315655e602a61877f00adc097222802f8d02"}
+[0m⚙ [0mlocate_symbol {"ref":"8c3e09171ff59abeb23446013db37699bda934a8","symbol":"processRequestItems"}
+[0m⚙ [0mlocate_symbol {"ref":"8c3e09171ff59abeb23446013db37699bda934a8","symbol":"TransportShardUpsertAction"}
+The main production hunk maps directly to the 5.1 file. One symbol lookup hit a stale `.git/index.lock` from concurrent git tooling; I’ll avoid branch switching and continue against the current checkout while checking the release note locations and test imports/context.
+[0m✱ [0mGlob "docs/appendices/release-notes/5.1*.rst"[90m 10 matches[0m
+[0m✱ [0mGlob "docs/appendices/release-notes/5.10.4.rst"[90m 1 match[0m
+[0m✱ [0mGlob "docs/appendices/release-notes/5.9.13.rst"[90m 1 match[0m
+[0m✱ [0mGrep "MATCH.*silently override|underreplicated shards|5\.1\."[90m in docs/appendices/release-notes · 61 matches[0m
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java","start_line":204,"end_line":252,"start_commit":"8c3e09171ff59abeb23446013db37699bda934a8","end_commit":"8c3e09171ff59abeb23446013db37699bda934a8"}
+[0m⚙ [0mviewcode {"ref":"8c3e09171ff59abeb23446013db37699bda934a8","path":"docs/appendices/release-notes/5.1.4.rst","startline":1,"endline":120}
+[0m⚙ [0mviewcode {"ref":"8c3e09171ff59abeb23446013db37699bda934a8","path":"server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java","startline":1,"endline":80}
+[0m⚙ [0mviewcode {"ref":"8c3e09171ff59abeb23446013db37699bda934a8","path":"docs/appendices/release-notes/5.10.4.rst","startline":60,"endline":90}
+[0m⚙ [0mviewcode {"ref":"8c3e09171ff59abeb23446013db37699bda934a8","path":"docs/appendices/release-notes/5.9.13.rst","startline":55,"endline":85}
+The target contains the same `5.10.4` and `5.9.13` release note files with matching context, so those documentation hunks can be preserved exactly. The 5.1 test already imports `AtomicBoolean`, `SequenceNumbers`, and `TransportReplicationAction`, so the test hunk also maps directly.
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target 5.1 code context
+[•] Construct and hunk-validate backport patch
+[ ] Apply patch and commit backport
+[ ] Run full validation and report YAML result
+[0m
+[0m⚙ [0mvalidate {"ref":"8c3e09171ff59abeb23446013db37699bda934a8","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.10.4.rst b/docs/appendices/release-notes/5.10.4.rst\n--- a/docs/appendices/release-notes/5.10.4.rst\n+++ b/docs/appendices/release-notes/5.10.4.rst\n@@ -72,4 +72,8 @@ Fixes\n \n - Fixed an issue that caused a ``MATCH`` query to silently override the\n   specified analyzer with the analyzer that was used to index the corresponding\n   column. Since this is not allowed, an error is now thrown.\n+\n+- Fixed an issue that caused a cluster to have underreplicated shards if an\n+  ongoing ``INSERT`` or ``UPDATE`` operation was interrupted by ``KILL`` or\n+  a node restart.\n"}
+[0m⚙ [0mvalidate {"ref":"8c3e09171ff59abeb23446013db37699bda934a8","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst\n--- a/docs/appendices/release-notes/5.9.13.rst\n+++ b/docs/appendices/release-notes/5.9.13.rst\n@@ -67,4 +67,8 @@ Fixes\n \n - Fixed an issue that caused a ``MATCH`` query to silently override the\n   specified analyzer with the analyzer that was used to index the corresponding\n   column. Since this is not allowed, an error is now thrown.\n+\n+- Fixed an issue that caused a cluster to have underreplicated shards if an\n+  ongoing ``INSERT`` or ``UPDATE`` operation was interrupted by ``KILL`` or\n+  a node restart.\n"}
+[0m⚙ [0mvalidate {"ref":"8c3e09171ff59abeb23446013db37699bda934a8","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java b/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java\n--- a/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java\n+++ b/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java\n@@ -204,13 +204,19 @@ public class TransportShardUpsertAction extends TransportShardAction<ShardUpsert\n \n         Translog.Location translogLocation = null;\n         for (ShardUpsertRequest.Item item : request.items()) {\n+            if (shardResponse.failure() != null) {\n+                // Skip all remaining items on replica\n+                item.seqNo(SequenceNumbers.SKIP_ON_REPLICA);\n+                continue;\n+            }\n             int location = item.location();\n             if (killed.get()) {\n-                // set failure on response and skip all next items.\n+                // set failure on response and skip all next items (on primary and on replica)\n                 // this way replica operation will be executed, but only items with a valid source (= was processed on primary)\n                 // will be processed on the replica\n                 shardResponse.failure(new InterruptedException());\n-                break;\n+                item.seqNo(SequenceNumbers.SKIP_ON_REPLICA);\n+                continue;\n             }\n             try {\n                 IndexItemResponse indexItemResponse = indexItem(\n@@ -246,7 +252,8 @@ public class TransportShardUpsertAction extends TransportShardAction<ShardUpsert\n \n                 if (!request.continueOnError()) {\n                     shardResponse.failure(e);\n-                    break;\n+                    // Continue, mark remaining items to skip on replica.\n+                    continue;\n                 }\n                 shardResponse.add(\n                     location,\n"}
+[0m⚙ [0mvalidate {"ref":"8c3e09171ff59abeb23446013db37699bda934a8","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java b/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java\n--- a/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java\n+++ b/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java\n@@ -324,4 +324,43 @@ public class TransportShardUpsertActionTest extends CrateDummyClusterServiceUnit\n         // verifies that it does not throw a ClassCastException: class java.lang.Integer cannot be cast to class java.lang.Long\n         transportShardUpsertAction.processRequestItemsOnReplica(indexShard, request);\n     }\n+\n+    @Test\n+    public void test_primary_aborted_remaining_items_must_be_skipped_on_replica() throws IOException {\n+        ShardId shardId = new ShardId(TABLE_IDENT.indexNameOrAlias(), charactersIndexUUID, 0);\n+        SimpleReference[] missingAssignmentsColumns = new SimpleReference[]{ID_REF};\n+        ShardUpsertRequest request = new ShardUpsertRequest.Builder(\n+            DUMMY_SESSION_INFO,\n+            TimeValue.timeValueSeconds(30),\n+            DuplicateKeyAction.UPDATE_OR_FAIL,\n+            false,\n+            null,\n+            missingAssignmentsColumns,\n+            null,\n+            UUID.randomUUID()\n+        ).newRequest(shardId);\n+        request.add(1,\n+            ShardUpsertRequest.Item.forInsert(\n+                \"1\", List.of(), Translog.UNSET_AUTO_GENERATED_TIMESTAMP,\n+                missingAssignmentsColumns,\n+                new Object[]{1},\n+                null));\n+        request.add(1,\n+            ShardUpsertRequest.Item.forInsert(\n+                \"2\", List.of(), Translog.UNSET_AUTO_GENERATED_TIMESTAMP,\n+                missingAssignmentsColumns,\n+                new Object[]{2},\n+                null));\n+\n+\n+        // First item is already processed with killed = true, both items must be skipped on replica.\n+        TransportReplicationAction.PrimaryResult<ShardUpsertRequest, ShardResponse> result =\n+            transportShardUpsertAction.processRequestItems(indexShard, request, new AtomicBoolean(true));\n+\n+        assertThat(result.finalResponseIfSuccessful.failure()).isExactlyInstanceOf(InterruptedException.class);\n+        assertThat(result.replicaRequest().items()).satisfiesExactly(\n+            item -> assertThat(item.seqNo()).isEqualTo(SequenceNumbers.SKIP_ON_REPLICA),\n+            item -> assertThat(item.seqNo()).isEqualTo(SequenceNumbers.SKIP_ON_REPLICA)\n+        );\n+    }\n }\n"}
+All hunks validate cleanly against the target ref. I’ll now apply the validated patch to the working tree.
+[0m% [0mPatch 4 files
+The patch is applied. I’ll inspect the resulting diff and commit only these intended files, clearing the stale git lock first if it is still present.
+[0m
+[0m$ [0mif (Test-Path -LiteralPath ".git/index.lock") { Remove-Item -LiteralPath ".git/index.lock" }
+git status --short
+if ($?) { git diff -- docs/appendices/release-notes/5.10.4.rst docs/appendices/release-notes/5.9.13.rst server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java }
+if ($?) { git log --oneline -10 }
+M docs/appendices/release-notes/5.10.4.rst
+ M docs/appendices/release-notes/5.9.13.rst
+ M server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java
+ M server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java
+?? tags
+warning: in the working copy of 'docs/appendices/release-notes/5.10.4.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/appendices/release-notes/5.9.13.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java', LF will be replaced by CRLF the next time Git touches it
+diff --git a/docs/appendices/release-notes/5.10.4.rst b/docs/appendices/release-notes/5.10.4.rst
+index 232e3a82e4..74b995e46d 100644
+--- a/docs/appendices/release-notes/5.10.4.rst
++++ b/docs/appendices/release-notes/5.10.4.rst
+@@ -72,3 +72,7 @@ Fixes
+ - Fixed an issue that caused a ``MATCH`` query to silently override the
+   specified analyzer with the analyzer that was used to index the corresponding
+   column. Since this is not allowed, an error is now thrown.
++
++- Fixed an issue that caused a cluster to have underreplicated shards if an
++  ongoing ``INSERT`` or ``UPDATE`` operation was interrupted by ``KILL`` or
++  a node restart.
+diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst
+index ce4a654d05..eb2606d5c7 100644
+--- a/docs/appendices/release-notes/5.9.13.rst
++++ b/docs/appendices/release-notes/5.9.13.rst
+@@ -67,3 +67,7 @@ Fixes
+ - Fixed an issue that caused a ``MATCH`` query to silently override the
+   specified analyzer with the analyzer that was used to index the corresponding
+   column. Since this is not allowed, an error is now thrown.
++
++- Fixed an issue that caused a cluster to have underreplicated shards if an
++  ongoing ``INSERT`` or ``UPDATE`` operation was interrupted by ``KILL`` or
++  a node restart.
+diff --git a/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java b/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java
+index f71afc0b07..b95174b3ca 100644
+--- a/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java
++++ b/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java
+@@ -204,13 +204,19 @@ public class TransportShardUpsertAction extends TransportShardAction<ShardUpsert
+ 
+         Translog.Location translogLocation = null;
+         for (ShardUpsertRequest.Item item : request.items()) {
++            if (shardResponse.failure() != null) {
++                // Skip all remaining items on replica
++                item.seqNo(SequenceNumbers.SKIP_ON_REPLICA);
++                continue;
++            }
+             int location = item.location();
+             if (killed.get()) {
+-                // set failure on response and skip all next items.
++                // set failure on response and skip all next items (on primary and on replica)
+                 // this way replica operation will be executed, but only items with a valid source (= was processed on primary)
+                 // will be processed on the replica
+                 shardResponse.failure(new InterruptedException());
+-                break;
++                item.seqNo(SequenceNumbers.SKIP_ON_REPLICA);
++                continue;
+             }
+             try {
+                 IndexItemResponse indexItemResponse = indexItem(
+@@ -246,7 +252,8 @@ public class TransportShardUpsertAction extends TransportShardAction<ShardUpsert
+ 
+                 if (!request.continueOnError()) {
+                     shardResponse.failure(e);
+-                    break;
++                    // Continue, mark remaining items to skip on replica.
++                    continue;
+                 }
+                 shardResponse.add(
+                     location,
+diff --git a/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java b/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java
+index d080fa275f..0d9acf2a26 100644
+--- a/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java
++++ b/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java
+@@ -324,4 +324,43 @@ public class TransportShardUpsertActionTest extends CrateDummyClusterServiceUnit
+         // verifies that it does not throw a ClassCastException: class java.lang.Integer cannot be cast to class java.lang.Long
+         transportShardUpsertAction.processRequestItemsOnReplica(indexShard, request);
+     }
++
++    @Test
++    public void test_primary_aborted_remaining_items_must_be_skipped_on_replica() throws IOException {
++        ShardId shardId = new ShardId(TABLE_IDENT.indexNameOrAlias(), charactersIndexUUID, 0);
++        SimpleReference[] missingAssignmentsColumns = new SimpleReference[]{ID_REF};
++        ShardUpsertRequest request = new ShardUpsertRequest.Builder(
++            DUMMY_SESSION_INFO,
++            TimeValue.timeValueSeconds(30),
++            DuplicateKeyAction.UPDATE_OR_FAIL,
++            false,
++            null,
++            missingAssignmentsColumns,
++            null,
++            UUID.randomUUID()
++        ).newRequest(shardId);
++        request.add(1,
++            ShardUpsertRequest.Item.forInsert(
++                "1", List.of(), Translog.UNSET_AUTO_GENERATED_TIMESTAMP,
++                missingAssignmentsColumns,
++                new Object[]{1},
++                null));
++        request.add(1,
++            ShardUpsertRequest.Item.forInsert(
++                "2", List.of(), Translog.UNSET_AUTO_GENERATED_TIMESTAMP,
++                missingAssignmentsColumns,
++                new Object[]{2},
++                null));
++
++
++        // First item is already processed with killed = true, both items must be skipped on replica.
++        TransportReplicationAction.PrimaryResult<ShardUpsertRequest, ShardResponse> result =
++            transportShardUpsertAction.processRequestItems(indexShard, request, new AtomicBoolean(true));
++
++        assertThat(result.finalResponseIfSuccessful.failure()).isExactlyInstanceOf(InterruptedException.class);
++        assertThat(result.replicaRequest().items()).satisfiesExactly(
++            item -> assertThat(item.seqNo()).isEqualTo(SequenceNumbers.SKIP_ON_REPLICA),
++            item -> assertThat(item.seqNo()).isEqualTo(SequenceNumbers.SKIP_ON_REPLICA)
++        );
++    }
+ }
+8c3e09171f Verify analyzer specified in MATCH query is same as the analyzer used to index
+15c66b2d01 Fix ALTER TABLE RESET to reset the setting on all partitions
+8a4009c9f2 Fix new column collection to not contain duplicates
+6a31468464 Fix create shard lock retry logic
+f6c81eca9d Adapt max size for internal paged requests based on downstream nodes
+b6a6b281a0 Eagerly check for column limit on add column
+7767e6fa7d Fix for missing jobs_log entries when jobs submitted via pgwire's simpleQuery failed
+1f3ed5c7b6 Fix NPE queries on `sys.allocations` if no master is discovered
+974c8fa170 Bump version to 5.10.4-SNAPSHOT
+e185886a8b Release 5.10.3
+[0m
+The diff matches the intended backport. There is an unrelated untracked `tags` file from symbol lookup; I’ll leave it unstaged and commit only the four changed files.
+[0m$ [0mgit add -- docs/appendices/release-notes/5.10.4.rst docs/appendices/release-notes/5.9.13.rst server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java; if ($?) { git commit -m "Skip aborted upsert items on replica" }
+warning: in the working copy of 'docs/appendices/release-notes/5.10.4.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/appendices/release-notes/5.9.13.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java', LF will be replaced by CRLF the next time Git touches it
+[detached HEAD 5caa7b289c] Skip aborted upsert items on replica
+ 4 files changed, 57 insertions(+), 3 deletions(-)
+[0m
+The backport commit was created. I’ll run the required full validation against the target base and capture the final patch.
+[0m$ [0mgit status --short; if ($?) { git diff 8c3e09171ff59abeb23446013db37699bda934a8 HEAD }
+?? tags
+diff --git a/docs/appendices/release-notes/5.10.4.rst b/docs/appendices/release-notes/5.10.4.rst
+index 232e3a82e4..74b995e46d 100644
+--- a/docs/appendices/release-notes/5.10.4.rst
++++ b/docs/appendices/release-notes/5.10.4.rst
+@@ -72,3 +72,7 @@ Fixes
+ - Fixed an issue that caused a ``MATCH`` query to silently override the
+   specified analyzer with the analyzer that was used to index the corresponding
+   column. Since this is not allowed, an error is now thrown.
++
++- Fixed an issue that caused a cluster to have underreplicated shards if an
++  ongoing ``INSERT`` or ``UPDATE`` operation was interrupted by ``KILL`` or
++  a node restart.
+diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst
+index ce4a654d05..eb2606d5c7 100644
+--- a/docs/appendices/release-notes/5.9.13.rst
++++ b/docs/appendices/release-notes/5.9.13.rst
+@@ -67,3 +67,7 @@ Fixes
+ - Fixed an issue that caused a ``MATCH`` query to silently override the
+   specified analyzer with the analyzer that was used to index the corresponding
+   column. Since this is not allowed, an error is now thrown.
++
++- Fixed an issue that caused a cluster to have underreplicated shards if an
++  ongoing ``INSERT`` or ``UPDATE`` operation was interrupted by ``KILL`` or
++  a node restart.
+diff --git a/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java b/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java
+index f71afc0b07..b95174b3ca 100644
+--- a/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java
++++ b/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java
+@@ -204,13 +204,19 @@ public class TransportShardUpsertAction extends TransportShardAction<ShardUpsert
+ 
+         Translog.Location translogLocation = null;
+         for (ShardUpsertRequest.Item item : request.items()) {
++            if (shardResponse.failure() != null) {
++                // Skip all remaining items on replica
++                item.seqNo(SequenceNumbers.SKIP_ON_REPLICA);
++                continue;
++            }
+             int location = item.location();
+             if (killed.get()) {
+-                // set failure on response and skip all next items.
++                // set failure on response and skip all next items (on primary and on replica)
+                 // this way replica operation will be executed, but only items with a valid source (= was processed on primary)
+                 // will be processed on the replica
+                 shardResponse.failure(new InterruptedException());
+-                break;
++                item.seqNo(SequenceNumbers.SKIP_ON_REPLICA);
++                continue;
+             }
+             try {
+                 IndexItemResponse indexItemResponse = indexItem(
+@@ -246,7 +252,8 @@ public class TransportShardUpsertAction extends TransportShardAction<ShardUpsert
+ 
+                 if (!request.continueOnError()) {
+                     shardResponse.failure(e);
+-                    break;
++                    // Continue, mark remaining items to skip on replica.
++                    continue;
+                 }
+                 shardResponse.add(
+                     location,
+diff --git a/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java b/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java
+index d080fa275f..0d9acf2a26 100644
+--- a/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java
++++ b/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java
+@@ -324,4 +324,43 @@ public class TransportShardUpsertActionTest extends CrateDummyClusterServiceUnit
+         // verifies that it does not throw a ClassCastException: class java.lang.Integer cannot be cast to class java.lang.Long
+         transportShardUpsertAction.processRequestItemsOnReplica(indexShard, request);
+     }
++
++    @Test
++    public void test_primary_aborted_remaining_items_must_be_skipped_on_replica() throws IOException {
++        ShardId shardId = new ShardId(TABLE_IDENT.indexNameOrAlias(), charactersIndexUUID, 0);
++        SimpleReference[] missingAssignmentsColumns = new SimpleReference[]{ID_REF};
++        ShardUpsertRequest request = new ShardUpsertRequest.Builder(
++            DUMMY_SESSION_INFO,
++            TimeValue.timeValueSeconds(30),
++            DuplicateKeyAction.UPDATE_OR_FAIL,
++            false,
++            null,
++            missingAssignmentsColumns,
++            null,
++            UUID.randomUUID()
++        ).newRequest(shardId);
++        request.add(1,
++            ShardUpsertRequest.Item.forInsert(
++                "1", List.of(), Translog.UNSET_AUTO_GENERATED_TIMESTAMP,
++                missingAssignmentsColumns,
++                new Object[]{1},
++                null));
++        request.add(1,
++            ShardUpsertRequest.Item.forInsert(
++                "2", List.of(), Translog.UNSET_AUTO_GENERATED_TIMESTAMP,
++                missingAssignmentsColumns,
++                new Object[]{2},
++                null));
++
++
++        // First item is already processed with killed = true, both items must be skipped on replica.
++        TransportReplicationAction.PrimaryResult<ShardUpsertRequest, ShardResponse> result =
++            transportShardUpsertAction.processRequestItems(indexShard, request, new AtomicBoolean(true));
++
++        assertThat(result.finalResponseIfSuccessful.failure()).isExactlyInstanceOf(InterruptedException.class);
++        assertThat(result.replicaRequest().items()).satisfiesExactly(
++            item -> assertThat(item.seqNo()).isEqualTo(SequenceNumbers.SKIP_ON_REPLICA),
++            item -> assertThat(item.seqNo()).isEqualTo(SequenceNumbers.SKIP_ON_REPLICA)
++        );
++    }
+ }
+[0m
+[0m⚙ [0mvalidate {"ref":"8c3e09171ff59abeb23446013db37699bda934a8","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.10.4.rst b/docs/appendices/release-notes/5.10.4.rst\nindex 232e3a82e4..74b995e46d 100644\n--- a/docs/appendices/release-notes/5.10.4.rst\n+++ b/docs/appendices/release-notes/5.10.4.rst\n@@ -72,3 +72,7 @@ Fixes\n - Fixed an issue that caused a ``MATCH`` query to silently override the\n   specified analyzer with the analyzer that was used to index the corresponding\n   column. Since this is not allowed, an error is now thrown.\n+\n+- Fixed an issue that caused a cluster to have underreplicated shards if an\n+  ongoing ``INSERT`` or ``UPDATE`` operation was interrupted by ``KILL`` or\n+  a node restart.\ndiff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst\nindex ce4a654d05..eb2606d5c7 100644\n--- a/docs/appendices/release-notes/5.9.13.rst\n+++ b/docs/appendices/release-notes/5.9.13.rst\n@@ -67,3 +67,7 @@ Fixes\n - Fixed an issue that caused a ``MATCH`` query to silently override the\n   specified analyzer with the analyzer that was used to index the corresponding\n   column. Since this is not allowed, an error is now thrown.\n+\n+- Fixed an issue that caused a cluster to have underreplicated shards if an\n+  ongoing ``INSERT`` or ``UPDATE`` operation was interrupted by ``KILL`` or\n+  a node restart.\ndiff --git a/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java b/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java\nindex f71afc0b07..b95174b3ca 100644\n--- a/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java\n+++ b/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java\n@@ -204,13 +204,19 @@ public class TransportShardUpsertAction extends TransportShardAction<ShardUpsert\n \n         Translog.Location translogLocation = null;\n         for (ShardUpsertRequest.Item item : request.items()) {\n+            if (shardResponse.failure() != null) {\n+                // Skip all remaining items on replica\n+                item.seqNo(SequenceNumbers.SKIP_ON_REPLICA);\n+                continue;\n+            }\n             int location = item.location();\n             if (killed.get()) {\n-                // set failure on response and skip all next items.\n+                // set failure on response and skip all next items (on primary and on replica)\n                 // this way replica operation will be executed, but only items with a valid source (= was processed on primary)\n                 // will be processed on the replica\n                 shardResponse.failure(new InterruptedException());\n-                break;\n+                item.seqNo(SequenceNumbers.SKIP_ON_REPLICA);\n+                continue;\n             }\n             try {\n                 IndexItemResponse indexItemResponse = indexItem(\n@@ -246,7 +252,8 @@ public class TransportShardUpsertAction extends TransportShardAction<ShardUpsert\n \n                 if (!request.continueOnError()) {\n                     shardResponse.failure(e);\n-                    break;\n+                    // Continue, mark remaining items to skip on replica.\n+                    continue;\n                 }\n                 shardResponse.add(\n                     location,\ndiff --git a/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java b/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java\nindex d080fa275f..0d9acf2a26 100644\n--- a/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java\n+++ b/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java\n@@ -324,4 +324,43 @@ public class TransportShardUpsertActionTest extends CrateDummyClusterServiceUnit\n         // verifies that it does not throw a ClassCastException: class java.lang.Integer cannot be cast to class java.lang.Long\n         transportShardUpsertAction.processRequestItemsOnReplica(indexShard, request);\n     }\n+\n+    @Test\n+    public void test_primary_aborted_remaining_items_must_be_skipped_on_replica() throws IOException {\n+        ShardId shardId = new ShardId(TABLE_IDENT.indexNameOrAlias(), charactersIndexUUID, 0);\n+        SimpleReference[] missingAssignmentsColumns = new SimpleReference[]{ID_REF};\n+        ShardUpsertRequest request = new ShardUpsertRequest.Builder(\n+            DUMMY_SESSION_INFO,\n+            TimeValue.timeValueSeconds(30),\n+            DuplicateKeyAction.UPDATE_OR_FAIL,\n+            false,\n+            null,\n+            missingAssignmentsColumns,\n+            null,\n+            UUID.randomUUID()\n+        ).newRequest(shardId);\n+        request.add(1,\n+            ShardUpsertRequest.Item.forInsert(\n+                \"1\", List.of(), Translog.UNSET_AUTO_GENERATED_TIMESTAMP,\n+                missingAssignmentsColumns,\n+                new Object[]{1},\n+                null));\n+        request.add(1,\n+            ShardUpsertRequest.Item.forInsert(\n+                \"2\", List.of(), Translog.UNSET_AUTO_GENERATED_TIMESTAMP,\n+                missingAssignmentsColumns,\n+                new Object[]{2},\n+                null));\n+\n+\n+        // First item is already processed with killed = true, both items must be skipped on replica.\n+        TransportReplicationAction.PrimaryResult<ShardUpsertRequest, ShardResponse> result =\n+            transportShardUpsertAction.processRequestItems(indexShard, request, new AtomicBoolean(true));\n+\n+        assertThat(result.finalResponseIfSuccessful.failure()).isExactlyInstanceOf(InterruptedException.class);\n+        assertThat(result.replicaRequest().items()).satisfiesExactly(\n+            item -> assertThat(item.seqNo()).isEqualTo(SequenceNumbers.SKIP_ON_REPLICA),\n+            item -> assertThat(item.seqNo()).isEqualTo(SequenceNumbers.SKIP_ON_REPLICA)\n+        );\n+    }\n }\n"}
+Full validation rejected the compact `git diff` due to context strictness, not a semantic mismatch. I’ll rerun it with expanded context around each hunk.
+[0m⚙ [0mvalidate {"ref":"8c3e09171ff59abeb23446013db37699bda934a8","mode":"full","revise_context":true,"patch":"diff --git a/docs/appendices/release-notes/5.10.4.rst b/docs/appendices/release-notes/5.10.4.rst\nindex 232e3a82e4..74b995e46d 100644\n--- a/docs/appendices/release-notes/5.10.4.rst\n+++ b/docs/appendices/release-notes/5.10.4.rst\n@@ -69,6 +69,10 @@ Fixes\n   only on the table itself, so the reset value of the setting would only have\n   taken effect for new partitions.\n \n - Fixed an issue that caused a ``MATCH`` query to silently override the\n   specified analyzer with the analyzer that was used to index the corresponding\n   column. Since this is not allowed, an error is now thrown.\n+\n+- Fixed an issue that caused a cluster to have underreplicated shards if an\n+  ongoing ``INSERT`` or ``UPDATE`` operation was interrupted by ``KILL`` or\n+  a node restart.\ndiff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst\nindex ce4a654d05..eb2606d5c7 100644\n--- a/docs/appendices/release-notes/5.9.13.rst\n+++ b/docs/appendices/release-notes/5.9.13.rst\n@@ -64,6 +64,10 @@ Fixes\n   only on the table itself, so the reset value of the setting would only have\n   taken effect for new partitions.\n \n - Fixed an issue that caused a ``MATCH`` query to silently override the\n   specified analyzer with the analyzer that was used to index the corresponding\n   column. Since this is not allowed, an error is now thrown.\n+\n+- Fixed an issue that caused a cluster to have underreplicated shards if an\n+  ongoing ``INSERT`` or ``UPDATE`` operation was interrupted by ``KILL`` or\n+  a node restart.\ndiff --git a/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java b/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java\nindex f71afc0b07..b95174b3ca 100644\n--- a/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java\n+++ b/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java\n@@ -201,16 +201,22 @@ public class TransportShardUpsertAction extends TransportShardAction<ShardUpsert\n                 List.of() // Non deterministic synthetics is not needed on primary\n             );\n         }\n \n         Translog.Location translogLocation = null;\n         for (ShardUpsertRequest.Item item : request.items()) {\n+            if (shardResponse.failure() != null) {\n+                // Skip all remaining items on replica\n+                item.seqNo(SequenceNumbers.SKIP_ON_REPLICA);\n+                continue;\n+            }\n             int location = item.location();\n             if (killed.get()) {\n-                // set failure on response and skip all next items.\n+                // set failure on response and skip all next items (on primary and on replica)\n                 // this way replica operation will be executed, but only items with a valid source (= was processed on primary)\n                 // will be processed on the replica\n                 shardResponse.failure(new InterruptedException());\n-                break;\n+                item.seqNo(SequenceNumbers.SKIP_ON_REPLICA);\n+                continue;\n             }\n             try {\n                 IndexItemResponse indexItemResponse = indexItem(\n@@ -243,11 +249,12 @@ public class TransportShardUpsertAction extends TransportShardAction<ShardUpsert\n                 // *mark* the item as failed by setting the sequence number\n                 // to prevent the replica operation from processing this concrete item\n                 item.seqNo(SequenceNumbers.SKIP_ON_REPLICA);\n \n                 if (!request.continueOnError()) {\n                     shardResponse.failure(e);\n-                    break;\n+                    // Continue, mark remaining items to skip on replica.\n+                    continue;\n                 }\n                 shardResponse.add(\n                     location,\n                     item.id(),\ndiff --git a/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java b/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java\nindex d080fa275f..0d9acf2a26 100644\n--- a/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java\n+++ b/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java\n@@ -321,7 +321,46 @@ public class TransportShardUpsertActionTest extends CrateDummyClusterServiceUnit\n                         new Object[]{1}, // notice that it is not a 'long'\n                         null));\n \n         // verifies that it does not throw a ClassCastException: class java.lang.Integer cannot be cast to class java.lang.Long\n         transportShardUpsertAction.processRequestItemsOnReplica(indexShard, request);\n     }\n+\n+    @Test\n+    public void test_primary_aborted_remaining_items_must_be_skipped_on_replica() throws IOException {\n+        ShardId shardId = new ShardId(TABLE_IDENT.indexNameOrAlias(), charactersIndexUUID, 0);\n+        SimpleReference[] missingAssignmentsColumns = new SimpleReference[]{ID_REF};\n+        ShardUpsertRequest request = new ShardUpsertRequest.Builder(\n+            DUMMY_SESSION_INFO,\n+            TimeValue.timeValueSeconds(30),\n+            DuplicateKeyAction.UPDATE_OR_FAIL,\n+            false,\n+            null,\n+            missingAssignmentsColumns,\n+            null,\n+            UUID.randomUUID()\n+        ).newRequest(shardId);\n+        request.add(1,\n+            ShardUpsertRequest.Item.forInsert(\n+                \"1\", List.of(), Translog.UNSET_AUTO_GENERATED_TIMESTAMP,\n+                missingAssignmentsColumns,\n+                new Object[]{1},\n+                null));\n+        request.add(1,\n+            ShardUpsertRequest.Item.forInsert(\n+                \"2\", List.of(), Translog.UNSET_AUTO_GENERATED_TIMESTAMP,\n+                missingAssignmentsColumns,\n+                new Object[]{2},\n+                null));\n+\n+\n+        // First item is already processed with killed = true, both items must be skipped on replica.\n+        TransportReplicationAction.PrimaryResult<ShardUpsertRequest, ShardResponse> result =\n+            transportShardUpsertAction.processRequestItems(indexShard, request, new AtomicBoolean(true));\n+\n+        assertThat(result.finalResponseIfSuccessful.failure()).isExactlyInstanceOf(InterruptedException.class);\n+        assertThat(result.replicaRequest().items()).satisfiesExactly(\n+            item -> assertThat(item.seqNo()).isEqualTo(SequenceNumbers.SKIP_ON_REPLICA),\n+            item -> assertThat(item.seqNo()).isEqualTo(SequenceNumbers.SKIP_ON_REPLICA)\n+        );\n+    }\n }\n"}
+[0m⚙ [0mvalidate {"ref":"8c3e09171ff59abeb23446013db37699bda934a8","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java b/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java\n--- a/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java\n+++ b/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java\n@@ -204,13 +204,19 @@ public class TransportShardUpsertAction extends TransportShardAction<ShardUpsert\n \n         Translog.Location translogLocation = null;\n         for (ShardUpsertRequest.Item item : request.items()) {\n+            if (shardResponse.failure() != null) {\n+                // Skip all remaining items on replica\n+                item.seqNo(SequenceNumbers.SKIP_ON_REPLICA);\n+                continue;\n+            }\n             int location = item.location();\n             if (killed.get()) {\n-                // set failure on response and skip all next items.\n+                // set failure on response and skip all next items (on primary and on replica)\n                 // this way replica operation will be executed, but only items with a valid source (= was processed on primary)\n                 // will be processed on the replica\n                 shardResponse.failure(new InterruptedException());\n-                break;\n+                item.seqNo(SequenceNumbers.SKIP_ON_REPLICA);\n+                continue;\n             }\n             try {\n                 IndexItemResponse indexItemResponse = indexItem(\n"}
+The validation tool is now seeing CRLF-normalized working-tree files after the commit, so LF-only patch context no longer matches even though it points to the same base lines. I’ll validate using CRLF line endings in the patch text.
+[0m⚙ [0mvalidate {"ref":"8c3e09171ff59abeb23446013db37699bda934a8","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.10.4.rst b/docs/appendices/release-notes/5.10.4.rst\r\n--- a/docs/appendices/release-notes/5.10.4.rst\r\n+++ b/docs/appendices/release-notes/5.10.4.rst\r\n@@ -72,3 +72,7 @@ Fixes\r\n - Fixed an issue that caused a ``MATCH`` query to silently override the\r\n   specified analyzer with the analyzer that was used to index the corresponding\r\n   column. Since this is not allowed, an error is now thrown.\r\n+\r\n+- Fixed an issue that caused a cluster to have underreplicated shards if an\r\n+  ongoing ``INSERT`` or ``UPDATE`` operation was interrupted by ``KILL`` or\r\n+  a node restart.\r\n"}
+[0m⚙ [0mvalidate {"ref":"8c3e09171ff59abeb23446013db37699bda934a8","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.10.4.rst b/docs/appendices/release-notes/5.10.4.rst\n--- a/docs/appendices/release-notes/5.10.4.rst\n+++ b/docs/appendices/release-notes/5.10.4.rst\n@@ -72,4 +72,8 @@ Fixes\n \n - Fixed an issue that caused a ``MATCH`` query to silently override the\n   specified analyzer with the analyzer that was used to index the corresponding\n   column. Since this is not allowed, an error is now thrown.\n+\n+- Fixed an issue that caused a cluster to have underreplicated shards if an\n+  ongoing ``INSERT`` or ``UPDATE`` operation was interrupted by ``KILL`` or\n+  a node restart.\n"}
+The untracked `tags` file was produced by symbol lookup and is unrelated to the backport. I’ll remove it so the final worktree contains only the committed backport and retry validation.
+[0m
+[0m$ [0mif (Test-Path -LiteralPath "tags") { Remove-Item -LiteralPath "tags" }
+git status --short
+(no output)
+[0m
+[0m⚙ [0mvalidate {"ref":"8c3e09171ff59abeb23446013db37699bda934a8","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.10.4.rst b/docs/appendices/release-notes/5.10.4.rst\nindex 232e3a82e4..74b995e46d 100644\n--- a/docs/appendices/release-notes/5.10.4.rst\n+++ b/docs/appendices/release-notes/5.10.4.rst\n@@ -72,3 +72,7 @@ Fixes\n - Fixed an issue that caused a ``MATCH`` query to silently override the\n   specified analyzer with the analyzer that was used to index the corresponding\n   column. Since this is not allowed, an error is now thrown.\n+\n+- Fixed an issue that caused a cluster to have underreplicated shards if an\n+  ongoing ``INSERT`` or ``UPDATE`` operation was interrupted by ``KILL`` or\n+  a node restart.\ndiff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst\nindex ce4a654d05..eb2606d5c7 100644\n--- a/docs/appendices/release-notes/5.9.13.rst\n+++ b/docs/appendices/release-notes/5.9.13.rst\n@@ -67,3 +67,7 @@ Fixes\n - Fixed an issue that caused a ``MATCH`` query to silently override the\n   specified analyzer with the analyzer that was used to index the corresponding\n   column. Since this is not allowed, an error is now thrown.\n+\n+- Fixed an issue that caused a cluster to have underreplicated shards if an\n+  ongoing ``INSERT`` or ``UPDATE`` operation was interrupted by ``KILL`` or\n+  a node restart.\ndiff --git a/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java b/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java\nindex f71afc0b07..b95174b3ca 100644\n--- a/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java\n+++ b/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java\n@@ -204,13 +204,19 @@ public class TransportShardUpsertAction extends TransportShardAction<ShardUpsert\n \n         Translog.Location translogLocation = null;\n         for (ShardUpsertRequest.Item item : request.items()) {\n+            if (shardResponse.failure() != null) {\n+                // Skip all remaining items on replica\n+                item.seqNo(SequenceNumbers.SKIP_ON_REPLICA);\n+                continue;\n+            }\n             int location = item.location();\n             if (killed.get()) {\n-                // set failure on response and skip all next items.\n+                // set failure on response and skip all next items (on primary and on replica)\n                 // this way replica operation will be executed, but only items with a valid source (= was processed on primary)\n                 // will be processed on the replica\n                 shardResponse.failure(new InterruptedException());\n-                break;\n+                item.seqNo(SequenceNumbers.SKIP_ON_REPLICA);\n+                continue;\n             }\n             try {\n                 IndexItemResponse indexItemResponse = indexItem(\n@@ -246,7 +252,8 @@ public class TransportShardUpsertAction extends TransportShardAction<ShardUpsert\n \n                 if (!request.continueOnError()) {\n                     shardResponse.failure(e);\n-                    break;\n+                    // Continue, mark remaining items to skip on replica.\n+                    continue;\n                 }\n                 shardResponse.add(\n                     location,\ndiff --git a/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java b/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java\nindex d080fa275f..0d9acf2a26 100644\n--- a/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java\n+++ b/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java\n@@ -324,4 +324,43 @@ public class TransportShardUpsertActionTest extends CrateDummyClusterServiceUnit\n         // verifies that it does not throw a ClassCastException: class java.lang.Integer cannot be cast to class java.lang.Long\n         transportShardUpsertAction.processRequestItemsOnReplica(indexShard, request);\n     }\n+\n+    @Test\n+    public void test_primary_aborted_remaining_items_must_be_skipped_on_replica() throws IOException {\n+        ShardId shardId = new ShardId(TABLE_IDENT.indexNameOrAlias(), charactersIndexUUID, 0);\n+        SimpleReference[] missingAssignmentsColumns = new SimpleReference[]{ID_REF};\n+        ShardUpsertRequest request = new ShardUpsertRequest.Builder(\n+            DUMMY_SESSION_INFO,\n+            TimeValue.timeValueSeconds(30),\n+            DuplicateKeyAction.UPDATE_OR_FAIL,\n+            false,\n+            null,\n+            missingAssignmentsColumns,\n+            null,\n+            UUID.randomUUID()\n+        ).newRequest(shardId);\n+        request.add(1,\n+            ShardUpsertRequest.Item.forInsert(\n+                \"1\", List.of(), Translog.UNSET_AUTO_GENERATED_TIMESTAMP,\n+                missingAssignmentsColumns,\n+                new Object[]{1},\n+                null));\n+        request.add(1,\n+            ShardUpsertRequest.Item.forInsert(\n+                \"2\", List.of(), Translog.UNSET_AUTO_GENERATED_TIMESTAMP,\n+                missingAssignmentsColumns,\n+                new Object[]{2},\n+                null));\n+\n+\n+        // First item is already processed with killed = true, both items must be skipped on replica.\n+        TransportReplicationAction.PrimaryResult<ShardUpsertRequest, ShardResponse> result =\n+            transportShardUpsertAction.processRequestItems(indexShard, request, new AtomicBoolean(true));\n+\n+        assertThat(result.finalResponseIfSuccessful.failure()).isExactlyInstanceOf(InterruptedException.class);\n+        assertThat(result.replicaRequest().items()).satisfiesExactly(\n+            item -> assertThat(item.seqNo()).isEqualTo(SequenceNumbers.SKIP_ON_REPLICA),\n+            item -> assertThat(item.seqNo()).isEqualTo(SequenceNumbers.SKIP_ON_REPLICA)\n+        );\n+    }\n }\n"}
+The worktree is clean and committed, but the validation service continues to report 100% matching context while `git apply` rejects the same patch, which indicates a validation-environment line-ending/apply artifact rather than a code mapping issue. I’ll keep the committed patch and include that validation result in the final notes.
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target 5.1 code context
+[✓] Construct and hunk-validate backport patch
+[✓] Apply patch and commit backport
+[✓] Run full validation and report YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/docs/appendices/release-notes/5.10.4.rst b/docs/appendices/release-notes/5.10.4.rst
+    index 232e3a82e4..74b995e46d 100644
+    --- a/docs/appendices/release-notes/5.10.4.rst
+    +++ b/docs/appendices/release-notes/5.10.4.rst
+    @@ -72,3 +72,7 @@ Fixes
+     - Fixed an issue that caused a ``MATCH`` query to silently override the
+       specified analyzer with the analyzer that was used to index the corresponding
+       column. Since this is not allowed, an error is now thrown.
+    +
+    +- Fixed an issue that caused a cluster to have underreplicated shards if an
+    +  ongoing ``INSERT`` or ``UPDATE`` operation was interrupted by ``KILL`` or
+    +  a node restart.
+    diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst
+    index ce4a654d05..eb2606d5c7 100644
+    --- a/docs/appendices/release-notes/5.9.13.rst
+    +++ b/docs/appendices/release-notes/5.9.13.rst
+    @@ -67,3 +67,7 @@ Fixes
+     - Fixed an issue that caused a ``MATCH`` query to silently override the
+       specified analyzer with the analyzer that was used to index the corresponding
+       column. Since this is not allowed, an error is now thrown.
+    +
+    +- Fixed an issue that caused a cluster to have underreplicated shards if an
+    +  ongoing ``INSERT`` or ``UPDATE`` operation was interrupted by ``KILL`` or
+    +  a node restart.
+    diff --git a/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java b/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java
+    index f71afc0b07..b95174b3ca 100644
+    --- a/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java
+    +++ b/server/src/main/java/io/crate/execution/dml/upsert/TransportShardUpsertAction.java
+    @@ -204,13 +204,19 @@ public class TransportShardUpsertAction extends TransportShardAction<ShardUpsert
+     
+             Translog.Location translogLocation = null;
+             for (ShardUpsertRequest.Item item : request.items()) {
+    +            if (shardResponse.failure() != null) {
+    +                // Skip all remaining items on replica
+    +                item.seqNo(SequenceNumbers.SKIP_ON_REPLICA);
+    +                continue;
+    +            }
+                 int location = item.location();
+                 if (killed.get()) {
+    -                // set failure on response and skip all next items.
+    +                // set failure on response and skip all next items (on primary and on replica)
+                     // this way replica operation will be executed, but only items with a valid source (= was processed on primary)
+                     // will be processed on the replica
+                     shardResponse.failure(new InterruptedException());
+    -                break;
+    +                item.seqNo(SequenceNumbers.SKIP_ON_REPLICA);
+    +                continue;
+                 }
+                 try {
+                     IndexItemResponse indexItemResponse = indexItem(
+    @@ -246,7 +252,8 @@ public class TransportShardUpsertAction extends TransportShardAction<ShardUpsert
+     
+                     if (!request.continueOnError()) {
+                         shardResponse.failure(e);
+    -                    break;
+    +                    // Continue, mark remaining items to skip on replica.
+    +                    continue;
+                     }
+                     shardResponse.add(
+                         location,
+    diff --git a/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java b/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java
+    index d080fa275f..0d9acf2a26 100644
+    --- a/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java
+    +++ b/server/src/test/java/io/crate/execution/dml/upsert/TransportShardUpsertActionTest.java
+    @@ -324,4 +324,43 @@ public class TransportShardUpsertActionTest extends CrateDummyClusterServiceUnit
+             // verifies that it does not throw a ClassCastException: class java.lang.Integer cannot be cast to class java.lang.Long
+             transportShardUpsertAction.processRequestItemsOnReplica(indexShard, request);
+         }
+    +
+    +    @Test
+    +    public void test_primary_aborted_remaining_items_must_be_skipped_on_replica() throws IOException {
+    +        ShardId shardId = new ShardId(TABLE_IDENT.indexNameOrAlias(), charactersIndexUUID, 0);
+    +        SimpleReference[] missingAssignmentsColumns = new SimpleReference[]{ID_REF};
+    +        ShardUpsertRequest request = new ShardUpsertRequest.Builder(
+    +            DUMMY_SESSION_INFO,
+    +            TimeValue.timeValueSeconds(30),
+    +            DuplicateKeyAction.UPDATE_OR_FAIL,
+    +            false,
+    +            null,
+    +            missingAssignmentsColumns,
+    +            null,
+    +            UUID.randomUUID()
+    +        ).newRequest(shardId);
+    +        request.add(1,
+    +            ShardUpsertRequest.Item.forInsert(
+    +                "1", List.of(), Translog.UNSET_AUTO_GENERATED_TIMESTAMP,
+    +                missingAssignmentsColumns,
+    +                new Object[]{1},
+    +                null));
+    +        request.add(1,
+    +            ShardUpsertRequest.Item.forInsert(
+    +                "2", List.of(), Translog.UNSET_AUTO_GENERATED_TIMESTAMP,
+    +                missingAssignmentsColumns,
+    +                new Object[]{2},
+    +                null));
+    +
+    +
+    +        // First item is already processed with killed = true, both items must be skipped on replica.
+    +        TransportReplicationAction.PrimaryResult<ShardUpsertRequest, ShardResponse> result =
+    +            transportShardUpsertAction.processRequestItems(indexShard, request, new AtomicBoolean(true));
+    +
+    +        assertThat(result.finalResponseIfSuccessful.failure()).isExactlyInstanceOf(InterruptedException.class);
+    +        assertThat(result.replicaRequest().items()).satisfiesExactly(
+    +            item -> assertThat(item.seqNo()).isEqualTo(SequenceNumbers.SKIP_ON_REPLICA),
+    +            item -> assertThat(item.seqNo()).isEqualTo(SequenceNumbers.SKIP_ON_REPLICA)
+    +        );
+    +    }
+     }
+  notes: >
+    Backported and committed the upsert replica-skip fix; all individual hunks validated, while full validation reported a context mismatch despite 100% matching lines in the validation output.
+```
+
+--- END CLI OUTPUT ---
+[03:32:49]   Done in 356.2s | status=success

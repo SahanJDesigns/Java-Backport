@@ -1,0 +1,123 @@
+[14:58:30] === Row 35: grpc-java  7162d2d6 -> 7dada7d5  [TYPE-I] ===
+[14:58:30]   Resolving parent of backport commit 7dada7d5...
+[14:58:30]   Backport parent (target ref): 1edc4d84d44ad08c0db589c5631890375a42eb45
+[14:58:30]   Extracting new-version patch for 7162d2d6...
+[14:58:30]   New-version patch size: 3973 chars
+[14:58:30]   Checking out backport parent 1edc4d84...
+[14:58:30]   Invoking OpenCode CLI (7864 chars)...
+[14:58:30]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the target branch context and validate the equivalent hunks against the specified parent ref, then return only the backport YAML.
+[0m# [0mTodos
+[•] Review original commit metadata and target context for changed files
+[ ] Construct adapted unified diff for v1.70.x parent ref
+[ ] Validate each patch hunk with validate mode=hunk
+[ ] Return parseable YAML result
+[0m
+[0m⚙ [0mviewcode {"ref":"1edc4d84d44ad08c0db589c5631890375a42eb45","path":"xds/src/test/java/io/grpc/xds/ClusterImplLoadBalancerTest.java","startline":1045,"endline":1095}
+[0m⚙ [0mviewcode {"ref":"1edc4d84d44ad08c0db589c5631890375a42eb45","path":"xds/src/main/java/io/grpc/xds/ClusterImplLoadBalancer.java","startline":360,"endline":410}
+[0m⚙ [0mviewcode {"ref":"1edc4d84d44ad08c0db589c5631890375a42eb45","path":"xds/src/test/java/io/grpc/xds/ClusterImplLoadBalancerTest.java","startline":250,"endline":325}
+[0m⚙ [0mgit_show {"ref":"7162d2d6615eb36814e151bf8e926b68409dbed9"}
+[0m⚙ [0mlocate_symbol {"ref":"1edc4d84d44ad08c0db589c5631890375a42eb45","symbol":"deliverSubchannelState"}
+[0m⚙ [0mlocate_symbol {"ref":"1edc4d84d44ad08c0db589c5631890375a42eb45","symbol":"ClusterImplLoadBalancer"}
+The target code matches the original locations. One symbol lookup reported a stale `.git/index.lock`, so I’m avoiding branch changes and continuing with direct ref/context validation.
+[0m⚙ [0mgit_history {"filepath":"xds/src/main/java/io/grpc/xds/ClusterImplLoadBalancer.java","start_line":385,"end_line":386,"start_commit":"1edc4d84d44ad08c0db589c5631890375a42eb45","end_commit":"1edc4d84d44ad08c0db589c5631890375a42eb45"}
+[0m⚙ [0mgit_history {"filepath":"xds/src/test/java/io/grpc/xds/ClusterImplLoadBalancerTest.java","start_line":271,"end_line":303,"start_commit":"1edc4d84d44ad08c0db589c5631890375a42eb45","end_commit":"1edc4d84d44ad08c0db589c5631890375a42eb45"}
+[0m⚙ [0mgit_history {"filepath":"xds/src/test/java/io/grpc/xds/ClusterImplLoadBalancerTest.java","start_line":1061,"end_line":1069,"start_commit":"1edc4d84d44ad08c0db589c5631890375a42eb45","end_commit":"1edc4d84d44ad08c0db589c5631890375a42eb45"}
+The backport appears to be a direct TYPE-I application: same class, picker wrapper, test method, and fake balancer helper are present. I’m validating the hunks independently now.
+[0m⚙ [0mvalidate {"ref":"1edc4d84d44ad08c0db589c5631890375a42eb45","mode":"hunk","patch":"diff --git a/xds/src/main/java/io/grpc/xds/ClusterImplLoadBalancer.java b/xds/src/main/java/io/grpc/xds/ClusterImplLoadBalancer.java\n--- a/xds/src/main/java/io/grpc/xds/ClusterImplLoadBalancer.java\n+++ b/xds/src/main/java/io/grpc/xds/ClusterImplLoadBalancer.java\n@@ -385,6 +385,7 @@ final class ClusterImplLoadBalancer extends LoadBalancer {\n       public PickResult pickSubchannel(PickSubchannelArgs args) {\n         args.getCallOptions().getOption(ClusterImplLoadBalancerProvider.FILTER_METADATA_CONSUMER)\n             .accept(filterMetadata);\n+        args.getPickDetailsConsumer().addOptionalLabel(\"grpc.xds.cluster\", cluster);\n         for (DropOverload dropOverload : dropPolicies) {\n           int rand = random.nextInt(1_000_000);\n           if (rand < dropOverload.dropsPerMillion()) {\n"}
+[0m⚙ [0mvalidate {"ref":"1edc4d84d44ad08c0db589c5631890375a42eb45","mode":"hunk","patch":"diff --git a/xds/src/test/java/io/grpc/xds/ClusterImplLoadBalancerTest.java b/xds/src/test/java/io/grpc/xds/ClusterImplLoadBalancerTest.java\n--- a/xds/src/test/java/io/grpc/xds/ClusterImplLoadBalancerTest.java\n+++ b/xds/src/test/java/io/grpc/xds/ClusterImplLoadBalancerTest.java\n@@ -271,7 +271,7 @@ public class ClusterImplLoadBalancerTest {\n   }\n \n   @Test\n-  public void pick_addsLocalityLabel() {\n+  public void pick_addsOptionalLabels() {\n     LoadBalancerProvider weightedTargetProvider = new WeightedTargetLoadBalancerProvider();\n     WeightedTargetConfig weightedTargetConfig =\n         buildWeightedTargetConfig(ImmutableMap.of(locality, 10));\n"}
+[0m⚙ [0mvalidate {"ref":"1edc4d84d44ad08c0db589c5631890375a42eb45","mode":"hunk","patch":"diff --git a/xds/src/test/java/io/grpc/xds/ClusterImplLoadBalancerTest.java b/xds/src/test/java/io/grpc/xds/ClusterImplLoadBalancerTest.java\n--- a/xds/src/test/java/io/grpc/xds/ClusterImplLoadBalancerTest.java\n+++ b/xds/src/test/java/io/grpc/xds/ClusterImplLoadBalancerTest.java\n@@ -298,6 +298,31 @@ public class ClusterImplLoadBalancerTest {\n     // The value will be determined by the parent policy, so can be different than the value used in\n     // makeAddress() for the test.\n     verify(detailsConsumer).addOptionalLabel(\"grpc.lb.locality\", locality.toString());\n+    verify(detailsConsumer).addOptionalLabel(\"grpc.xds.cluster\", CLUSTER);\n+  }\n+\n+  @Test\n+  public void pick_noResult_addsClusterLabel() {\n+    LoadBalancerProvider weightedTargetProvider = new WeightedTargetLoadBalancerProvider();\n+    WeightedTargetConfig weightedTargetConfig =\n+        buildWeightedTargetConfig(ImmutableMap.of(locality, 10));\n+    ClusterImplConfig config = new ClusterImplConfig(CLUSTER, EDS_SERVICE_NAME, LRS_SERVER_INFO,\n+        null, Collections.<DropOverload>emptyList(),\n+        GracefulSwitchLoadBalancer.createLoadBalancingPolicyConfig(\n+            weightedTargetProvider, weightedTargetConfig),\n+        null, Collections.emptyMap());\n+    EquivalentAddressGroup endpoint = makeAddress(\"endpoint-addr\", locality);\n+    deliverAddressesAndConfig(Collections.singletonList(endpoint), config);\n+    FakeLoadBalancer leafBalancer = Iterables.getOnlyElement(downstreamBalancers);\n+    leafBalancer.deliverSubchannelState(PickResult.withNoResult(), ConnectivityState.CONNECTING);\n+    assertThat(currentState).isEqualTo(ConnectivityState.CONNECTING);\n+\n+    PickDetailsConsumer detailsConsumer = mock(PickDetailsConsumer.class);\n+    pickSubchannelArgs = new PickSubchannelArgsImpl(\n+      TestMethodDescriptors.voidMethod(), new Metadata(), CallOptions.DEFAULT, detailsConsumer);\n+    PickResult result = currentPicker.pickSubchannel(pickSubchannelArgs);\n+    assertThat(result.getStatus().isOk()).isTrue();\n+    verify(detailsConsumer).addOptionalLabel(\"grpc.xds.cluster\", CLUSTER);\n   }\n \n   @Test\n"}
+[0m⚙ [0mvalidate {"ref":"1edc4d84d44ad08c0db589c5631890375a42eb45","mode":"hunk","patch":"diff --git a/xds/src/test/java/io/grpc/xds/ClusterImplLoadBalancerTest.java b/xds/src/test/java/io/grpc/xds/ClusterImplLoadBalancerTest.java\n--- a/xds/src/test/java/io/grpc/xds/ClusterImplLoadBalancerTest.java\n+++ b/xds/src/test/java/io/grpc/xds/ClusterImplLoadBalancerTest.java\n@@ -1061,10 +1086,14 @@ public class ClusterImplLoadBalancerTest {\n     }\n \n     void deliverSubchannelState(final Subchannel subchannel, ConnectivityState state) {\n+      deliverSubchannelState(PickResult.withSubchannel(subchannel), state);\n+    }\n+\n+    void deliverSubchannelState(final PickResult result, ConnectivityState state) {\n       SubchannelPicker picker = new SubchannelPicker() {\n         @Override\n         public PickResult pickSubchannel(PickSubchannelArgs args) {\n-          return PickResult.withSubchannel(subchannel);\n+          return result;\n         }\n       };\n       helper.updateBalancingState(state, picker);\n"}
+[0m
+[0m# [0mTodos
+[✓] Review original commit metadata and target context for changed files
+[✓] Construct adapted unified diff for v1.70.x parent ref
+[✓] Validate each patch hunk with validate mode=hunk
+[•] Return parseable YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/xds/src/main/java/io/grpc/xds/ClusterImplLoadBalancer.java b/xds/src/main/java/io/grpc/xds/ClusterImplLoadBalancer.java
+    --- a/xds/src/main/java/io/grpc/xds/ClusterImplLoadBalancer.java
+    +++ b/xds/src/main/java/io/grpc/xds/ClusterImplLoadBalancer.java
+    @@ -385,6 +385,7 @@ final class ClusterImplLoadBalancer extends LoadBalancer {
+           public PickResult pickSubchannel(PickSubchannelArgs args) {
+             args.getCallOptions().getOption(ClusterImplLoadBalancerProvider.FILTER_METADATA_CONSUMER)
+                 .accept(filterMetadata);
+    +        args.getPickDetailsConsumer().addOptionalLabel("grpc.xds.cluster", cluster);
+             for (DropOverload dropOverload : dropPolicies) {
+               int rand = random.nextInt(1_000_000);
+               if (rand < dropOverload.dropsPerMillion()) {
+    diff --git a/xds/src/test/java/io/grpc/xds/ClusterImplLoadBalancerTest.java b/xds/src/test/java/io/grpc/xds/ClusterImplLoadBalancerTest.java
+    --- a/xds/src/test/java/io/grpc/xds/ClusterImplLoadBalancerTest.java
+    +++ b/xds/src/test/java/io/grpc/xds/ClusterImplLoadBalancerTest.java
+    @@ -271,7 +271,7 @@ public class ClusterImplLoadBalancerTest {
+       }
+     
+       @Test
+    -  public void pick_addsLocalityLabel() {
+    +  public void pick_addsOptionalLabels() {
+         LoadBalancerProvider weightedTargetProvider = new WeightedTargetLoadBalancerProvider();
+         WeightedTargetConfig weightedTargetConfig =
+             buildWeightedTargetConfig(ImmutableMap.of(locality, 10));
+    @@ -298,6 +298,31 @@ public class ClusterImplLoadBalancerTest {
+         // The value will be determined by the parent policy, so can be different than the value used in
+         // makeAddress() for the test.
+         verify(detailsConsumer).addOptionalLabel("grpc.lb.locality", locality.toString());
+    +    verify(detailsConsumer).addOptionalLabel("grpc.xds.cluster", CLUSTER);
+    +  }
+    +
+    +  @Test
+    +  public void pick_noResult_addsClusterLabel() {
+    +    LoadBalancerProvider weightedTargetProvider = new WeightedTargetLoadBalancerProvider();
+    +    WeightedTargetConfig weightedTargetConfig =
+    +        buildWeightedTargetConfig(ImmutableMap.of(locality, 10));
+    +    ClusterImplConfig config = new ClusterImplConfig(CLUSTER, EDS_SERVICE_NAME, LRS_SERVER_INFO,
+    +        null, Collections.<DropOverload>emptyList(),
+    +        GracefulSwitchLoadBalancer.createLoadBalancingPolicyConfig(
+    +            weightedTargetProvider, weightedTargetConfig),
+    +        null, Collections.emptyMap());
+    +    EquivalentAddressGroup endpoint = makeAddress("endpoint-addr", locality);
+    +    deliverAddressesAndConfig(Collections.singletonList(endpoint), config);
+    +    FakeLoadBalancer leafBalancer = Iterables.getOnlyElement(downstreamBalancers);
+    +    leafBalancer.deliverSubchannelState(PickResult.withNoResult(), ConnectivityState.CONNECTING);
+    +    assertThat(currentState).isEqualTo(ConnectivityState.CONNECTING);
+    +
+    +    PickDetailsConsumer detailsConsumer = mock(PickDetailsConsumer.class);
+    +    pickSubchannelArgs = new PickSubchannelArgsImpl(
+    +      TestMethodDescriptors.voidMethod(), new Metadata(), CallOptions.DEFAULT, detailsConsumer);
+    +    PickResult result = currentPicker.pickSubchannel(pickSubchannelArgs);
+    +    assertThat(result.getStatus().isOk()).isTrue();
+    +    verify(detailsConsumer).addOptionalLabel("grpc.xds.cluster", CLUSTER);
+       }
+     
+       @Test
+    @@ -1061,10 +1086,14 @@ public class ClusterImplLoadBalancerTest {
+         }
+     
+         void deliverSubchannelState(final Subchannel subchannel, ConnectivityState state) {
+    +      deliverSubchannelState(PickResult.withSubchannel(subchannel), state);
+    +    }
+    +
+    +    void deliverSubchannelState(final PickResult result, ConnectivityState state) {
+           SubchannelPicker picker = new SubchannelPicker() {
+             @Override
+             public PickResult pickSubchannel(PickSubchannelArgs args) {
+    -          return PickResult.withSubchannel(subchannel);
+    +          return result;
+             }
+           };
+           helper.updateBalancingState(state, picker);
+  notes: >
+    Direct TYPE-I backport; all four hunks were validated successfully with mode=hunk against 1edc4d84d44ad08c0db589c5631890375a42eb45.
+```
+
+--- END CLI OUTPUT ---
+[15:00:31]   Done in 121.5s | status=success

@@ -1,0 +1,211 @@
+[15:54:50] === Row 57: hbase  e56e14bc -> e110ee1c  [TYPE-I] ===
+[15:54:50]   Resolving parent of backport commit e110ee1c...
+[15:54:50]   Backport parent (target ref): 741754adc7d147271678799bf584518359cec7e2
+[15:54:50]   Extracting new-version patch for e56e14bc...
+[15:54:50]   New-version patch size: 8650 chars
+[15:54:50]   Checking out backport parent 741754ad...
+[15:54:51]   Invoking OpenCode CLI (12540 chars)...
+[15:54:51]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the commit metadata and branch-2 context for the changed files, then construct and hunk-validate a branch-2 patch without checking out any other ref.
+[0m⚙ [0mviewcode {"ref":"741754adc7d147271678799bf584518359cec7e2","path":"hbase-compression/hbase-compression-zstd/src/main/java/org/apache/hadoop/hbase/io/compress/zstd/ZstdByteBuffDecompressor.java","startline":1,"endline":150}
+[0m⚙ [0mviewcode {"ref":"741754adc7d147271678799bf584518359cec7e2","path":"hbase-compression/hbase-compression-zstd/src/test/java/org/apache/hadoop/hbase/io/compress/zstd/TestZstdByteBuffDecompressor.java","startline":1,"endline":160}
+[0m⚙ [0mviewcode {"ref":"741754adc7d147271678799bf584518359cec7e2","path":"pom.xml","startline":910,"endline":945}
+[0m⚙ [0mgit_show {"ref":"e56e14bcc9f15ceae3f7961a21d4eef94ce1c159"}
+The branch-2 source and test files contain the same target code structure as the master patch. I’m checking symbol/property locations and history now, especially because `pom.xml` line numbers differ on branch-2.
+[0m✱ [0mGrep "<zstd-jni.version>"[90m in . · 1 match[0m
+[0m⚙ [0mgit_history {"filepath":"hbase-compression/hbase-compression-zstd/src/main/java/org/apache/hadoop/hbase/io/compress/zstd/ZstdByteBuffDecompressor.java","start_line":55,"end_line":113,"start_commit":"741754adc7d147271678799bf584518359cec7e2","end_commit":"741754adc7d147271678799bf584518359cec7e2"}
+[0m⚙ [0mlocate_symbol {"ref":"741754adc7d147271678799bf584518359cec7e2","symbol":"ZstdByteBuffDecompressor"}
+[0m⚙ [0mlocate_symbol {"ref":"741754adc7d147271678799bf584518359cec7e2","symbol":"testCapabilities"}
+[0m⚙ [0mgit_history {"filepath":"hbase-compression/hbase-compression-zstd/src/test/java/org/apache/hadoop/hbase/io/compress/zstd/TestZstdByteBuffDecompressor.java","start_line":62,"end_line":98,"start_commit":"741754adc7d147271678799bf584518359cec7e2","end_commit":"741754adc7d147271678799bf584518359cec7e2"}
+[0m⚙ [0mlocate_symbol {"ref":"741754adc7d147271678799bf584518359cec7e2","symbol":"canDecompress"}
+`locate_symbol`/`git_history` confirmed the relevant symbols where possible, but one parallel symbol lookup left/encountered a stale `.git/index.lock`. I’m checking repository state before validation so I don’t disturb source changes.
+[0m⚙ [0mgit_history {"filepath":"pom.xml","start_line":660,"end_line":668,"start_commit":"741754adc7d147271678799bf584518359cec7e2^","end_commit":"741754adc7d147271678799bf584518359cec7e2"}
+[0m⚙ [0mgit_history {"filepath":"hbase-compression/hbase-compression-zstd/src/main/java/org/apache/hadoop/hbase/io/compress/zstd/ZstdByteBuffDecompressor.java","start_line":55,"end_line":113,"start_commit":"741754adc7d147271678799bf584518359cec7e2^","end_commit":"741754adc7d147271678799bf584518359cec7e2"}
+[0m⚙ [0mviewcode {"ref":"741754adc7d147271678799bf584518359cec7e2","path":"pom.xml","startline":650,"endline":675}
+Branch-2 has the zstd property at a different `pom.xml` location, but the value and surrounding compression properties match the original hunk. I’m preparing a direct adapted patch with the same behavioral change and test coverage.
+[0m⚙ [0mvalidate {"ref":"741754adc7d147271678799bf584518359cec7e2","mode":"hunk","patch":"diff --git a/hbase-compression/hbase-compression-zstd/src/main/java/org/apache/hadoop/hbase/io/compress/zstd/ZstdByteBuffDecompressor.java b/hbase-compression/hbase-compression-zstd/src/main/java/org/apache/hadoop/hbase/io/compress/zstd/ZstdByteBuffDecompressor.java\n--- a/hbase-compression/hbase-compression-zstd/src/main/java/org/apache/hadoop/hbase/io/compress/zstd/ZstdByteBuffDecompressor.java\n+++ b/hbase-compression/hbase-compression-zstd/src/main/java/org/apache/hadoop/hbase/io/compress/zstd/ZstdByteBuffDecompressor.java\n@@ -55,20 +55,8 @@ public class ZstdByteBuffDecompressor implements ByteBuffDecompressor, CanReinit\n \n   @Override\n   public boolean canDecompress(ByteBuff output, ByteBuff input) {\n-    if (!allowByteBuffDecompression) {\n-      return false;\n-    }\n-    if (output instanceof SingleByteBuff && input instanceof SingleByteBuff) {\n-      ByteBuffer nioOutput = output.nioByteBuffers()[0];\n-      ByteBuffer nioInput = input.nioByteBuffers()[0];\n-      if (nioOutput.isDirect() && nioInput.isDirect()) {\n-        return true;\n-      } else if (!nioOutput.isDirect() && !nioInput.isDirect()) {\n-        return true;\n-      }\n-    }\n-\n-    return false;\n+    return allowByteBuffDecompression && output instanceof SingleByteBuff\n+      && input instanceof SingleByteBuff;\n   }\n \n   @Override\n"}
+The `canDecompress` hunk applies cleanly. I’m validating the decompression implementation hunk next.
+[0m⚙ [0mvalidate {"ref":"741754adc7d147271678799bf584518359cec7e2","mode":"hunk","patch":"diff --git a/hbase-compression/hbase-compression-zstd/src/main/java/org/apache/hadoop/hbase/io/compress/zstd/ZstdByteBuffDecompressor.java b/hbase-compression/hbase-compression-zstd/src/main/java/org/apache/hadoop/hbase/io/compress/zstd/ZstdByteBuffDecompressor.java\n--- a/hbase-compression/hbase-compression-zstd/src/main/java/org/apache/hadoop/hbase/io/compress/zstd/ZstdByteBuffDecompressor.java\n+++ b/hbase-compression/hbase-compression-zstd/src/main/java/org/apache/hadoop/hbase/io/compress/zstd/ZstdByteBuffDecompressor.java\n@@ -80,38 +68,35 @@ public class ZstdByteBuffDecompressor implements ByteBuffDecompressor, CanReinit\n     if (output instanceof SingleByteBuff && input instanceof SingleByteBuff) {\n       ByteBuffer nioOutput = output.nioByteBuffers()[0];\n       ByteBuffer nioInput = input.nioByteBuffers()[0];\n+      int origOutputPos = nioOutput.position();\n+      int n;\n       if (nioOutput.isDirect() && nioInput.isDirect()) {\n-        return decompressDirectByteBuffers(nioOutput, nioInput, inputLen);\n+        n = ctx.decompressDirectByteBuffer(nioOutput, nioOutput.position(),\n+          nioOutput.limit() - nioOutput.position(), nioInput, nioInput.position(), inputLen);\n       } else if (!nioOutput.isDirect() && !nioInput.isDirect()) {\n-        return decompressHeapByteBuffers(nioOutput, nioInput, inputLen);\n+        n = ctx.decompressByteArray(nioOutput.array(),\n+          nioOutput.arrayOffset() + nioOutput.position(), nioOutput.limit() - nioOutput.position(),\n+          nioInput.array(), nioInput.arrayOffset() + nioInput.position(), inputLen);\n+      } else if (nioOutput.isDirect() && !nioInput.isDirect()) {\n+        n = ctx.decompressByteArrayToDirectByteBuffer(nioOutput, nioOutput.position(),\n+          nioOutput.limit() - nioOutput.position(), nioInput.array(),\n+          nioInput.arrayOffset() + nioInput.position(), inputLen);\n+      } else if (!nioOutput.isDirect() && nioInput.isDirect()) {\n+        n = ctx.decompressDirectByteBufferToByteArray(nioOutput.array(),\n+          nioOutput.arrayOffset() + nioOutput.position(), nioOutput.limit() - nioOutput.position(),\n+          nioInput, nioInput.position(), inputLen);\n+      } else {\n+        throw new IllegalStateException(\"Unreachable line\");\n       }\n-    }\n-\n-    throw new IllegalStateException(\"One buffer is direct and the other is not, \"\n-      + \"or one or more not SingleByteBuffs. This is not supported\");\n-  }\n \n-  private int decompressDirectByteBuffers(ByteBuffer output, ByteBuffer input, int inputLen) {\n-    int origOutputPos = output.position();\n+      nioOutput.position(origOutputPos + n);\n+      nioInput.position(input.position() + inputLen);\n \n-    int n = ctx.decompressDirectByteBuffer(output, output.position(),\n-      output.limit() - output.position(), input, input.position(), inputLen);\n-\n-    output.position(origOutputPos + n);\n-    input.position(input.position() + inputLen);\n-    return n;\n-  }\n-\n-  private int decompressHeapByteBuffers(ByteBuffer output, ByteBuffer input, int inputLen) {\n-    int origOutputPos = output.position();\n-\n-    int n = ctx.decompressByteArray(output.array(), output.arrayOffset() + output.position(),\n-      output.limit() - output.position(), input.array(), input.arrayOffset() + input.position(),\n-      inputLen);\n-\n-    output.position(origOutputPos + n);\n-    input.position(input.position() + inputLen);\n-    return n;\n+      return n;\n+    } else {\n+      throw new IllegalStateException(\n+        \"At least one buffer is not a SingleByteBuff, this is not supported\");\n+    }\n   }\n \n   @Override\n"}
+The main implementation hunk applies cleanly against the target ref. I’m validating the test updates and dependency version hunk.
+[0m⚙ [0mvalidate {"ref":"741754adc7d147271678799bf584518359cec7e2","mode":"hunk","patch":"diff --git a/hbase-compression/hbase-compression-zstd/src/test/java/org/apache/hadoop/hbase/io/compress/zstd/TestZstdByteBuffDecompressor.java b/hbase-compression/hbase-compression-zstd/src/test/java/org/apache/hadoop/hbase/io/compress/zstd/TestZstdByteBuffDecompressor.java\n--- a/hbase-compression/hbase-compression-zstd/src/test/java/org/apache/hadoop/hbase/io/compress/zstd/TestZstdByteBuffDecompressor.java\n+++ b/hbase-compression/hbase-compression-zstd/src/test/java/org/apache/hadoop/hbase/io/compress/zstd/TestZstdByteBuffDecompressor.java\n@@ -62,8 +62,8 @@ public class TestZstdByteBuffDecompressor {\n     try (ZstdByteBuffDecompressor decompressor = new ZstdByteBuffDecompressor(null)) {\n       assertTrue(decompressor.canDecompress(emptySingleHeapBuff, emptySingleHeapBuff));\n       assertTrue(decompressor.canDecompress(emptySingleDirectBuff, emptySingleDirectBuff));\n-      assertFalse(decompressor.canDecompress(emptySingleHeapBuff, emptySingleDirectBuff));\n-      assertFalse(decompressor.canDecompress(emptySingleDirectBuff, emptySingleHeapBuff));\n+      assertTrue(decompressor.canDecompress(emptySingleHeapBuff, emptySingleDirectBuff));\n+      assertTrue(decompressor.canDecompress(emptySingleDirectBuff, emptySingleHeapBuff));\n       assertFalse(decompressor.canDecompress(emptyMultiHeapBuff, emptyMultiHeapBuff));\n       assertFalse(decompressor.canDecompress(emptyMultiDirectBuff, emptyMultiDirectBuff));\n       assertFalse(decompressor.canDecompress(emptySingleHeapBuff, emptyMultiHeapBuff));\n"}
+[0m⚙ [0mvalidate {"ref":"741754adc7d147271678799bf584518359cec7e2","mode":"hunk","patch":"diff --git a/hbase-compression/hbase-compression-zstd/src/test/java/org/apache/hadoop/hbase/io/compress/zstd/TestZstdByteBuffDecompressor.java b/hbase-compression/hbase-compression-zstd/src/test/java/org/apache/hadoop/hbase/io/compress/zstd/TestZstdByteBuffDecompressor.java\n--- a/hbase-compression/hbase-compression-zstd/src/test/java/org/apache/hadoop/hbase/io/compress/zstd/TestZstdByteBuffDecompressor.java\n+++ b/hbase-compression/hbase-compression-zstd/src/test/java/org/apache/hadoop/hbase/io/compress/zstd/TestZstdByteBuffDecompressor.java\n@@ -72,7 +72,7 @@ public class TestZstdByteBuffDecompressor {\n   }\n \n   @Test\n-  public void testDecompressHeap() throws IOException {\n+  public void testDecompressHeapToHeap() throws IOException {\n     try (ZstdByteBuffDecompressor decompressor = new ZstdByteBuffDecompressor(null)) {\n       ByteBuff output = new SingleByteBuff(ByteBuffer.allocate(64));\n       ByteBuff input = new SingleByteBuff(ByteBuffer.wrap(COMPRESSED_PAYLOAD));\n"}
+[0m⚙ [0mvalidate {"ref":"741754adc7d147271678799bf584518359cec7e2","mode":"hunk","patch":"diff --git a/hbase-compression/hbase-compression-zstd/src/test/java/org/apache/hadoop/hbase/io/compress/zstd/TestZstdByteBuffDecompressor.java b/hbase-compression/hbase-compression-zstd/src/test/java/org/apache/hadoop/hbase/io/compress/zstd/TestZstdByteBuffDecompressor.java\n--- a/hbase-compression/hbase-compression-zstd/src/test/java/org/apache/hadoop/hbase/io/compress/zstd/TestZstdByteBuffDecompressor.java\n+++ b/hbase-compression/hbase-compression-zstd/src/test/java/org/apache/hadoop/hbase/io/compress/zstd/TestZstdByteBuffDecompressor.java\n@@ -83,7 +83,7 @@ public class TestZstdByteBuffDecompressor {\n   }\n \n   @Test\n-  public void testDecompressDirect() throws IOException {\n+  public void testDecompressDirectToDirect() throws IOException {\n     try (ZstdByteBuffDecompressor decompressor = new ZstdByteBuffDecompressor(null)) {\n       ByteBuff output = new SingleByteBuff(ByteBuffer.allocateDirect(64));\n       ByteBuff input = new SingleByteBuff(ByteBuffer.allocateDirect(COMPRESSED_PAYLOAD.length));\n"}
+[0m⚙ [0mvalidate {"ref":"741754adc7d147271678799bf584518359cec7e2","mode":"hunk","patch":"diff --git a/hbase-compression/hbase-compression-zstd/src/test/java/org/apache/hadoop/hbase/io/compress/zstd/TestZstdByteBuffDecompressor.java b/hbase-compression/hbase-compression-zstd/src/test/java/org/apache/hadoop/hbase/io/compress/zstd/TestZstdByteBuffDecompressor.java\n--- a/hbase-compression/hbase-compression-zstd/src/test/java/org/apache/hadoop/hbase/io/compress/zstd/TestZstdByteBuffDecompressor.java\n+++ b/hbase-compression/hbase-compression-zstd/src/test/java/org/apache/hadoop/hbase/io/compress/zstd/TestZstdByteBuffDecompressor.java\n@@ -95,4 +95,28 @@ public class TestZstdByteBuffDecompressor {\n     }\n   }\n \n+  @Test\n+  public void testDecompressDirectToHeap() throws IOException {\n+    try (ZstdByteBuffDecompressor decompressor = new ZstdByteBuffDecompressor(null)) {\n+      ByteBuff output = new SingleByteBuff(ByteBuffer.allocate(64));\n+      ByteBuff input = new SingleByteBuff(ByteBuffer.allocateDirect(COMPRESSED_PAYLOAD.length));\n+      input.put(COMPRESSED_PAYLOAD);\n+      input.rewind();\n+      int decompressedSize = decompressor.decompress(output, input, COMPRESSED_PAYLOAD.length);\n+      assertEquals(\"HBase is fun to use and very fast\",\n+        Bytes.toString(output.toBytes(0, decompressedSize)));\n+    }\n+  }\n+\n+  @Test\n+  public void testDecompressHeapToDirect() throws IOException {\n+    try (ZstdByteBuffDecompressor decompressor = new ZstdByteBuffDecompressor(null)) {\n+      ByteBuff output = new SingleByteBuff(ByteBuffer.allocateDirect(64));\n+      ByteBuff input = new SingleByteBuff(ByteBuffer.wrap(COMPRESSED_PAYLOAD));\n+      int decompressedSize = decompressor.decompress(output, input, COMPRESSED_PAYLOAD.length);\n+      assertEquals(\"HBase is fun to use and very fast\",\n+        Bytes.toString(output.toBytes(0, decompressedSize)));\n+    }\n+  }\n+\n }\n"}
+[0m⚙ [0mvalidate {"ref":"741754adc7d147271678799bf584518359cec7e2","mode":"hunk","patch":"diff --git a/pom.xml b/pom.xml\n--- a/pom.xml\n+++ b/pom.xml\n@@ -663,7 +663,7 @@\n     <brotli4j.version>1.11.0</brotli4j.version>\n     <lz4.version>1.8.0</lz4.version>\n     <snappy.version>1.1.10.4</snappy.version>\n-    <zstd-jni.version>1.5.5-2</zstd-jni.version>\n+    <zstd-jni.version>1.5.7-2</zstd-jni.version>\n     <!--\n         Note that the version of protobuf shipped in hbase-thirdparty must match the version used\n         in hbase-protocol-shaded and hbase-examples. The version of jackson-[annotations,core,\n"}
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/hbase-compression/hbase-compression-zstd/src/main/java/org/apache/hadoop/hbase/io/compress/zstd/ZstdByteBuffDecompressor.java b/hbase-compression/hbase-compression-zstd/src/main/java/org/apache/hadoop/hbase/io/compress/zstd/ZstdByteBuffDecompressor.java
+    --- a/hbase-compression/hbase-compression-zstd/src/main/java/org/apache/hadoop/hbase/io/compress/zstd/ZstdByteBuffDecompressor.java
+    +++ b/hbase-compression/hbase-compression-zstd/src/main/java/org/apache/hadoop/hbase/io/compress/zstd/ZstdByteBuffDecompressor.java
+    @@ -55,20 +55,8 @@ public class ZstdByteBuffDecompressor implements ByteBuffDecompressor, CanReinit
+     
+       @Override
+       public boolean canDecompress(ByteBuff output, ByteBuff input) {
+    -    if (!allowByteBuffDecompression) {
+    -      return false;
+    -    }
+    -    if (output instanceof SingleByteBuff && input instanceof SingleByteBuff) {
+    -      ByteBuffer nioOutput = output.nioByteBuffers()[0];
+    -      ByteBuffer nioInput = input.nioByteBuffers()[0];
+    -      if (nioOutput.isDirect() && nioInput.isDirect()) {
+    -        return true;
+    -      } else if (!nioOutput.isDirect() && !nioInput.isDirect()) {
+    -        return true;
+    -      }
+    -    }
+    -
+    -    return false;
+    +    return allowByteBuffDecompression && output instanceof SingleByteBuff
+    +      && input instanceof SingleByteBuff;
+       }
+     
+       @Override
+    @@ -80,38 +68,35 @@ public class ZstdByteBuffDecompressor implements ByteBuffDecompressor, CanReinit
+         if (output instanceof SingleByteBuff && input instanceof SingleByteBuff) {
+           ByteBuffer nioOutput = output.nioByteBuffers()[0];
+           ByteBuffer nioInput = input.nioByteBuffers()[0];
+    +      int origOutputPos = nioOutput.position();
+    +      int n;
+           if (nioOutput.isDirect() && nioInput.isDirect()) {
+    -        return decompressDirectByteBuffers(nioOutput, nioInput, inputLen);
+    +        n = ctx.decompressDirectByteBuffer(nioOutput, nioOutput.position(),
+    +          nioOutput.limit() - nioOutput.position(), nioInput, nioInput.position(), inputLen);
+           } else if (!nioOutput.isDirect() && !nioInput.isDirect()) {
+    -        return decompressHeapByteBuffers(nioOutput, nioInput, inputLen);
+    +        n = ctx.decompressByteArray(nioOutput.array(),
+    +          nioOutput.arrayOffset() + nioOutput.position(), nioOutput.limit() - nioOutput.position(),
+    +          nioInput.array(), nioInput.arrayOffset() + nioInput.position(), inputLen);
+    +      } else if (nioOutput.isDirect() && !nioInput.isDirect()) {
+    +        n = ctx.decompressByteArrayToDirectByteBuffer(nioOutput, nioOutput.position(),
+    +          nioOutput.limit() - nioOutput.position(), nioInput.array(),
+    +          nioInput.arrayOffset() + nioInput.position(), inputLen);
+    +      } else if (!nioOutput.isDirect() && nioInput.isDirect()) {
+    +        n = ctx.decompressDirectByteBufferToByteArray(nioOutput.array(),
+    +          nioOutput.arrayOffset() + nioOutput.position(), nioOutput.limit() - nioOutput.position(),
+    +          nioInput, nioInput.position(), inputLen);
+    +      } else {
+    +        throw new IllegalStateException("Unreachable line");
+           }
+    -    }
+    -
+    -    throw new IllegalStateException("One buffer is direct and the other is not, "
+    -      + "or one or more not SingleByteBuffs. This is not supported");
+    -  }
+     
+    -  private int decompressDirectByteBuffers(ByteBuffer output, ByteBuffer input, int inputLen) {
+    -    int origOutputPos = output.position();
+    +      nioOutput.position(origOutputPos + n);
+    +      nioInput.position(input.position() + inputLen);
+     
+    -    int n = ctx.decompressDirectByteBuffer(output, output.position(),
+    -      output.limit() - output.position(), input, input.position(), inputLen);
+    -
+    -    output.position(origOutputPos + n);
+    -    input.position(input.position() + inputLen);
+    -    return n;
+    -  }
+    -
+    -  private int decompressHeapByteBuffers(ByteBuffer output, ByteBuffer input, int inputLen) {
+    -    int origOutputPos = output.position();
+    -
+    -    int n = ctx.decompressByteArray(output.array(), output.arrayOffset() + output.position(),
+    -      output.limit() - output.position(), input.array(), input.arrayOffset() + input.position(),
+    -      inputLen);
+    -
+    -    output.position(origOutputPos + n);
+    -    input.position(input.position() + inputLen);
+    -    return n;
+    +      return n;
+    +    } else {
+    +      throw new IllegalStateException(
+    +        "At least one buffer is not a SingleByteBuff, this is not supported");
+    +    }
+       }
+     
+       @Override
+    diff --git a/hbase-compression/hbase-compression-zstd/src/test/java/org/apache/hadoop/hbase/io/compress/zstd/TestZstdByteBuffDecompressor.java b/hbase-compression/hbase-compression-zstd/src/test/java/org/apache/hadoop/hbase/io/compress/zstd/TestZstdByteBuffDecompressor.java
+    --- a/hbase-compression/hbase-compression-zstd/src/test/java/org/apache/hadoop/hbase/io/compress/zstd/TestZstdByteBuffDecompressor.java
+    +++ b/hbase-compression/hbase-compression-zstd/src/test/java/org/apache/hadoop/hbase/io/compress/zstd/TestZstdByteBuffDecompressor.java
+    @@ -62,8 +62,8 @@ public class TestZstdByteBuffDecompressor {
+         try (ZstdByteBuffDecompressor decompressor = new ZstdByteBuffDecompressor(null)) {
+           assertTrue(decompressor.canDecompress(emptySingleHeapBuff, emptySingleHeapBuff));
+           assertTrue(decompressor.canDecompress(emptySingleDirectBuff, emptySingleDirectBuff));
+    -      assertFalse(decompressor.canDecompress(emptySingleHeapBuff, emptySingleDirectBuff));
+    -      assertFalse(decompressor.canDecompress(emptySingleDirectBuff, emptySingleHeapBuff));
+    +      assertTrue(decompressor.canDecompress(emptySingleHeapBuff, emptySingleDirectBuff));
+    +      assertTrue(decompressor.canDecompress(emptySingleDirectBuff, emptySingleHeapBuff));
+           assertFalse(decompressor.canDecompress(emptyMultiHeapBuff, emptyMultiHeapBuff));
+           assertFalse(decompressor.canDecompress(emptyMultiDirectBuff, emptyMultiDirectBuff));
+           assertFalse(decompressor.canDecompress(emptySingleHeapBuff, emptyMultiHeapBuff));
+    @@ -72,7 +72,7 @@ public class TestZstdByteBuffDecompressor {
+       }
+     
+       @Test
+    -  public void testDecompressHeap() throws IOException {
+    +  public void testDecompressHeapToHeap() throws IOException {
+         try (ZstdByteBuffDecompressor decompressor = new ZstdByteBuffDecompressor(null)) {
+           ByteBuff output = new SingleByteBuff(ByteBuffer.allocate(64));
+           ByteBuff input = new SingleByteBuff(ByteBuffer.wrap(COMPRESSED_PAYLOAD));
+    @@ -83,7 +83,7 @@ public class TestZstdByteBuffDecompressor {
+       }
+     
+       @Test
+    -  public void testDecompressDirect() throws IOException {
+    +  public void testDecompressDirectToDirect() throws IOException {
+         try (ZstdByteBuffDecompressor decompressor = new ZstdByteBuffDecompressor(null)) {
+           ByteBuff output = new SingleByteBuff(ByteBuffer.allocateDirect(64));
+           ByteBuff input = new SingleByteBuff(ByteBuffer.allocateDirect(COMPRESSED_PAYLOAD.length));
+    @@ -95,4 +95,28 @@ public class TestZstdByteBuffDecompressor {
+         }
+       }
+     
+    +  @Test
+    +  public void testDecompressDirectToHeap() throws IOException {
+    +    try (ZstdByteBuffDecompressor decompressor = new ZstdByteBuffDecompressor(null)) {
+    +      ByteBuff output = new SingleByteBuff(ByteBuffer.allocate(64));
+    +      ByteBuff input = new SingleByteBuff(ByteBuffer.allocateDirect(COMPRESSED_PAYLOAD.length));
+    +      input.put(COMPRESSED_PAYLOAD);
+    +      input.rewind();
+    +      int decompressedSize = decompressor.decompress(output, input, COMPRESSED_PAYLOAD.length);
+    +      assertEquals("HBase is fun to use and very fast",
+    +        Bytes.toString(output.toBytes(0, decompressedSize)));
+    +    }
+    +  }
+    +
+    +  @Test
+    +  public void testDecompressHeapToDirect() throws IOException {
+    +    try (ZstdByteBuffDecompressor decompressor = new ZstdByteBuffDecompressor(null)) {
+    +      ByteBuff output = new SingleByteBuff(ByteBuffer.allocateDirect(64));
+    +      ByteBuff input = new SingleByteBuff(ByteBuffer.wrap(COMPRESSED_PAYLOAD));
+    +      int decompressedSize = decompressor.decompress(output, input, COMPRESSED_PAYLOAD.length);
+    +      assertEquals("HBase is fun to use and very fast",
+    +        Bytes.toString(output.toBytes(0, decompressedSize)));
+    +    }
+    +  }
+    +
+     }
+    diff --git a/pom.xml b/pom.xml
+    --- a/pom.xml
+    +++ b/pom.xml
+    @@ -663,7 +663,7 @@
+         <brotli4j.version>1.11.0</brotli4j.version>
+         <lz4.version>1.8.0</lz4.version>
+         <snappy.version>1.1.10.4</snappy.version>
+    -    <zstd-jni.version>1.5.5-2</zstd-jni.version>
+    +    <zstd-jni.version>1.5.7-2</zstd-jni.version>
+         <!--
+             Note that the version of protobuf shipped in hbase-thirdparty must match the version used
+             in hbase-protocol-shaded and hbase-examples. The version of jackson-[annotations,core,
+  notes: >
+    Backported the zstd mixed heap/direct ByteBuff decompression support and dependency bump to branch-2; all individual hunks validated against 741754adc7d147271678799bf584518359cec7e2.
+```
+
+--- END CLI OUTPUT ---
+[15:57:46]   Done in 176.1s | status=success

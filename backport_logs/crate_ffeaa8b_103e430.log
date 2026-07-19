@@ -1,0 +1,2517 @@
+[21:15:05] === Row 4: crate  ffeaa8be -> 103e4306  [TYPE-I] ===
+[21:15:05]   Resolving parent of backport commit 103e4306...
+[21:15:06]   Backport parent (target ref): 2e739716e3037b6e66d74ef7372d7661a5289af2
+[21:15:06]   Extracting new-version patch for ffeaa8be...
+[21:15:06]   New-version patch size: 29494 chars
+[21:15:06]   Checking out backport parent 2e739716...
+[21:15:06]   UNEXPECTED ERROR: Traceback (most recent call last):
+  File "c:\Users\Thimira\Desktop\javabackports\backport_with_opencode.py", line 409, in process_row
+    prompt = build_backport_prompt(job, backport_parent, new_version_patch)
+  File "c:\Users\Thimira\Desktop\javabackports\backport_with_opencode.py", line 218, in build_backport_prompt
+    return BACKPORT_PROMPT_TEMPLATE.format(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        project=row.get("project", ""),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+        new_version_patch=new_version_patch,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+KeyError: 'backp\nort_version'
+
+[21:15:06]   Done in 0.5s | status=error
+[00:37:10] === Row 21: crate  ffeaa8be -> 103e4306  [TYPE-I] ===
+[00:37:10]   Resolving parent of backport commit 103e4306...
+[00:37:10]   Backport parent (target ref): 2e739716e3037b6e66d74ef7372d7661a5289af2
+[00:37:10]   Extracting new-version patch for ffeaa8be...
+[00:37:10]   New-version patch size: 29494 chars
+[00:37:10]   Checking out backport parent 2e739716...
+[00:37:10]   Invoking OpenCode CLI (33522 chars)...
+[00:37:10]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll compare the provided master diff against the current `6.0` checkout, locate the corresponding transport handler/test code and release notes, then build and validate a minimal backport patch before committing it.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target branch file context
+[ ] Construct and validate per-hunk backport patch
+[ ] Apply patch and commit backport
+[ ] Run full validation and produce YAML result
+[0m
+[0m⚙ [0mviewcode {"ref":"2e739716e3037b6e66d74ef7372d7661a5289af2","path":"server/src/main/java/org/elasticsearch/transport/InboundHandler.java","startline":1,"endline":390}
+[0m⚙ [0mviewcode {"ref":"2e739716e3037b6e66d74ef7372d7661a5289af2","path":"server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java","startline":1,"endline":850}
+[0m⚙ [0mgit_show {"ref":"ffeaa8be341dc98fcd4a30f3b6be8df9ae8b5dcf"}
+[0m⚙ [0mviewcode {"ref":"2e739716e3037b6e66d74ef7372d7661a5289af2","path":"docs/appendices/release-notes/6.0.3.rst","startline":1,"endline":90}
+[0m⚙ [0mviewcode {"ref":"2e739716e3037b6e66d74ef7372d7661a5289af2","path":"docs/appendices/release-notes/5.10.13.rst","startline":1,"endline":80}
+[0m⚙ [0mlocate_symbol {"ref":"2e739716e3037b6e66d74ef7372d7661a5289af2","symbol":"InboundHandler"}
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/org/elasticsearch/transport/InboundHandler.java","start_line":120,"end_line":260,"start_commit":"2e739716e3037b6e66d74ef7372d7661a5289af2","end_commit":"2e739716e3037b6e66d74ef7372d7661a5289af2"}
+[0m⚙ [0mlocate_symbol {"ref":"2e739716e3037b6e66d74ef7372d7661a5289af2","symbol":"handleResponse"}
+[0m⚙ [0mlocate_symbol {"ref":"2e739716e3037b6e66d74ef7372d7661a5289af2","symbol":"RequestHandlerRegistry"}
+[0m⚙ [0mlocate_symbol {"ref":"2e739716e3037b6e66d74ef7372d7661a5289af2","symbol":"TransportMessageListener"}
+[0m⚙ [0mlocate_symbol {"ref":"2e739716e3037b6e66d74ef7372d7661a5289af2","symbol":"handlerResponseError"}
+The target files match the original hunk locations on `6.0`; the only API difference found so far is the lambda parameter spelling in test helper setup. One symbol lookup left a stale `.git/index.lock`, so I’m checking/removing only that lock file before continuing with patch validation.
+[0m
+[0m$ [0mif (Test-Path -LiteralPath ".git\index.lock") { Remove-Item -LiteralPath ".git\index.lock"; "removed stale .git/index.lock" } else { "no index lock" }
+no index lock
+[0m
+[0m✱ [0mGrep "setMessageListener"[90m in server/src/main/java/org/elasticsearch/transport · 7 matches[0m
+[0m✱ [0mGrep "fromByteBuffer"[90m in server/src/test/java · 0 matches[0m
+[0m✱ [0mGrep "org.jetbrains.annotations.Nullable"[90m in server/src/test/java · 26 matches[0m
+[0m✱ [0mGrep "static .*fromByteBuffer|fromByteBuffer\("[90m in server/src/main/java · 4 matches[0m
+I found one backport-specific issue in the provided test diff: `BytesReference.fromByteBuffer` is package-private on this branch, so the tests need to use `BytesArray` over the backing byte array instead. I’m adapting only that construction while preserving the intended malformed payload coverage.
+[0m→ [0mRead server/src/main/java/org/elasticsearch/common/bytes/BytesReference.java[90m [offset=80, limit=35][0m
+[0m
+[0m$ [0mgit status --short
+?? tags
+[0m
+I’m applying the backport now: moving response stream-consumption checks into the response deserialization path, adding EOF handling for truncated requests, and adding regression tests/release notes adapted to `6.0`.
+[0m✗ [0mPatch failed
+[91m[1mError: [0mapply_patch verification failed: Error: Failed to find expected lines in C:\Users\Thimira\Desktop\javabackports\crate\server\src\main\java\org\elasticsearch\transport\InboundHandler.java:
+
+    }
+
+    private static void sendErrorResponse(String actionName, TransportChannel transportChannel, Exception e) {
+        try {
+            transportChannel.sendResponse(e);
+[0m
+[0m$ [0mgit diff --stat
+(no output)
+[0m
+[0m% [0mPatch 2 files
+[0m% [0mPatch 1 file
+The initial large patch had a context mismatch around a blank-line location, so I split it into smaller targeted patches and the core handler call-site changes are now applied cleanly.
+[0m% [0mPatch 1 file
+[0m% [0mPatch 1 file
+[0m% [0mPatch 1 file
+[0m% [0mPatch 1 file
+[0m% [0mPatch 1 file
+[0m✱ [0mGrep "handlerForVersion\([^,\)]*\)"[90m in server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java · 0 matches[0m
+[0m✱ [0mGrep "fromByteBuffer"[90m in server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java · 0 matches[0m
+[0m✱ [0mGrep "handleResponse\("[90m in server/src/main/java/org/elasticsearch/transport/InboundHandler.java · 12 matches[0m
+The backport code is in place. I’m generating the unified diff from the current working tree and validating it against the specified parent before committing.
+[0m
+[0m$ [0mgit diff -- docs/appendices/release-notes/5.10.13.rst docs/appendices/release-notes/6.0.3.rst server/src/main/java/org/elasticsearch/transport/InboundHandler.java server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java
+warning: in the working copy of 'docs/appendices/release-notes/5.10.13.rst', LF will be replaced by CRLF the next time Git touches it
+diff --git a/docs/appendices/release-notes/5.10.13.rst b/docs/appendices/release-notes/5.10.13.rst
+index 2953b4da61..d85a61e9dc 100644
+--- a/docs/appendices/release-notes/5.10.13.rst
++++ b/docs/appendices/release-notes/5.10.13.rst
+@@ -51,3 +51,7 @@ Fixes
+ - Fixed an issue that could lead to PostgreSQL wire protocol messages being sent
+   in the wrong order to the client. The issue was triggered when using batched
+   statements where one of the statements caused a parse or bind error.
++
++- Fixed an issue that could lead to stuck jobs, memory leaks and even make a
++  cluster unstable when a query with a ``LIMIT`` clause was interrupted by a
++  ``CircuitBreakingException``.
+diff --git a/docs/appendices/release-notes/6.0.3.rst b/docs/appendices/release-notes/6.0.3.rst
+index a82a63c457..c713ba8896 100644
+--- a/docs/appendices/release-notes/6.0.3.rst
++++ b/docs/appendices/release-notes/6.0.3.rst
+@@ -47,4 +47,6 @@ series.
+ Fixes
+ =====
+ 
+-None
++- Fixed an issue that could lead to stuck jobs, memory leaks and even make a
++  cluster unstable when a query with a ``LIMIT`` clause was interrupted by a
++  ``CircuitBreakingException``.
+diff --git a/server/src/main/java/org/elasticsearch/transport/InboundHandler.java b/server/src/main/java/org/elasticsearch/transport/InboundHandler.java
+index 86d3f3ef0b..fe196df22d 100644
+--- a/server/src/main/java/org/elasticsearch/transport/InboundHandler.java
++++ b/server/src/main/java/org/elasticsearch/transport/InboundHandler.java
+@@ -19,6 +19,7 @@
+ 
+ package org.elasticsearch.transport;
+ 
++import java.io.EOFException;
+ import java.io.IOException;
+ import java.net.InetSocketAddress;
+ import java.nio.ByteBuffer;
+@@ -128,21 +129,13 @@ public class InboundHandler {
+                         streamInput = namedWriteableStream(message.openOrGetStreamInput());
+                         assertRemoteVersion(streamInput, header.getVersion());
+                         if (header.isError()) {
+-                            handlerResponseError(streamInput, handler);
++                            handlerResponseError(requestId, streamInput, handler);
+                         } else {
+-                            handleResponse(remoteAddress, streamInput, handler);
+-                        }
+-                        // Check the entire message has been read
+-                        final int nextByte = streamInput.read();
+-                        // calling read() is useful to make sure the message is fully read, even if there is an EOS marker
+-                        if (nextByte != -1) {
+-                            throw new IllegalStateException("Message not fully read (response) for requestId ["
+-                                + requestId + "], handler [" + handler + "], error [" + header.isError()
+-                                + "]; resetting");
++                            handleResponse(requestId, remoteAddress, streamInput, handler);
+                         }
+                     } else {
+                         assert header.isError() == false;
+-                        handleResponse(remoteAddress, EMPTY_STREAM_INPUT, handler);
++                        handleResponse(requestId, remoteAddress, EMPTY_STREAM_INPUT, handler);
+                     }
+                 }
+             }
+@@ -210,14 +203,8 @@ public class InboundHandler {
+                     assertRemoteVersion(stream, header.getVersion());
+                     final RequestHandlerRegistry<T> reg = requestHandlers.getHandler(action);
+                     assert reg != null;
+-                    final T request = reg.newRequest(stream);
+-                    // in case we throw an exception, i.e. when the limit is hit, we don't want to verify
+-                    final int nextByte = stream.read();
+-                    // calling read() is useful to make sure the message is fully read, even if there some kind of EOS marker
+-                    if (nextByte != -1) {
+-                        throw new IllegalStateException("Message not fully read (request) for requestId [" + requestId + "], action ["
+-                            + action + "], available [" + stream.available() + "]; resetting");
+-                    }
++                    final T request = newRequest(requestId, action, stream, reg);
++                    checkStreamIsFullyConsumed(requestId, action, stream);
+                     final String executor = reg.getExecutor();
+                     if (ThreadPool.Names.SAME.equals(executor)) {
+                         try {
+@@ -236,6 +223,97 @@ public class InboundHandler {
+         }
+     }
+ 
++    /**
++     * Creates new request instance out of input stream. Throws IllegalStateException if the end of
++     * the stream was reached before the request is fully deserialized from the stream.
++     * @param <T> transport request type
++     * @param requestId request identifier
++     * @param action action name
++     * @param stream stream
++     * @param reg request handler registry
++     * @return new request instance
++     * @throws IOException IOException
++     * @throws IllegalStateException IllegalStateException
++     */
++    private <T extends TransportRequest> T newRequest(
++        final long requestId,
++        final String action,
++        final StreamInput stream,
++        final RequestHandlerRegistry<T> reg
++    ) throws IOException {
++        try {
++            return reg.newRequest(stream);
++        } catch (final EOFException e) {
++            // Another favor of (de)serialization issues is when stream contains less bytes than
++            // the request handler needs to deserialize the payload.
++            throw new IllegalStateException(
++                "Message fully read (request) but more data is expected for requestId ["
++                    + requestId
++                    + "], action ["
++                    + action
++                    + "]; resetting",
++                e
++            );
++        }
++    }
++
++    /**
++     * Checks if the stream is fully consumed and throws the exceptions if that is not the case.
++     * @param requestId request identifier
++     * @param action action name
++     * @param stream stream
++     * @throws IOException IOException
++     */
++    private void checkStreamIsFullyConsumed(final long requestId, final String action, final StreamInput stream) throws IOException {
++        // in case we throw an exception, i.e. when the limit is hit, we don't want to verify
++        final int nextByte = stream.read();
++
++        // calling read() is useful to make sure the message is fully read, even if there some kind of EOS marker
++        if (nextByte != -1) {
++            throw new IllegalStateException(
++                "Message not fully read (request) for requestId ["
++                    + requestId
++                    + "], action ["
++                    + action
++                    + "], available ["
++                    + stream.available()
++                    + "]; resetting"
++            );
++        }
++    }
++
++    /**
++     * Checks if the stream is fully consumed and throws the exceptions if that is not the case.
++     * @param requestId request identifier
++     * @param handler response handler
++     * @param stream stream
++     * @param error "true" if response represents error, "false" otherwise
++     * @throws IOException IOException
++     */
++    private void checkStreamIsFullyConsumed(
++        final long requestId,
++        final TransportResponseHandler<?> handler,
++        final StreamInput stream,
++        final boolean error
++    ) throws IOException {
++        if (stream != EMPTY_STREAM_INPUT) {
++            // Check the entire message has been read
++            final int nextByte = stream.read();
++            // calling read() is useful to make sure the message is fully read, even if there is an EOS marker
++            if (nextByte != -1) {
++                throw new IllegalStateException(
++                    "Message not fully read (response) for requestId ["
++                        + requestId
++                        + "], handler ["
++                        + handler
++                        + "], error ["
++                        + error
++                        + "]; resetting"
++                );
++            }
++        }
++    }
++
+     private static void sendErrorResponse(String actionName, TransportChannel transportChannel, Exception e) {
+         try {
+             transportChannel.sendResponse(e);
+@@ -245,11 +323,14 @@ public class InboundHandler {
+         }
+     }
+ 
+-    private <T extends TransportResponse> void handleResponse(InetSocketAddress remoteAddress, final StreamInput stream,
++    private <T extends TransportResponse> void handleResponse(final long requestId,
++                                                              InetSocketAddress remoteAddress,
++                                                              final StreamInput stream,
+                                                               final TransportResponseHandler<T> handler) {
+         final T response;
+         try {
+             response = handler.read(stream);
++            checkStreamIsFullyConsumed(requestId, handler, stream, false);
+         } catch (Exception e) {
+             final Exception serializationException = new TransportSerializationException(
+                 "Failed to deserialize response from handler [" + handler + "]", e);
+@@ -273,10 +354,11 @@ public class InboundHandler {
+         }
+     }
+ 
+-    private void handlerResponseError(StreamInput stream, final TransportResponseHandler<?> handler) {
++    private void handlerResponseError(final long requestId, StreamInput stream, final TransportResponseHandler<?> handler) {
+         Exception error;
+         try {
+             error = stream.readException();
++            checkStreamIsFullyConsumed(requestId, handler, stream, true);
+         } catch (Exception e) {
+             error = new TransportSerializationException(
+                     "Failed to deserialize exception response from stream for handler [" + handler + "]", e);
+diff --git a/server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java b/server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java
+index d974a2c565..f0ff1540a5 100644
+--- a/server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java
++++ b/server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java
+@@ -21,9 +21,11 @@ package org.elasticsearch.transport;
+ 
+ import static org.assertj.core.api.Assertions.assertThat;
+ 
++import java.io.EOFException;
+ import java.io.IOException;
+ import java.io.InputStream;
+ import java.net.InetSocketAddress;
++import java.nio.ByteBuffer;
+ import java.util.Collections;
+ import java.util.concurrent.TimeUnit;
+ import java.util.concurrent.atomic.AtomicBoolean;
+@@ -32,6 +34,7 @@ import java.util.concurrent.atomic.AtomicReference;
+ import org.apache.logging.log4j.Level;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
++import org.apache.lucene.util.BytesRef;
+ import org.elasticsearch.ElasticsearchException;
+ import org.elasticsearch.Version;
+ import org.elasticsearch.action.ActionListener;
+@@ -51,6 +54,7 @@ import org.elasticsearch.test.VersionUtils;
+ import org.elasticsearch.threadpool.TestThreadPool;
+ import org.elasticsearch.threadpool.ThreadPool;
+ import org.elasticsearch.transport.netty4.Netty4Utils;
++import org.jetbrains.annotations.Nullable;
+ import org.junit.After;
+ import org.junit.Before;
+ import org.junit.Test;
+@@ -92,7 +96,7 @@ public class InboundHandlerTests extends ESTestCase {
+         };
+         requestHandlers = new Transport.RequestHandlers();
+         responseHandlers = new Transport.ResponseHandlers();
+-        handler = handlerForVersion(version);
++        handler = handlerForVersion(version, null);
+     }
+ 
+     @After
+@@ -279,7 +283,7 @@ public class InboundHandlerTests extends ESTestCase {
+         // minimum compatible one.
+         Version localVersion = Version.V_6_0_0;
+         Version remoteVersion = Version.V_5_10_1;
+-        InboundHandler handler = handlerForVersion(localVersion);
++        InboundHandler handler = handlerForVersion(localVersion, null);
+         int headerSize = TcpHeader.headerSize(remoteVersion);
+ 
+         final long requestId = randomNonNegativeLong();
+@@ -322,7 +326,7 @@ public class InboundHandlerTests extends ESTestCase {
+     public void test_handshake_checks_minimum_compatible_version_if_normal_version_is_not_compatible() throws Exception {
+         Version localVersion = Version.V_6_0_0;
+         Version remoteVersion = Version.V_5_10_1;
+-        InboundHandler handler = handlerForVersion(remoteVersion);
++        InboundHandler handler = handlerForVersion(remoteVersion, null);
+ 
+         int headerSize = TcpHeader.headerSize(localVersion.minimumCompatibilityVersion());
+         final long requestId = randomNonNegativeLong();
+@@ -359,7 +363,7 @@ public class InboundHandlerTests extends ESTestCase {
+     public void test_handshake_error_if_version_and_minimum_compatible_version_is_not_compatible() throws Exception {
+         Version localVersion = Version.V_6_0_0;
+         Version remoteVersion = Version.V_4_8_4;
+-        InboundHandler handler = handlerForVersion(localVersion);
++        InboundHandler handler = handlerForVersion(localVersion, null);
+         int headerSize = TcpHeader.headerSize(remoteVersion);
+ 
+         final long requestId = randomNonNegativeLong();
+@@ -437,6 +441,316 @@ public class InboundHandlerTests extends ESTestCase {
+         }
+     }
+ 
++    @Test
++    public void testRequestNotFullyRead() throws Exception {
++        String action = "test-request";
++        int headerSize = TcpHeader.headerSize(version);
++        AtomicReference<Exception> exceptionCaptor = new AtomicReference<>();
++        final long requestId = responseHandlers.newRequestId();
++        responseHandlers.add(requestId, new Transport.ResponseContext<>(new TransportResponseHandler<TestResponse>() {
++            @Override
++            public void handleResponse(TestResponse response) {}
++
++            @Override
++            public void handleException(TransportException exp) {
++                exceptionCaptor.set(exp);
++            }
++
++            @Override
++            public String executor() {
++                return ThreadPool.Names.SAME;
++            }
++
++            @Override
++            public TestResponse read(StreamInput in) throws IOException {
++                return new TestResponse(in);
++            }
++        }, null, action));
++
++        RequestHandlerRegistry<TestRequest> registry = new RequestHandlerRegistry<>(
++            action,
++            TestRequest::new,
++            (request, channel) -> {},
++            ThreadPool.Names.SAME,
++            false,
++            true
++        );
++
++        requestHandlers.registerHandler(registry);
++        String requestValue = randomAlphaOfLength(10);
++
++        OutboundMessage.Request request = new OutboundMessage.Request(
++            new TestRequest(requestValue),
++            version,
++            action,
++            requestId,
++            false,
++            false
++        );
++
++        var listener = new TransportMessageListener() {
++            @Override
++            public void onResponseSent(long requestId, String action, Exception error) {
++                exceptionCaptor.set(error);
++            }
++        };
++        InboundHandler handler = handlerForVersion(version, listener);
++
++        // Create the request payload with 1 byte overflow
++        final BytesRef bytes = request.serialize(new BytesStreamOutput()).toBytesRef();
++        final ByteBuffer buffer = ByteBuffer.allocate(bytes.length + 1);
++        buffer.put(bytes.bytes, 0, bytes.length);
++        buffer.put((byte) 1);
++
++        BytesReference fullRequestBytes = new BytesArray(buffer.array(), 0, buffer.position());
++        BytesReference requestContent = fullRequestBytes.slice(headerSize, fullRequestBytes.length() - headerSize);
++        Header requestHeader = new Header(fullRequestBytes.length() - 6, requestId, TransportStatus.setRequest((byte) 0), version);
++        InboundMessage requestMessage = new InboundMessage(requestHeader, ReleasableBytesReference.wrap(requestContent), () -> {});
++        requestHeader.finishParsingHeader(requestMessage.openOrGetStreamInput());
++        handler.inboundMessage(channel, requestMessage);
++
++        assertThat(exceptionCaptor.get()).isExactlyInstanceOf(IllegalStateException.class);
++        assertThat(exceptionCaptor.get().getMessage()).startsWith("Message not fully read (request) for requestId");
++    }
++
++    @Test
++    public void testRequestFullyReadButMoreDataIsAvailable() throws Exception {
++        String action = "test-request";
++        int headerSize = TcpHeader.headerSize(version);
++        AtomicReference<Exception> exceptionCaptor = new AtomicReference<>();
++        final long requestId = responseHandlers.newRequestId();
++        responseHandlers.add(requestId, new Transport.ResponseContext<>(new TransportResponseHandler<TestResponse>() {
++            @Override
++            public void handleResponse(TestResponse response) {}
++
++            @Override
++            public void handleException(TransportException exp) {
++                exceptionCaptor.set(exp);
++            }
++
++            @Override
++            public String executor() {
++                return ThreadPool.Names.SAME;
++            }
++
++            @Override
++            public TestResponse read(StreamInput in) throws IOException {
++                return new TestResponse(in);
++            }
++        }, null, action));
++
++        RequestHandlerRegistry<TestRequest> registry = new RequestHandlerRegistry<>(
++            action,
++            TestRequest::new,
++            (request, channel) -> {},
++            ThreadPool.Names.SAME,
++            false,
++            true
++        );
++
++        requestHandlers.registerHandler(registry);
++        String requestValue = randomAlphaOfLength(10);
++        OutboundMessage.Request request = new OutboundMessage.Request(
++            new TestRequest(requestValue),
++            version,
++            action,
++            requestId,
++            false,
++            false
++        );
++
++        var listener = new TransportMessageListener() {
++            @Override
++            public void onResponseSent(long requestId, String action, Exception error) {
++                exceptionCaptor.set(error);
++            }
++        };
++        InboundHandler handler = handlerForVersion(version, listener);
++
++        final BytesReference fullRequestBytes = request.serialize(new BytesStreamOutput());
++        // Create the request payload by intentionally stripping 1 byte away
++        BytesReference requestContent = fullRequestBytes.slice(headerSize, fullRequestBytes.length() - headerSize - 1);
++        Header requestHeader = new Header(fullRequestBytes.length() - 6, requestId, TransportStatus.setRequest((byte) 0), version);
++        InboundMessage requestMessage = new InboundMessage(requestHeader, ReleasableBytesReference.wrap(requestContent), () -> {});
++        requestHeader.finishParsingHeader(requestMessage.openOrGetStreamInput());
++        handler.inboundMessage(channel, requestMessage);
++
++        assertThat(exceptionCaptor.get()).isExactlyInstanceOf(IllegalStateException.class);
++        assertThat(exceptionCaptor.get().getCause()).isExactlyInstanceOf(EOFException.class);
++        assertThat(exceptionCaptor.get().getMessage()).startsWith("Message fully read (request) but more data is expected for requestId");
++    }
++
++    @Test
++    public void testResponseNotFullyRead() throws Exception {
++        String action = "test-request";
++        int headerSize = TcpHeader.headerSize(version);
++        AtomicReference<TestRequest> requestCaptor = new AtomicReference<>();
++        AtomicReference<Exception> exceptionCaptor = new AtomicReference<>();
++        AtomicReference<TestResponse> responseCaptor = new AtomicReference<>();
++        AtomicReference<TransportChannel> channelCaptor = new AtomicReference<>();
++        final long requestId = responseHandlers.newRequestId();
++        responseHandlers.add(requestId, new Transport.ResponseContext<>(new TransportResponseHandler<TestResponse>() {
++            @Override
++            public void handleResponse(TestResponse response) {
++                responseCaptor.set(response);
++            }
++
++            @Override
++            public void handleException(TransportException exp) {
++                exceptionCaptor.set(exp);
++            }
++
++            @Override
++            public String executor() {
++                return ThreadPool.Names.SAME;
++            }
++
++            @Override
++            public TestResponse read(StreamInput in) throws IOException {
++                return new TestResponse(in);
++            }
++        }, null, action));
++        RequestHandlerRegistry<TestRequest> registry = new RequestHandlerRegistry<>(
++            action,
++            TestRequest::new,
++            (request, channel) -> {
++                channelCaptor.set(channel);
++                requestCaptor.set(request);
++            },
++            ThreadPool.Names.SAME,
++            false,
++            true
++        );
++        requestHandlers.registerHandler(registry);
++        String requestValue = randomAlphaOfLength(10);
++        OutboundMessage.Request request = new OutboundMessage.Request(
++            new TestRequest(requestValue),
++            version,
++            action,
++            requestId,
++            false,
++            false
++        );
++
++        BytesReference fullRequestBytes = request.serialize(new BytesStreamOutput());
++        BytesReference requestContent = fullRequestBytes.slice(headerSize, fullRequestBytes.length() - headerSize);
++        Header requestHeader = new Header(fullRequestBytes.length() - 6, requestId, TransportStatus.setRequest((byte) 0), version);
++        InboundMessage requestMessage = new InboundMessage(requestHeader, ReleasableBytesReference.wrap(requestContent), () -> {});
++        requestHeader.finishParsingHeader(requestMessage.openOrGetStreamInput());
++        handler.inboundMessage(channel, requestMessage);
++
++        TransportChannel transportChannel = channelCaptor.get();
++        assertThat(transportChannel.getVersion()).isEqualTo(Version.CURRENT);
++        assertThat(transportChannel.getChannelType()).isEqualTo("transport");
++        assertThat(requestValue).isEqualTo(requestCaptor.get().value);
++
++        String responseValue = randomAlphaOfLength(10);
++        byte responseStatus = TransportStatus.setResponse((byte) 0);
++        transportChannel.sendResponse(new TestResponse(responseValue));
++
++        // Create the response payload with 1 byte overflow
++        ByteBuf msg = (ByteBuf) embeddedChannel.outboundMessages().poll();
++        final BytesRef bytes = Netty4Utils.toBytesReference(msg).toBytesRef();
++        final ByteBuffer buffer = ByteBuffer.allocate(bytes.length + 1);
++        buffer.put(bytes.bytes, 0, bytes.length);
++        buffer.put((byte) 1);
++
++        BytesReference fullResponseBytes = new BytesArray(buffer.array(), 0, buffer.position());
++        BytesReference responseContent = fullResponseBytes.slice(headerSize, fullResponseBytes.length() - headerSize);
++        Header responseHeader = new Header(fullResponseBytes.length() - 6, requestId, responseStatus, version);
++        InboundMessage responseMessage = new InboundMessage(responseHeader, ReleasableBytesReference.wrap(responseContent), () -> {});
++        responseHeader.finishParsingHeader(responseMessage.openOrGetStreamInput());
++        handler.inboundMessage(channel, responseMessage);
++
++        assertThat(exceptionCaptor.get()).isExactlyInstanceOf(RemoteTransportException.class);
++        assertThat(exceptionCaptor.get().getCause()).isExactlyInstanceOf(TransportSerializationException.class);
++        assertThat(exceptionCaptor.get().getMessage()).contains("Failed to deserialize response from handler");
++    }
++
++    @Test
++    public void testResponseFullyReadButMoreDataIsAvailable() throws Exception {
++        String action = "test-request";
++        int headerSize = TcpHeader.headerSize(version);
++        AtomicReference<TestRequest> requestCaptor = new AtomicReference<>();
++        AtomicReference<Exception> exceptionCaptor = new AtomicReference<>();
++        AtomicReference<TestResponse> responseCaptor = new AtomicReference<>();
++        AtomicReference<TransportChannel> channelCaptor = new AtomicReference<>();
++
++        final long requestId = responseHandlers.newRequestId();
++        responseHandlers.add(requestId, new Transport.ResponseContext<>(new TransportResponseHandler<TestResponse>() {
++            @Override
++            public void handleResponse(TestResponse response) {
++                responseCaptor.set(response);
++            }
++
++            @Override
++            public void handleException(TransportException exp) {
++                exceptionCaptor.set(exp);
++            }
++
++            @Override
++            public String executor() {
++                return ThreadPool.Names.SAME;
++            }
++
++            @Override
++            public TestResponse read(StreamInput in) throws IOException {
++                return new TestResponse(in);
++            }
++        }, null, action));
++        RequestHandlerRegistry<TestRequest> registry = new RequestHandlerRegistry<>(
++            action,
++            TestRequest::new,
++            (request, channel) -> {
++                channelCaptor.set(channel);
++                requestCaptor.set(request);
++            },
++            ThreadPool.Names.SAME,
++            false,
++            true
++        );
++        requestHandlers.registerHandler(registry);
++        String requestValue = randomAlphaOfLength(10);
++        OutboundMessage.Request request = new OutboundMessage.Request(
++            new TestRequest(requestValue),
++            version,
++            action,
++            requestId,
++            false,
++            false
++        );
++
++        BytesReference fullRequestBytes = request.serialize(new BytesStreamOutput());
++        BytesReference requestContent = fullRequestBytes.slice(headerSize, fullRequestBytes.length() - headerSize);
++        Header requestHeader = new Header(fullRequestBytes.length() - 6, requestId, TransportStatus.setRequest((byte) 0), version);
++        InboundMessage requestMessage = new InboundMessage(requestHeader, ReleasableBytesReference.wrap(requestContent), () -> {});
++        requestHeader.finishParsingHeader(requestMessage.openOrGetStreamInput());
++        handler.inboundMessage(channel, requestMessage);
++
++        TransportChannel transportChannel = channelCaptor.get();
++        assertThat(transportChannel.getVersion()).isEqualTo(Version.CURRENT);
++        assertThat(transportChannel.getChannelType()).isEqualTo("transport");
++        assertThat(requestValue).isEqualTo(requestCaptor.get().value);
++
++        String responseValue = randomAlphaOfLength(10);
++        byte responseStatus = TransportStatus.setResponse((byte) 0);
++        transportChannel.sendResponse(new TestResponse(responseValue));
++
++        ByteBuf msg = (ByteBuf) embeddedChannel.outboundMessages().poll();
++        BytesReference fullResponseBytes = Netty4Utils.toBytesReference(msg);
++
++        // Create the response payload by intentionally stripping 1 byte away
++        BytesReference responseContent = fullResponseBytes.slice(headerSize, fullResponseBytes.length() - headerSize - 1);
++        Header responseHeader = new Header(fullResponseBytes.length() - 6, requestId, responseStatus, version);
++        InboundMessage responseMessage = new InboundMessage(responseHeader, ReleasableBytesReference.wrap(responseContent), () -> {});
++        responseHeader.finishParsingHeader(responseMessage.openOrGetStreamInput());
++        handler.inboundMessage(channel, responseMessage);
++
++        assertThat(exceptionCaptor.get()).isExactlyInstanceOf(RemoteTransportException.class);
++        assertThat(exceptionCaptor.get().getCause()).isExactlyInstanceOf(TransportSerializationException.class);
++        assertThat(exceptionCaptor.get().getMessage()).contains("Failed to deserialize response from handler");
++    }
++
+     private static InboundMessage unreadableInboundHandshake(Version remoteVersion, Header requestHeader) {
+         return new InboundMessage(requestHeader, ReleasableBytesReference.wrap(BytesArray.EMPTY), () -> { }) {
+             @Override
+@@ -453,7 +767,7 @@ public class InboundHandlerTests extends ESTestCase {
+         };
+     }
+ 
+-    private InboundHandler handlerForVersion(Version localVersion) {
++    private InboundHandler handlerForVersion(Version localVersion, @Nullable TransportMessageListener listener) {
+         NamedWriteableRegistry namedWriteableRegistry = new NamedWriteableRegistry(Collections.emptyList());
+         TransportHandshaker handshaker = new TransportHandshaker(localVersion, threadPool, (n, c, r, v) -> {});
+         TransportKeepAlive keepAlive = new TransportKeepAlive(threadPool, (c, b) -> channel.writeAndFlush(Unpooled.wrappedBuffer(b)));
+@@ -464,6 +778,9 @@ public class InboundHandlerTests extends ESTestCase {
+             threadPool,
+             BigArrays.NON_RECYCLING_INSTANCE
+         );
++        if (listener != null) {
++            outboundHandler.setMessageListener(listener);
++        }
+         return new InboundHandler(
+             threadPool,
+             outboundHandler,
+warning: in the working copy of 'docs/appendices/release-notes/6.0.3.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/org/elasticsearch/transport/InboundHandler.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java', LF will be replaced by CRLF the next time Git touches it
+[0m
+The generated diff applies cleanly in the working tree and preserves the original hunks, with only the test byte-buffer construction adapted for `6.0` visibility. I’m validating the full unified patch against the specified parent next.
+[0m⚙ [0mvalidate {"ref":"2e739716e3037b6e66d74ef7372d7661a5289af2","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.10.13.rst b/docs/appendices/release-notes/5.10.13.rst\nindex 2953b4da61..d85a61e9dc 100644\n--- a/docs/appendices/release-notes/5.10.13.rst\n+++ b/docs/appendices/release-notes/5.10.13.rst\n@@ -51,3 +51,7 @@ Fixes\n - Fixed an issue that could lead to PostgreSQL wire protocol messages being sent\n   in the wrong order to the client. The issue was triggered when using batched\n   statements where one of the statements caused a parse or bind error.\n+\n+- Fixed an issue that could lead to stuck jobs, memory leaks and even make a\n+  cluster unstable when a query with a ``LIMIT`` clause was interrupted by a\n+  ``CircuitBreakingException``.\ndiff --git a/docs/appendices/release-notes/6.0.3.rst b/docs/appendices/release-notes/6.0.3.rst\nindex a82a63c457..c713ba8896 100644\n--- a/docs/appendices/release-notes/6.0.3.rst\n+++ b/docs/appendices/release-notes/6.0.3.rst\n@@ -47,4 +47,6 @@ series.\n Fixes\n =====\n \n-None\n+- Fixed an issue that could lead to stuck jobs, memory leaks and even make a\n+  cluster unstable when a query with a ``LIMIT`` clause was interrupted by a\n+  ``CircuitBreakingException``.\ndiff --git a/server/src/main/java/org/elasticsearch/transport/InboundHandler.java b/server/src/main/java/org/elasticsearch/transport/InboundHandler.java\nindex 86d3f3ef0b..fe196df22d 100644\n--- a/server/src/main/java/org/elasticsearch/transport/InboundHandler.java\n+++ b/server/src/main/java/org/elasticsearch/transport/InboundHandler.java\n@@ -19,6 +19,7 @@\n \n package org.elasticsearch.transport;\n \n+import java.io.EOFException;\n import java.io.IOException;\n import java.net.InetSocketAddress;\n import java.nio.ByteBuffer;\n@@ -128,21 +129,13 @@ public class InboundHandler {\n                         streamInput = namedWriteableStream(message.openOrGetStreamInput());\n                         assertRemoteVersion(streamInput, header.getVersion());\n                         if (header.isError()) {\n-                            handlerResponseError(streamInput, handler);\n+                            handlerResponseError(requestId, streamInput, handler);\n                         } else {\n-                            handleResponse(remoteAddress, streamInput, handler);\n-                        }\n-                        // Check the entire message has been read\n-                        final int nextByte = streamInput.read();\n-                        // calling read() is useful to make sure the message is fully read, even if there is an EOS marker\n-                        if (nextByte != -1) {\n-                            throw new IllegalStateException(\"Message not fully read (response) for requestId [\"\n-                                + requestId + \"], handler [\" + handler + \"], error [\" + header.isError()\n-                                + \"]; resetting\");\n+                            handleResponse(requestId, remoteAddress, streamInput, handler);\n                         }\n                     } else {\n                         assert header.isError() == false;\n-                        handleResponse(remoteAddress, EMPTY_STREAM_INPUT, handler);\n+                        handleResponse(requestId, remoteAddress, EMPTY_STREAM_INPUT, handler);\n                     }\n                 }\n             }\n@@ -210,14 +203,8 @@ public class InboundHandler {\n                     assertRemoteVersion(stream, header.getVersion());\n                     final RequestHandlerRegistry<T> reg = requestHandlers.getHandler(action);\n                     assert reg != null;\n-                    final T request = reg.newRequest(stream);\n-                    // in case we throw an exception, i.e. when the limit is hit, we don't want to verify\n-                    final int nextByte = stream.read();\n-                    // calling read() is useful to make sure the message is fully read, even if there some kind of EOS marker\n-                    if (nextByte != -1) {\n-                        throw new IllegalStateException(\"Message not fully read (request) for requestId [\" + requestId + \"], action [\"\n-                            + action + \"], available [\" + stream.available() + \"]; resetting\");\n-                    }\n+                    final T request = newRequest(requestId, action, stream, reg);\n+                    checkStreamIsFullyConsumed(requestId, action, stream);\n                     final String executor = reg.getExecutor();\n                     if (ThreadPool.Names.SAME.equals(executor)) {\n                         try {\n@@ -236,6 +223,97 @@ public class InboundHandler {\n         }\n     }\n \n+    /**\n+     * Creates new request instance out of input stream. Throws IllegalStateException if the end of\n+     * the stream was reached before the request is fully deserialized from the stream.\n+     * @param <T> transport request type\n+     * @param requestId request identifier\n+     * @param action action name\n+     * @param stream stream\n+     * @param reg request handler registry\n+     * @return new request instance\n+     * @throws IOException IOException\n+     * @throws IllegalStateException IllegalStateException\n+     */\n+    private <T extends TransportRequest> T newRequest(\n+        final long requestId,\n+        final String action,\n+        final StreamInput stream,\n+        final RequestHandlerRegistry<T> reg\n+    ) throws IOException {\n+        try {\n+            return reg.newRequest(stream);\n+        } catch (final EOFException e) {\n+            // Another favor of (de)serialization issues is when stream contains less bytes than\n+            // the request handler needs to deserialize the payload.\n+            throw new IllegalStateException(\n+                \"Message fully read (request) but more data is expected for requestId [\"\n+                    + requestId\n+                    + \"], action [\"\n+                    + action\n+                    + \"]; resetting\",\n+                e\n+            );\n+        }\n+    }\n+\n+    /**\n+     * Checks if the stream is fully consumed and throws the exceptions if that is not the case.\n+     * @param requestId request identifier\n+     * @param action action name\n+     * @param stream stream\n+     * @throws IOException IOException\n+     */\n+    private void checkStreamIsFullyConsumed(final long requestId, final String action, final StreamInput stream) throws IOException {\n+        // in case we throw an exception, i.e. when the limit is hit, we don't want to verify\n+        final int nextByte = stream.read();\n+\n+        // calling read() is useful to make sure the message is fully read, even if there some kind of EOS marker\n+        if (nextByte != -1) {\n+            throw new IllegalStateException(\n+                \"Message not fully read (request) for requestId [\"\n+                    + requestId\n+                    + \"], action [\"\n+                    + action\n+                    + \"], available [\"\n+                    + stream.available()\n+                    + \"]; resetting\"\n+            );\n+        }\n+    }\n+\n+    /**\n+     * Checks if the stream is fully consumed and throws the exceptions if that is not the case.\n+     * @param requestId request identifier\n+     * @param handler response handler\n+     * @param stream stream\n+     * @param error \"true\" if response represents error, \"false\" otherwise\n+     * @throws IOException IOException\n+     */\n+    private void checkStreamIsFullyConsumed(\n+        final long requestId,\n+        final TransportResponseHandler<?> handler,\n+        final StreamInput stream,\n+        final boolean error\n+    ) throws IOException {\n+        if (stream != EMPTY_STREAM_INPUT) {\n+            // Check the entire message has been read\n+            final int nextByte = stream.read();\n+            // calling read() is useful to make sure the message is fully read, even if there is an EOS marker\n+            if (nextByte != -1) {\n+                throw new IllegalStateException(\n+                    \"Message not fully read (response) for requestId [\"\n+                        + requestId\n+                        + \"], handler [\"\n+                        + handler\n+                        + \"], error [\"\n+                        + error\n+                        + \"]; resetting\"\n+                );\n+            }\n+        }\n+    }\n+\n     private static void sendErrorResponse(String actionName, TransportChannel transportChannel, Exception e) {\n         try {\n             transportChannel.sendResponse(e);\n@@ -245,11 +323,14 @@ public class InboundHandler {\n         }\n     }\n \n-    private <T extends TransportResponse> void handleResponse(InetSocketAddress remoteAddress, final StreamInput stream,\n+    private <T extends TransportResponse> void handleResponse(final long requestId,\n+                                                              InetSocketAddress remoteAddress,\n+                                                              final StreamInput stream,\n                                                               final TransportResponseHandler<T> handler) {\n         final T response;\n         try {\n             response = handler.read(stream);\n+            checkStreamIsFullyConsumed(requestId, handler, stream, false);\n         } catch (Exception e) {\n             final Exception serializationException = new TransportSerializationException(\n                 \"Failed to deserialize response from handler [\" + handler + \"]\", e);\n@@ -273,10 +354,11 @@ public class InboundHandler {\n         }\n     }\n \n-    private void handlerResponseError(StreamInput stream, final TransportResponseHandler<?> handler) {\n+    private void handlerResponseError(final long requestId, StreamInput stream, final TransportResponseHandler<?> handler) {\n         Exception error;\n         try {\n             error = stream.readException();\n+            checkStreamIsFullyConsumed(requestId, handler, stream, true);\n         } catch (Exception e) {\n             error = new TransportSerializationException(\n                     \"Failed to deserialize exception response from stream for handler [\" + handler + \"]\", e);\n"}
+[0m⚙ [0mvalidate {"ref":"2e739716e3037b6e66d74ef7372d7661a5289af2","mode":"hunk","revise_context":true,"patch":"diff --git a/server/src/main/java/org/elasticsearch/transport/InboundHandler.java b/server/src/main/java/org/elasticsearch/transport/InboundHandler.java\nindex 86d3f3ef0b..fe196df22d 100644\n--- a/server/src/main/java/org/elasticsearch/transport/InboundHandler.java\n+++ b/server/src/main/java/org/elasticsearch/transport/InboundHandler.java\n@@ -19,6 +19,7 @@\n \n package org.elasticsearch.transport;\n \n+import java.io.EOFException;\n import java.io.IOException;\n import java.net.InetSocketAddress;\n import java.nio.ByteBuffer;\n"}
+The validator rejected my copied patch because blank context lines were not preserved in the JSON patch string, not because the code context differs. I’m continuing with local compile/test checks and will use a machine-generated diff for the final patch output.
+[0m✱ [0mGlob "gradlew*"[90m 0 matches[0m
+[0m✱ [0mGlob "*gradle*"[90m 0 matches[0m
+[0m→ [0mRead .[90m [limit=100][0m
+I’m running the targeted transport test class now to catch compile or behavioral issues introduced by the adapted tests.
+[0m
+[0m$ [0m& ".\mvnw.cmd" -pl server -Dtest=org.elasticsearch.transport.InboundHandlerTests test
+Error: JAVA_HOME not found in your environment. 
+Please set the JAVA_HOME variable in your environment to match the 
+location of your Java installation.
+[0m
+The targeted Maven test cannot run in this shell because `JAVA_HOME` is not set. I’ll still run non-Java checks locally, commit the patch, and use the required Docker-based full validator for final application validation.
+[0m$ [0mgit diff --check
+warning: in the working copy of 'docs/appendices/release-notes/5.10.13.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/appendices/release-notes/6.0.3.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/org/elasticsearch/transport/InboundHandler.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java', LF will be replaced by CRLF the next time Git touches it
+[0m
+[0m✱ [0mGrep "public BytesArray\(byte\[\] bytes, int offset, int length\)|BytesArray\(byte\[\] bytes, int offset, int length\)"[90m in server/src/main/java/org/elasticsearch/common/bytes/BytesArray.java · 1 match[0m
+`git diff --check` passed with only line-ending warnings. I’m reviewing status/diff metadata, then I’ll commit only the intended four backport files.
+[0m
+[0m$ [0mgit log --oneline -10
+2e739716e3 docs: Fix 6.0.2 & 3 release notes
+833b5c27c8 Bump to 6.0.3-SNAPSHOT
+69d7f4f0bb Release 6.0.2
+a9aa3153ff Don't run linkchecks per PR
+b1fdf189ca Fix linkchecks by ignoring npmjs.com/package/pg-cursor
+af79a03f61 Ensure multiple delayed writes are sent in correct order
+0f7f947bf7 Fix issue with Blob tables
+db7d730c9e Bump to 6.0.2-SNAPSHOT
+fde4096a04 Release 6.0.1
+adbe5d8f94 Reflect release 5.10.12
+[0m
+[0m$ [0mgit diff --stat
+warning: in the working copy of 'docs/appendices/release-notes/5.10.13.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/appendices/release-notes/6.0.3.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/org/elasticsearch/transport/InboundHandler.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java', LF will be replaced by CRLF the next time Git touches it
+ docs/appendices/release-notes/5.10.13.rst          |   4 +
+ docs/appendices/release-notes/6.0.3.rst            |   4 +-
+ .../elasticsearch/transport/InboundHandler.java    | 124 ++++++--
+ .../transport/InboundHandlerTests.java             | 327 ++++++++++++++++++++-
+ 4 files changed, 432 insertions(+), 27 deletions(-)
+[0m
+[0m$ [0mgit status --short
+M docs/appendices/release-notes/5.10.13.rst
+ M docs/appendices/release-notes/6.0.3.rst
+ M server/src/main/java/org/elasticsearch/transport/InboundHandler.java
+ M server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java
+?? tags
+[0m
+The worktree has only the intended four modified files plus an unrelated untracked `tags` file, which I’m leaving untouched. I’m committing the backport now.
+[0m$ [0mgit add -- "docs/appendices/release-notes/5.10.13.rst" "docs/appendices/release-notes/6.0.3.rst" "server/src/main/java/org/elasticsearch/transport/InboundHandler.java" "server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java"; if ($?) { git commit -m "Prevent node disconnects on serialization failures" }
+warning: in the working copy of 'docs/appendices/release-notes/5.10.13.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/appendices/release-notes/6.0.3.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/org/elasticsearch/transport/InboundHandler.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java', LF will be replaced by CRLF the next time Git touches it
+[detached HEAD 17f919b9e5] Prevent node disconnects on serialization failures
+ 4 files changed, 432 insertions(+), 27 deletions(-)
+[0m
+[0m$ [0mgit diff --unified=0 2e739716e3037b6e66d74ef7372d7661a5289af2 HEAD -- docs/appendices/release-notes/5.10.13.rst docs/appendices/release-notes/6.0.3.rst server/src/main/java/org/elasticsearch/transport/InboundHandler.java server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java
+diff --git a/docs/appendices/release-notes/5.10.13.rst b/docs/appendices/release-notes/5.10.13.rst
+index 2953b4da61..d85a61e9dc 100644
+--- a/docs/appendices/release-notes/5.10.13.rst
++++ b/docs/appendices/release-notes/5.10.13.rst
+@@ -53,0 +54,4 @@ Fixes
++
++- Fixed an issue that could lead to stuck jobs, memory leaks and even make a
++  cluster unstable when a query with a ``LIMIT`` clause was interrupted by a
++  ``CircuitBreakingException``.
+diff --git a/docs/appendices/release-notes/6.0.3.rst b/docs/appendices/release-notes/6.0.3.rst
+index a82a63c457..c713ba8896 100644
+--- a/docs/appendices/release-notes/6.0.3.rst
++++ b/docs/appendices/release-notes/6.0.3.rst
+@@ -50 +50,3 @@ Fixes
+-None
++- Fixed an issue that could lead to stuck jobs, memory leaks and even make a
++  cluster unstable when a query with a ``LIMIT`` clause was interrupted by a
++  ``CircuitBreakingException``.
+diff --git a/server/src/main/java/org/elasticsearch/transport/InboundHandler.java b/server/src/main/java/org/elasticsearch/transport/InboundHandler.java
+index 86d3f3ef0b..fe196df22d 100644
+--- a/server/src/main/java/org/elasticsearch/transport/InboundHandler.java
++++ b/server/src/main/java/org/elasticsearch/transport/InboundHandler.java
+@@ -21,0 +22 @@ package org.elasticsearch.transport;
++import java.io.EOFException;
+@@ -131 +132 @@ public class InboundHandler {
+-                            handlerResponseError(streamInput, handler);
++                            handlerResponseError(requestId, streamInput, handler);
+@@ -133,9 +134 @@ public class InboundHandler {
+-                            handleResponse(remoteAddress, streamInput, handler);
+-                        }
+-                        // Check the entire message has been read
+-                        final int nextByte = streamInput.read();
+-                        // calling read() is useful to make sure the message is fully read, even if there is an EOS marker
+-                        if (nextByte != -1) {
+-                            throw new IllegalStateException("Message not fully read (response) for requestId ["
+-                                + requestId + "], handler [" + handler + "], error [" + header.isError()
+-                                + "]; resetting");
++                            handleResponse(requestId, remoteAddress, streamInput, handler);
+@@ -145 +138 @@ public class InboundHandler {
+-                        handleResponse(remoteAddress, EMPTY_STREAM_INPUT, handler);
++                        handleResponse(requestId, remoteAddress, EMPTY_STREAM_INPUT, handler);
+@@ -213,8 +206,2 @@ public class InboundHandler {
+-                    final T request = reg.newRequest(stream);
+-                    // in case we throw an exception, i.e. when the limit is hit, we don't want to verify
+-                    final int nextByte = stream.read();
+-                    // calling read() is useful to make sure the message is fully read, even if there some kind of EOS marker
+-                    if (nextByte != -1) {
+-                        throw new IllegalStateException("Message not fully read (request) for requestId [" + requestId + "], action ["
+-                            + action + "], available [" + stream.available() + "]; resetting");
+-                    }
++                    final T request = newRequest(requestId, action, stream, reg);
++                    checkStreamIsFullyConsumed(requestId, action, stream);
+@@ -238,0 +226,91 @@ public class InboundHandler {
++    /**
++     * Creates new request instance out of input stream. Throws IllegalStateException if the end of
++     * the stream was reached before the request is fully deserialized from the stream.
++     * @param <T> transport request type
++     * @param requestId request identifier
++     * @param action action name
++     * @param stream stream
++     * @param reg request handler registry
++     * @return new request instance
++     * @throws IOException IOException
++     * @throws IllegalStateException IllegalStateException
++     */
++    private <T extends TransportRequest> T newRequest(
++        final long requestId,
++        final String action,
++        final StreamInput stream,
++        final RequestHandlerRegistry<T> reg
++    ) throws IOException {
++        try {
++            return reg.newRequest(stream);
++        } catch (final EOFException e) {
++            // Another favor of (de)serialization issues is when stream contains less bytes than
++            // the request handler needs to deserialize the payload.
++            throw new IllegalStateException(
++                "Message fully read (request) but more data is expected for requestId ["
++                    + requestId
++                    + "], action ["
++                    + action
++                    + "]; resetting",
++                e
++            );
++        }
++    }
++
++    /**
++     * Checks if the stream is fully consumed and throws the exceptions if that is not the case.
++     * @param requestId request identifier
++     * @param action action name
++     * @param stream stream
++     * @throws IOException IOException
++     */
++    private void checkStreamIsFullyConsumed(final long requestId, final String action, final StreamInput stream) throws IOException {
++        // in case we throw an exception, i.e. when the limit is hit, we don't want to verify
++        final int nextByte = stream.read();
++
++        // calling read() is useful to make sure the message is fully read, even if there some kind of EOS marker
++        if (nextByte != -1) {
++            throw new IllegalStateException(
++                "Message not fully read (request) for requestId ["
++                    + requestId
++                    + "], action ["
++                    + action
++                    + "], available ["
++                    + stream.available()
++                    + "]; resetting"
++            );
++        }
++    }
++
++    /**
++     * Checks if the stream is fully consumed and throws the exceptions if that is not the case.
++     * @param requestId request identifier
++     * @param handler response handler
++     * @param stream stream
++     * @param error "true" if response represents error, "false" otherwise
++     * @throws IOException IOException
++     */
++    private void checkStreamIsFullyConsumed(
++        final long requestId,
++        final TransportResponseHandler<?> handler,
++        final StreamInput stream,
++        final boolean error
++    ) throws IOException {
++        if (stream != EMPTY_STREAM_INPUT) {
++            // Check the entire message has been read
++            final int nextByte = stream.read();
++            // calling read() is useful to make sure the message is fully read, even if there is an EOS marker
++            if (nextByte != -1) {
++                throw new IllegalStateException(
++                    "Message not fully read (response) for requestId ["
++                        + requestId
++                        + "], handler ["
++                        + handler
++                        + "], error ["
++                        + error
++                        + "]; resetting"
++                );
++            }
++        }
++    }
++
+@@ -248 +326,3 @@ public class InboundHandler {
+-    private <T extends TransportResponse> void handleResponse(InetSocketAddress remoteAddress, final StreamInput stream,
++    private <T extends TransportResponse> void handleResponse(final long requestId,
++                                                              InetSocketAddress remoteAddress,
++                                                              final StreamInput stream,
+@@ -252,0 +333 @@ public class InboundHandler {
++            checkStreamIsFullyConsumed(requestId, handler, stream, false);
+@@ -276 +357 @@ public class InboundHandler {
+-    private void handlerResponseError(StreamInput stream, final TransportResponseHandler<?> handler) {
++    private void handlerResponseError(final long requestId, StreamInput stream, final TransportResponseHandler<?> handler) {
+@@ -279,0 +361 @@ public class InboundHandler {
++            checkStreamIsFullyConsumed(requestId, handler, stream, true);
+diff --git a/server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java b/server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java
+index d974a2c565..f0ff1540a5 100644
+--- a/server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java
++++ b/server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java
+@@ -23,0 +24 @@ import static org.assertj.core.api.Assertions.assertThat;
++import java.io.EOFException;
+@@ -26,0 +28 @@ import java.net.InetSocketAddress;
++import java.nio.ByteBuffer;
+@@ -34,0 +37 @@ import org.apache.logging.log4j.Logger;
++import org.apache.lucene.util.BytesRef;
+@@ -53,0 +57 @@ import org.elasticsearch.transport.netty4.Netty4Utils;
++import org.jetbrains.annotations.Nullable;
+@@ -95 +99 @@ public class InboundHandlerTests extends ESTestCase {
+-        handler = handlerForVersion(version);
++        handler = handlerForVersion(version, null);
+@@ -282 +286 @@ public class InboundHandlerTests extends ESTestCase {
+-        InboundHandler handler = handlerForVersion(localVersion);
++        InboundHandler handler = handlerForVersion(localVersion, null);
+@@ -325 +329 @@ public class InboundHandlerTests extends ESTestCase {
+-        InboundHandler handler = handlerForVersion(remoteVersion);
++        InboundHandler handler = handlerForVersion(remoteVersion, null);
+@@ -362 +366 @@ public class InboundHandlerTests extends ESTestCase {
+-        InboundHandler handler = handlerForVersion(localVersion);
++        InboundHandler handler = handlerForVersion(localVersion, null);
+@@ -439,0 +444,310 @@ public class InboundHandlerTests extends ESTestCase {
++    @Test
++    public void testRequestNotFullyRead() throws Exception {
++        String action = "test-request";
++        int headerSize = TcpHeader.headerSize(version);
++        AtomicReference<Exception> exceptionCaptor = new AtomicReference<>();
++        final long requestId = responseHandlers.newRequestId();
++        responseHandlers.add(requestId, new Transport.ResponseContext<>(new TransportResponseHandler<TestResponse>() {
++            @Override
++            public void handleResponse(TestResponse response) {}
++
++            @Override
++            public void handleException(TransportException exp) {
++                exceptionCaptor.set(exp);
++            }
++
++            @Override
++            public String executor() {
++                return ThreadPool.Names.SAME;
++            }
++
++            @Override
++            public TestResponse read(StreamInput in) throws IOException {
++                return new TestResponse(in);
++            }
++        }, null, action));
++
++        RequestHandlerRegistry<TestRequest> registry = new RequestHandlerRegistry<>(
++            action,
++            TestRequest::new,
++            (request, channel) -> {},
++            ThreadPool.Names.SAME,
++            false,
++            true
++        );
++
++        requestHandlers.registerHandler(registry);
++        String requestValue = randomAlphaOfLength(10);
++
++        OutboundMessage.Request request = new OutboundMessage.Request(
++            new TestRequest(requestValue),
++            version,
++            action,
++            requestId,
++            false,
++            false
++        );
++
++        var listener = new TransportMessageListener() {
++            @Override
++            public void onResponseSent(long requestId, String action, Exception error) {
++                exceptionCaptor.set(error);
++            }
++        };
++        InboundHandler handler = handlerForVersion(version, listener);
++
++        // Create the request payload with 1 byte overflow
++        final BytesRef bytes = request.serialize(new BytesStreamOutput()).toBytesRef();
++        final ByteBuffer buffer = ByteBuffer.allocate(bytes.length + 1);
++        buffer.put(bytes.bytes, 0, bytes.length);
++        buffer.put((byte) 1);
++
++        BytesReference fullRequestBytes = new BytesArray(buffer.array(), 0, buffer.position());
++        BytesReference requestContent = fullRequestBytes.slice(headerSize, fullRequestBytes.length() - headerSize);
++        Header requestHeader = new Header(fullRequestBytes.length() - 6, requestId, TransportStatus.setRequest((byte) 0), version);
++        InboundMessage requestMessage = new InboundMessage(requestHeader, ReleasableBytesReference.wrap(requestContent), () -> {});
++        requestHeader.finishParsingHeader(requestMessage.openOrGetStreamInput());
++        handler.inboundMessage(channel, requestMessage);
++
++        assertThat(exceptionCaptor.get()).isExactlyInstanceOf(IllegalStateException.class);
++        assertThat(exceptionCaptor.get().getMessage()).startsWith("Message not fully read (request) for requestId");
++    }
++
++    @Test
++    public void testRequestFullyReadButMoreDataIsAvailable() throws Exception {
++        String action = "test-request";
++        int headerSize = TcpHeader.headerSize(version);
++        AtomicReference<Exception> exceptionCaptor = new AtomicReference<>();
++        final long requestId = responseHandlers.newRequestId();
++        responseHandlers.add(requestId, new Transport.ResponseContext<>(new TransportResponseHandler<TestResponse>() {
++            @Override
++            public void handleResponse(TestResponse response) {}
++
++            @Override
++            public void handleException(TransportException exp) {
++                exceptionCaptor.set(exp);
++            }
++
++            @Override
++            public String executor() {
++                return ThreadPool.Names.SAME;
++            }
++
++            @Override
++            public TestResponse read(StreamInput in) throws IOException {
++                return new TestResponse(in);
++            }
++        }, null, action));
++
++        RequestHandlerRegistry<TestRequest> registry = new RequestHandlerRegistry<>(
++            action,
++            TestRequest::new,
++            (request, channel) -> {},
++            ThreadPool.Names.SAME,
++            false,
++            true
++        );
++
++        requestHandlers.registerHandler(registry);
++        String requestValue = randomAlphaOfLength(10);
++        OutboundMessage.Request request = new OutboundMessage.Request(
++            new TestRequest(requestValue),
++            version,
++            action,
++            requestId,
++            false,
++            false
++        );
++
++        var listener = new TransportMessageListener() {
++            @Override
++            public void onResponseSent(long requestId, String action, Exception error) {
++                exceptionCaptor.set(error);
++            }
++        };
++        InboundHandler handler = handlerForVersion(version, listener);
++
++        final BytesReference fullRequestBytes = request.serialize(new BytesStreamOutput());
++        // Create the request payload by intentionally stripping 1 byte away
++        BytesReference requestContent = fullRequestBytes.slice(headerSize, fullRequestBytes.length() - headerSize - 1);
++        Header requestHeader = new Header(fullRequestBytes.length() - 6, requestId, TransportStatus.setRequest((byte) 0), version);
++        InboundMessage requestMessage = new InboundMessage(requestHeader, ReleasableBytesReference.wrap(requestContent), () -> {});
++        requestHeader.finishParsingHeader(requestMessage.openOrGetStreamInput());
++        handler.inboundMessage(channel, requestMessage);
++
++        assertThat(exceptionCaptor.get()).isExactlyInstanceOf(IllegalStateException.class);
++        assertThat(exceptionCaptor.get().getCause()).isExactlyInstanceOf(EOFException.class);
++        assertThat(exceptionCaptor.get().getMessage()).startsWith("Message fully read (request) but more data is expected for requestId");
++    }
++
++    @Test
++    public void testResponseNotFullyRead() throws Exception {
++        String action = "test-request";
++        int headerSize = TcpHeader.headerSize(version);
++        AtomicReference<TestRequest> requestCaptor = new AtomicReference<>();
++        AtomicReference<Exception> exceptionCaptor = new AtomicReference<>();
++        AtomicReference<TestResponse> responseCaptor = new AtomicReference<>();
++        AtomicReference<TransportChannel> channelCaptor = new AtomicReference<>();
++        final long requestId = responseHandlers.newRequestId();
++        responseHandlers.add(requestId, new Transport.ResponseContext<>(new TransportResponseHandler<TestResponse>() {
++            @Override
++            public void handleResponse(TestResponse response) {
++                responseCaptor.set(response);
++            }
++
++            @Override
++            public void handleException(TransportException exp) {
++                exceptionCaptor.set(exp);
++            }
++
++            @Override
++            public String executor() {
++                return ThreadPool.Names.SAME;
++            }
++
++            @Override
++            public TestResponse read(StreamInput in) throws IOException {
++                return new TestResponse(in);
++            }
++        }, null, action));
++        RequestHandlerRegistry<TestRequest> registry = new RequestHandlerRegistry<>(
++            action,
++            TestRequest::new,
++            (request, channel) -> {
++                channelCaptor.set(channel);
++                requestCaptor.set(request);
++            },
++            ThreadPool.Names.SAME,
++            false,
++            true
++        );
++        requestHandlers.registerHandler(registry);
++        String requestValue = randomAlphaOfLength(10);
++        OutboundMessage.Request request = new OutboundMessage.Request(
++            new TestRequest(requestValue),
++            version,
++            action,
++            requestId,
++            false,
++            false
++        );
++
++        BytesReference fullRequestBytes = request.serialize(new BytesStreamOutput());
++        BytesReference requestContent = fullRequestBytes.slice(headerSize, fullRequestBytes.length() - headerSize);
++        Header requestHeader = new Header(fullRequestBytes.length() - 6, requestId, TransportStatus.setRequest((byte) 0), version);
++        InboundMessage requestMessage = new InboundMessage(requestHeader, ReleasableBytesReference.wrap(requestContent), () -> {});
++        requestHeader.finishParsingHeader(requestMessage.openOrGetStreamInput());
++        handler.inboundMessage(channel, requestMessage);
++
++        TransportChannel transportChannel = channelCaptor.get();
++        assertThat(transportChannel.getVersion()).isEqualTo(Version.CURRENT);
++        assertThat(transportChannel.getChannelType()).isEqualTo("transport");
++        assertThat(requestValue).isEqualTo(requestCaptor.get().value);
++
++        String responseValue = randomAlphaOfLength(10);
++        byte responseStatus = TransportStatus.setResponse((byte) 0);
++        transportChannel.sendResponse(new TestResponse(responseValue));
++
++        // Create the response payload with 1 byte overflow
++        ByteBuf msg = (ByteBuf) embeddedChannel.outboundMessages().poll();
++        final BytesRef bytes = Netty4Utils.toBytesReference(msg).toBytesRef();
++        final ByteBuffer buffer = ByteBuffer.allocate(bytes.length + 1);
++        buffer.put(bytes.bytes, 0, bytes.length);
++        buffer.put((byte) 1);
++
++        BytesReference fullResponseBytes = new BytesArray(buffer.array(), 0, buffer.position());
++        BytesReference responseContent = fullResponseBytes.slice(headerSize, fullResponseBytes.length() - headerSize);
++        Header responseHeader = new Header(fullResponseBytes.length() - 6, requestId, responseStatus, version);
++        InboundMessage responseMessage = new InboundMessage(responseHeader, ReleasableBytesReference.wrap(responseContent), () -> {});
++        responseHeader.finishParsingHeader(responseMessage.openOrGetStreamInput());
++        handler.inboundMessage(channel, responseMessage);
++
++        assertThat(exceptionCaptor.get()).isExactlyInstanceOf(RemoteTransportException.class);
++        assertThat(exceptionCaptor.get().getCause()).isExactlyInstanceOf(TransportSerializationException.class);
++        assertThat(exceptionCaptor.get().getMessage()).contains("Failed to deserialize response from handler");
++    }
++
++    @Test
++    public void testResponseFullyReadButMoreDataIsAvailable() throws Exception {
++        String action = "test-request";
++        int headerSize = TcpHeader.headerSize(version);
++        AtomicReference<TestRequest> requestCaptor = new AtomicReference<>();
++        AtomicReference<Exception> exceptionCaptor = new AtomicReference<>();
++        AtomicReference<TestResponse> responseCaptor = new AtomicReference<>();
++        AtomicReference<TransportChannel> channelCaptor = new AtomicReference<>();
++
++        final long requestId = responseHandlers.newRequestId();
++        responseHandlers.add(requestId, new Transport.ResponseContext<>(new TransportResponseHandler<TestResponse>() {
++            @Override
++            public void handleResponse(TestResponse response) {
++                responseCaptor.set(response);
++            }
++
++            @Override
++            public void handleException(TransportException exp) {
++                exceptionCaptor.set(exp);
++            }
++
++            @Override
++            public String executor() {
++                return ThreadPool.Names.SAME;
++            }
++
++            @Override
++            public TestResponse read(StreamInput in) throws IOException {
++                return new TestResponse(in);
++            }
++        }, null, action));
++        RequestHandlerRegistry<TestRequest> registry = new RequestHandlerRegistry<>(
++            action,
++            TestRequest::new,
++            (request, channel) -> {
++                channelCaptor.set(channel);
++                requestCaptor.set(request);
++            },
++            ThreadPool.Names.SAME,
++            false,
++            true
++        );
++        requestHandlers.registerHandler(registry);
++        String requestValue = randomAlphaOfLength(10);
++        OutboundMessage.Request request = new OutboundMessage.Request(
++            new TestRequest(requestValue),
++            version,
++            action,
++            requestId,
++            false,
++            false
++        );
++
++        BytesReference fullRequestBytes = request.serialize(new BytesStreamOutput());
++        BytesReference requestContent = fullRequestBytes.slice(headerSize, fullRequestBytes.length() - headerSize);
++        Header requestHeader = new Header(fullRequestBytes.length() - 6, requestId, TransportStatus.setRequest((byte) 0), version);
++        InboundMessage requestMessage = new InboundMessage(requestHeader, ReleasableBytesReference.wrap(requestContent), () -> {});
++        requestHeader.finishParsingHeader(requestMessage.openOrGetStreamInput());
++        handler.inboundMessage(channel, requestMessage);
++
++        TransportChannel transportChannel = channelCaptor.get();
++        assertThat(transportChannel.getVersion()).isEqualTo(Version.CURRENT);
++        assertThat(transportChannel.getChannelType()).isEqualTo("transport");
++        assertThat(requestValue).isEqualTo(requestCaptor.get().value);
++
++        String responseValue = randomAlphaOfLength(10);
++        byte responseStatus = TransportStatus.setResponse((byte) 0);
++        transportChannel.sendResponse(new TestResponse(responseValue));
++
++        ByteBuf msg = (ByteBuf) embeddedChannel.outboundMessages().poll();
++        BytesReference fullResponseBytes = Netty4Utils.toBytesReference(msg);
++
++        // Create the response payload by intentionally stripping 1 byte away
++        BytesReference responseContent = fullResponseBytes.slice(headerSize, fullResponseBytes.length() - headerSize - 1);
++        Header responseHeader = new Header(fullResponseBytes.length() - 6, requestId, responseStatus, version);
++        InboundMessage responseMessage = new InboundMessage(responseHeader, ReleasableBytesReference.wrap(responseContent), () -> {});
++        responseHeader.finishParsingHeader(responseMessage.openOrGetStreamInput());
++        handler.inboundMessage(channel, responseMessage);
++
++        assertThat(exceptionCaptor.get()).isExactlyInstanceOf(RemoteTransportException.class);
++        assertThat(exceptionCaptor.get().getCause()).isExactlyInstanceOf(TransportSerializationException.class);
++        assertThat(exceptionCaptor.get().getMessage()).contains("Failed to deserialize response from handler");
++    }
++
+@@ -456 +770 @@ public class InboundHandlerTests extends ESTestCase {
+-    private InboundHandler handlerForVersion(Version localVersion) {
++    private InboundHandler handlerForVersion(Version localVersion, @Nullable TransportMessageListener listener) {
+@@ -466,0 +781,3 @@ public class InboundHandlerTests extends ESTestCase {
++        if (listener != null) {
++            outboundHandler.setMessageListener(listener);
++        }
+[0m
+The commit is created. Because the normal diff has many blank context lines, I’m using a zero-context equivalent of the same committed patch for the validator application step; the committed diff remains the standard three-context patch for final output.
+[0m⚙ [0mvalidate {"ref":"2e739716e3037b6e66d74ef7372d7661a5289af2","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.10.13.rst b/docs/appendices/release-notes/5.10.13.rst\nindex 2953b4da61..d85a61e9dc 100644\n--- a/docs/appendices/release-notes/5.10.13.rst\n+++ b/docs/appendices/release-notes/5.10.13.rst\n@@ -53,0 +54,4 @@ Fixes\n+\n+- Fixed an issue that could lead to stuck jobs, memory leaks and even make a\n+  cluster unstable when a query with a ``LIMIT`` clause was interrupted by a\n+  ``CircuitBreakingException``.\ndiff --git a/docs/appendices/release-notes/6.0.3.rst b/docs/appendices/release-notes/6.0.3.rst\nindex a82a63c457..c713ba8896 100644\n--- a/docs/appendices/release-notes/6.0.3.rst\n+++ b/docs/appendices/release-notes/6.0.3.rst\n@@ -50 +50,3 @@ Fixes\n-None\n+- Fixed an issue that could lead to stuck jobs, memory leaks and even make a\n+  cluster unstable when a query with a ``LIMIT`` clause was interrupted by a\n+  ``CircuitBreakingException``.\ndiff --git a/server/src/main/java/org/elasticsearch/transport/InboundHandler.java b/server/src/main/java/org/elasticsearch/transport/InboundHandler.java\nindex 86d3f3ef0b..fe196df22d 100644\n--- a/server/src/main/java/org/elasticsearch/transport/InboundHandler.java\n+++ b/server/src/main/java/org/elasticsearch/transport/InboundHandler.java\n@@ -21,0 +22 @@ package org.elasticsearch.transport;\n+import java.io.EOFException;\n@@ -131 +132 @@ public class InboundHandler {\n-                            handlerResponseError(streamInput, handler);\n+                            handlerResponseError(requestId, streamInput, handler);\n@@ -133,9 +134 @@ public class InboundHandler {\n-                            handleResponse(remoteAddress, streamInput, handler);\n-                        }\n-                        // Check the entire message has been read\n-                        final int nextByte = streamInput.read();\n-                        // calling read() is useful to make sure the message is fully read, even if there is an EOS marker\n-                        if (nextByte != -1) {\n-                            throw new IllegalStateException(\"Message not fully read (response) for requestId [\"\n-                                + requestId + \"], handler [\" + handler + \"], error [\" + header.isError()\n-                                + \"]; resetting\");\n+                            handleResponse(requestId, remoteAddress, streamInput, handler);\n@@ -145 +138 @@ public class InboundHandler {\n-                        handleResponse(remoteAddress, EMPTY_STREAM_INPUT, handler);\n+                        handleResponse(requestId, remoteAddress, EMPTY_STREAM_INPUT, handler);\n@@ -213,8 +206,2 @@ public class InboundHandler {\n-                    final T request = reg.newRequest(stream);\n-                    // in case we throw an exception, i.e. when the limit is hit, we don't want to verify\n-                    final int nextByte = stream.read();\n-                    // calling read() is useful to make sure the message is fully read, even if there some kind of EOS marker\n-                    if (nextByte != -1) {\n-                        throw new IllegalStateException(\"Message not fully read (request) for requestId [\" + requestId + \"], action [\"\n-                            + action + \"], available [\" + stream.available() + \"]; resetting\");\n-                    }\n+                    final T request = newRequest(requestId, action, stream, reg);\n+                    checkStreamIsFullyConsumed(requestId, action, stream);\n@@ -238,0 +226,91 @@ public class InboundHandler {\n+    /**\n+     * Creates new request instance out of input stream. Throws IllegalStateException if the end of\n+     * the stream was reached before the request is fully deserialized from the stream.\n+     * @param <T> transport request type\n+     * @param requestId request identifier\n+     * @param action action name\n+     * @param stream stream\n+     * @param reg request handler registry\n+     * @return new request instance\n+     * @throws IOException IOException\n+     * @throws IllegalStateException IllegalStateException\n+     */\n+    private <T extends TransportRequest> T newRequest(\n+        final long requestId,\n+        final String action,\n+        final StreamInput stream,\n+        final RequestHandlerRegistry<T> reg\n+    ) throws IOException {\n+        try {\n+            return reg.newRequest(stream);\n+        } catch (final EOFException e) {\n+            // Another favor of (de)serialization issues is when stream contains less bytes than\n+            // the request handler needs to deserialize the payload.\n+            throw new IllegalStateException(\n+                \"Message fully read (request) but more data is expected for requestId [\"\n+                    + requestId\n+                    + \"], action [\"\n+                    + action\n+                    + \"]; resetting\",\n+                e\n+            );\n+        }\n+    }\n+\n+    /**\n+     * Checks if the stream is fully consumed and throws the exceptions if that is not the case.\n+     * @param requestId request identifier\n+     * @param action action name\n+     * @param stream stream\n+     * @throws IOException IOException\n+     */\n+    private void checkStreamIsFullyConsumed(final long requestId, final String action, final StreamInput stream) throws IOException {\n+        // in case we throw an exception, i.e. when the limit is hit, we don't want to verify\n+        final int nextByte = stream.read();\n+\n+        // calling read() is useful to make sure the message is fully read, even if there some kind of EOS marker\n+        if (nextByte != -1) {\n+            throw new IllegalStateException(\n+                \"Message not fully read (request) for requestId [\"\n+                    + requestId\n+                    + \"], action [\"\n+                    + action\n+                    + \"], available [\"\n+                    + stream.available()\n+                    + \"]; resetting\"\n+            );\n+        }\n+    }\n+\n+    /**\n+     * Checks if the stream is fully consumed and throws the exceptions if that is not the case.\n+     * @param requestId request identifier\n+     * @param handler response handler\n+     * @param stream stream\n+     * @param error \"true\" if response represents error, \"false\" otherwise\n+     * @throws IOException IOException\n+     */\n+    private void checkStreamIsFullyConsumed(\n+        final long requestId,\n+        final TransportResponseHandler<?> handler,\n+        final StreamInput stream,\n+        final boolean error\n+    ) throws IOException {\n+        if (stream != EMPTY_STREAM_INPUT) {\n+            // Check the entire message has been read\n+            final int nextByte = stream.read();\n+            // calling read() is useful to make sure the message is fully read, even if there is an EOS marker\n+            if (nextByte != -1) {\n+                throw new IllegalStateException(\n+                    \"Message not fully read (response) for requestId [\"\n+                        + requestId\n+                        + \"], handler [\"\n+                        + handler\n+                        + \"], error [\"\n+                        + error\n+                        + \"]; resetting\"\n+                );\n+            }\n+        }\n+    }\n+\n@@ -248 +326,3 @@ public class InboundHandler {\n-    private <T extends TransportResponse> void handleResponse(InetSocketAddress remoteAddress, final StreamInput stream,\n+    private <T extends TransportResponse> void handleResponse(final long requestId,\n+                                                              InetSocketAddress remoteAddress,\n+                                                              final StreamInput stream,\n@@ -252,0 +333 @@ public class InboundHandler {\n+            checkStreamIsFullyConsumed(requestId, handler, stream, false);\n@@ -276 +357 @@ public class InboundHandler {\n-    private void handlerResponseError(StreamInput stream, final TransportResponseHandler<?> handler) {\n+    private void handlerResponseError(final long requestId, StreamInput stream, final TransportResponseHandler<?> handler) {\n@@ -279,0 +361 @@ public class InboundHandler {\n+            checkStreamIsFullyConsumed(requestId, handler, stream, true);\n"}
+The validator appears to apply patches to the current checkout rather than resetting to the `ref`; after the commit, re-applying the same patch fails because the changes are already present. I’m invoking the full validator with an empty patch now to validate the committed tree’s compile/test pipeline, and I’ll report the earlier patch-application validator behavior in the notes.
+[0m⚙ [0mvalidate {"ref":"2e739716e3037b6e66d74ef7372d7661a5289af2","mode":"full","patch":""}
+[0m
+[0m$ [0mgit status --short
+?? tags
+[0m
+[0m$ [0mgit diff --stat 2e739716e3037b6e66d74ef7372d7661a5289af2 HEAD
+docs/appendices/release-notes/5.10.13.rst          |   4 +
+ docs/appendices/release-notes/6.0.3.rst            |   4 +-
+ .../elasticsearch/transport/InboundHandler.java    | 124 ++++++--
+ .../transport/InboundHandlerTests.java             | 327 ++++++++++++++++++++-
+ 4 files changed, 432 insertions(+), 27 deletions(-)
+[0m
+[0m$ [0mgit diff 2e739716e3037b6e66d74ef7372d7661a5289af2 HEAD -- docs/appendices/release-notes/5.10.13.rst docs/appendices/release-notes/6.0.3.rst server/src/main/java/org/elasticsearch/transport/InboundHandler.java server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java
+diff --git a/docs/appendices/release-notes/5.10.13.rst b/docs/appendices/release-notes/5.10.13.rst
+index 2953b4da61..d85a61e9dc 100644
+--- a/docs/appendices/release-notes/5.10.13.rst
++++ b/docs/appendices/release-notes/5.10.13.rst
+@@ -51,3 +51,7 @@ Fixes
+ - Fixed an issue that could lead to PostgreSQL wire protocol messages being sent
+   in the wrong order to the client. The issue was triggered when using batched
+   statements where one of the statements caused a parse or bind error.
++
++- Fixed an issue that could lead to stuck jobs, memory leaks and even make a
++  cluster unstable when a query with a ``LIMIT`` clause was interrupted by a
++  ``CircuitBreakingException``.
+diff --git a/docs/appendices/release-notes/6.0.3.rst b/docs/appendices/release-notes/6.0.3.rst
+index a82a63c457..c713ba8896 100644
+--- a/docs/appendices/release-notes/6.0.3.rst
++++ b/docs/appendices/release-notes/6.0.3.rst
+@@ -47,4 +47,6 @@ series.
+ Fixes
+ =====
+ 
+-None
++- Fixed an issue that could lead to stuck jobs, memory leaks and even make a
++  cluster unstable when a query with a ``LIMIT`` clause was interrupted by a
++  ``CircuitBreakingException``.
+diff --git a/server/src/main/java/org/elasticsearch/transport/InboundHandler.java b/server/src/main/java/org/elasticsearch/transport/InboundHandler.java
+index 86d3f3ef0b..fe196df22d 100644
+--- a/server/src/main/java/org/elasticsearch/transport/InboundHandler.java
++++ b/server/src/main/java/org/elasticsearch/transport/InboundHandler.java
+@@ -19,6 +19,7 @@
+ 
+ package org.elasticsearch.transport;
+ 
++import java.io.EOFException;
+ import java.io.IOException;
+ import java.net.InetSocketAddress;
+ import java.nio.ByteBuffer;
+@@ -128,21 +129,13 @@ public class InboundHandler {
+                         streamInput = namedWriteableStream(message.openOrGetStreamInput());
+                         assertRemoteVersion(streamInput, header.getVersion());
+                         if (header.isError()) {
+-                            handlerResponseError(streamInput, handler);
++                            handlerResponseError(requestId, streamInput, handler);
+                         } else {
+-                            handleResponse(remoteAddress, streamInput, handler);
+-                        }
+-                        // Check the entire message has been read
+-                        final int nextByte = streamInput.read();
+-                        // calling read() is useful to make sure the message is fully read, even if there is an EOS marker
+-                        if (nextByte != -1) {
+-                            throw new IllegalStateException("Message not fully read (response) for requestId ["
+-                                + requestId + "], handler [" + handler + "], error [" + header.isError()
+-                                + "]; resetting");
++                            handleResponse(requestId, remoteAddress, streamInput, handler);
+                         }
+                     } else {
+                         assert header.isError() == false;
+-                        handleResponse(remoteAddress, EMPTY_STREAM_INPUT, handler);
++                        handleResponse(requestId, remoteAddress, EMPTY_STREAM_INPUT, handler);
+                     }
+                 }
+             }
+@@ -210,14 +203,8 @@ public class InboundHandler {
+                     assertRemoteVersion(stream, header.getVersion());
+                     final RequestHandlerRegistry<T> reg = requestHandlers.getHandler(action);
+                     assert reg != null;
+-                    final T request = reg.newRequest(stream);
+-                    // in case we throw an exception, i.e. when the limit is hit, we don't want to verify
+-                    final int nextByte = stream.read();
+-                    // calling read() is useful to make sure the message is fully read, even if there some kind of EOS marker
+-                    if (nextByte != -1) {
+-                        throw new IllegalStateException("Message not fully read (request) for requestId [" + requestId + "], action ["
+-                            + action + "], available [" + stream.available() + "]; resetting");
+-                    }
++                    final T request = newRequest(requestId, action, stream, reg);
++                    checkStreamIsFullyConsumed(requestId, action, stream);
+                     final String executor = reg.getExecutor();
+                     if (ThreadPool.Names.SAME.equals(executor)) {
+                         try {
+@@ -236,6 +223,97 @@ public class InboundHandler {
+         }
+     }
+ 
++    /**
++     * Creates new request instance out of input stream. Throws IllegalStateException if the end of
++     * the stream was reached before the request is fully deserialized from the stream.
++     * @param <T> transport request type
++     * @param requestId request identifier
++     * @param action action name
++     * @param stream stream
++     * @param reg request handler registry
++     * @return new request instance
++     * @throws IOException IOException
++     * @throws IllegalStateException IllegalStateException
++     */
++    private <T extends TransportRequest> T newRequest(
++        final long requestId,
++        final String action,
++        final StreamInput stream,
++        final RequestHandlerRegistry<T> reg
++    ) throws IOException {
++        try {
++            return reg.newRequest(stream);
++        } catch (final EOFException e) {
++            // Another favor of (de)serialization issues is when stream contains less bytes than
++            // the request handler needs to deserialize the payload.
++            throw new IllegalStateException(
++                "Message fully read (request) but more data is expected for requestId ["
++                    + requestId
++                    + "], action ["
++                    + action
++                    + "]; resetting",
++                e
++            );
++        }
++    }
++
++    /**
++     * Checks if the stream is fully consumed and throws the exceptions if that is not the case.
++     * @param requestId request identifier
++     * @param action action name
++     * @param stream stream
++     * @throws IOException IOException
++     */
++    private void checkStreamIsFullyConsumed(final long requestId, final String action, final StreamInput stream) throws IOException {
++        // in case we throw an exception, i.e. when the limit is hit, we don't want to verify
++        final int nextByte = stream.read();
++
++        // calling read() is useful to make sure the message is fully read, even if there some kind of EOS marker
++        if (nextByte != -1) {
++            throw new IllegalStateException(
++                "Message not fully read (request) for requestId ["
++                    + requestId
++                    + "], action ["
++                    + action
++                    + "], available ["
++                    + stream.available()
++                    + "]; resetting"
++            );
++        }
++    }
++
++    /**
++     * Checks if the stream is fully consumed and throws the exceptions if that is not the case.
++     * @param requestId request identifier
++     * @param handler response handler
++     * @param stream stream
++     * @param error "true" if response represents error, "false" otherwise
++     * @throws IOException IOException
++     */
++    private void checkStreamIsFullyConsumed(
++        final long requestId,
++        final TransportResponseHandler<?> handler,
++        final StreamInput stream,
++        final boolean error
++    ) throws IOException {
++        if (stream != EMPTY_STREAM_INPUT) {
++            // Check the entire message has been read
++            final int nextByte = stream.read();
++            // calling read() is useful to make sure the message is fully read, even if there is an EOS marker
++            if (nextByte != -1) {
++                throw new IllegalStateException(
++                    "Message not fully read (response) for requestId ["
++                        + requestId
++                        + "], handler ["
++                        + handler
++                        + "], error ["
++                        + error
++                        + "]; resetting"
++                );
++            }
++        }
++    }
++
+     private static void sendErrorResponse(String actionName, TransportChannel transportChannel, Exception e) {
+         try {
+             transportChannel.sendResponse(e);
+@@ -245,11 +323,14 @@ public class InboundHandler {
+         }
+     }
+ 
+-    private <T extends TransportResponse> void handleResponse(InetSocketAddress remoteAddress, final StreamInput stream,
++    private <T extends TransportResponse> void handleResponse(final long requestId,
++                                                              InetSocketAddress remoteAddress,
++                                                              final StreamInput stream,
+                                                               final TransportResponseHandler<T> handler) {
+         final T response;
+         try {
+             response = handler.read(stream);
++            checkStreamIsFullyConsumed(requestId, handler, stream, false);
+         } catch (Exception e) {
+             final Exception serializationException = new TransportSerializationException(
+                 "Failed to deserialize response from handler [" + handler + "]", e);
+@@ -273,10 +354,11 @@ public class InboundHandler {
+         }
+     }
+ 
+-    private void handlerResponseError(StreamInput stream, final TransportResponseHandler<?> handler) {
++    private void handlerResponseError(final long requestId, StreamInput stream, final TransportResponseHandler<?> handler) {
+         Exception error;
+         try {
+             error = stream.readException();
++            checkStreamIsFullyConsumed(requestId, handler, stream, true);
+         } catch (Exception e) {
+             error = new TransportSerializationException(
+                     "Failed to deserialize exception response from stream for handler [" + handler + "]", e);
+diff --git a/server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java b/server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java
+index d974a2c565..f0ff1540a5 100644
+--- a/server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java
++++ b/server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java
+@@ -21,9 +21,11 @@ package org.elasticsearch.transport;
+ 
+ import static org.assertj.core.api.Assertions.assertThat;
+ 
++import java.io.EOFException;
+ import java.io.IOException;
+ import java.io.InputStream;
+ import java.net.InetSocketAddress;
++import java.nio.ByteBuffer;
+ import java.util.Collections;
+ import java.util.concurrent.TimeUnit;
+ import java.util.concurrent.atomic.AtomicBoolean;
+@@ -32,6 +34,7 @@ import java.util.concurrent.atomic.AtomicReference;
+ import org.apache.logging.log4j.Level;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
++import org.apache.lucene.util.BytesRef;
+ import org.elasticsearch.ElasticsearchException;
+ import org.elasticsearch.Version;
+ import org.elasticsearch.action.ActionListener;
+@@ -51,6 +54,7 @@ import org.elasticsearch.test.VersionUtils;
+ import org.elasticsearch.threadpool.TestThreadPool;
+ import org.elasticsearch.threadpool.ThreadPool;
+ import org.elasticsearch.transport.netty4.Netty4Utils;
++import org.jetbrains.annotations.Nullable;
+ import org.junit.After;
+ import org.junit.Before;
+ import org.junit.Test;
+@@ -92,7 +96,7 @@ public class InboundHandlerTests extends ESTestCase {
+         };
+         requestHandlers = new Transport.RequestHandlers();
+         responseHandlers = new Transport.ResponseHandlers();
+-        handler = handlerForVersion(version);
++        handler = handlerForVersion(version, null);
+     }
+ 
+     @After
+@@ -279,7 +283,7 @@ public class InboundHandlerTests extends ESTestCase {
+         // minimum compatible one.
+         Version localVersion = Version.V_6_0_0;
+         Version remoteVersion = Version.V_5_10_1;
+-        InboundHandler handler = handlerForVersion(localVersion);
++        InboundHandler handler = handlerForVersion(localVersion, null);
+         int headerSize = TcpHeader.headerSize(remoteVersion);
+ 
+         final long requestId = randomNonNegativeLong();
+@@ -322,7 +326,7 @@ public class InboundHandlerTests extends ESTestCase {
+     public void test_handshake_checks_minimum_compatible_version_if_normal_version_is_not_compatible() throws Exception {
+         Version localVersion = Version.V_6_0_0;
+         Version remoteVersion = Version.V_5_10_1;
+-        InboundHandler handler = handlerForVersion(remoteVersion);
++        InboundHandler handler = handlerForVersion(remoteVersion, null);
+ 
+         int headerSize = TcpHeader.headerSize(localVersion.minimumCompatibilityVersion());
+         final long requestId = randomNonNegativeLong();
+@@ -359,7 +363,7 @@ public class InboundHandlerTests extends ESTestCase {
+     public void test_handshake_error_if_version_and_minimum_compatible_version_is_not_compatible() throws Exception {
+         Version localVersion = Version.V_6_0_0;
+         Version remoteVersion = Version.V_4_8_4;
+-        InboundHandler handler = handlerForVersion(localVersion);
++        InboundHandler handler = handlerForVersion(localVersion, null);
+         int headerSize = TcpHeader.headerSize(remoteVersion);
+ 
+         final long requestId = randomNonNegativeLong();
+@@ -437,6 +441,316 @@ public class InboundHandlerTests extends ESTestCase {
+         }
+     }
+ 
++    @Test
++    public void testRequestNotFullyRead() throws Exception {
++        String action = "test-request";
++        int headerSize = TcpHeader.headerSize(version);
++        AtomicReference<Exception> exceptionCaptor = new AtomicReference<>();
++        final long requestId = responseHandlers.newRequestId();
++        responseHandlers.add(requestId, new Transport.ResponseContext<>(new TransportResponseHandler<TestResponse>() {
++            @Override
++            public void handleResponse(TestResponse response) {}
++
++            @Override
++            public void handleException(TransportException exp) {
++                exceptionCaptor.set(exp);
++            }
++
++            @Override
++            public String executor() {
++                return ThreadPool.Names.SAME;
++            }
++
++            @Override
++            public TestResponse read(StreamInput in) throws IOException {
++                return new TestResponse(in);
++            }
++        }, null, action));
++
++        RequestHandlerRegistry<TestRequest> registry = new RequestHandlerRegistry<>(
++            action,
++            TestRequest::new,
++            (request, channel) -> {},
++            ThreadPool.Names.SAME,
++            false,
++            true
++        );
++
++        requestHandlers.registerHandler(registry);
++        String requestValue = randomAlphaOfLength(10);
++
++        OutboundMessage.Request request = new OutboundMessage.Request(
++            new TestRequest(requestValue),
++            version,
++            action,
++            requestId,
++            false,
++            false
++        );
++
++        var listener = new TransportMessageListener() {
++            @Override
++            public void onResponseSent(long requestId, String action, Exception error) {
++                exceptionCaptor.set(error);
++            }
++        };
++        InboundHandler handler = handlerForVersion(version, listener);
++
++        // Create the request payload with 1 byte overflow
++        final BytesRef bytes = request.serialize(new BytesStreamOutput()).toBytesRef();
++        final ByteBuffer buffer = ByteBuffer.allocate(bytes.length + 1);
++        buffer.put(bytes.bytes, 0, bytes.length);
++        buffer.put((byte) 1);
++
++        BytesReference fullRequestBytes = new BytesArray(buffer.array(), 0, buffer.position());
++        BytesReference requestContent = fullRequestBytes.slice(headerSize, fullRequestBytes.length() - headerSize);
++        Header requestHeader = new Header(fullRequestBytes.length() - 6, requestId, TransportStatus.setRequest((byte) 0), version);
++        InboundMessage requestMessage = new InboundMessage(requestHeader, ReleasableBytesReference.wrap(requestContent), () -> {});
++        requestHeader.finishParsingHeader(requestMessage.openOrGetStreamInput());
++        handler.inboundMessage(channel, requestMessage);
++
++        assertThat(exceptionCaptor.get()).isExactlyInstanceOf(IllegalStateException.class);
++        assertThat(exceptionCaptor.get().getMessage()).startsWith("Message not fully read (request) for requestId");
++    }
++
++    @Test
++    public void testRequestFullyReadButMoreDataIsAvailable() throws Exception {
++        String action = "test-request";
++        int headerSize = TcpHeader.headerSize(version);
++        AtomicReference<Exception> exceptionCaptor = new AtomicReference<>();
++        final long requestId = responseHandlers.newRequestId();
++        responseHandlers.add(requestId, new Transport.ResponseContext<>(new TransportResponseHandler<TestResponse>() {
++            @Override
++            public void handleResponse(TestResponse response) {}
++
++            @Override
++            public void handleException(TransportException exp) {
++                exceptionCaptor.set(exp);
++            }
++
++            @Override
++            public String executor() {
++                return ThreadPool.Names.SAME;
++            }
++
++            @Override
++            public TestResponse read(StreamInput in) throws IOException {
++                return new TestResponse(in);
++            }
++        }, null, action));
++
++        RequestHandlerRegistry<TestRequest> registry = new RequestHandlerRegistry<>(
++            action,
++            TestRequest::new,
++            (request, channel) -> {},
++            ThreadPool.Names.SAME,
++            false,
++            true
++        );
++
++        requestHandlers.registerHandler(registry);
++        String requestValue = randomAlphaOfLength(10);
++        OutboundMessage.Request request = new OutboundMessage.Request(
++            new TestRequest(requestValue),
++            version,
++            action,
++            requestId,
++            false,
++            false
++        );
++
++        var listener = new TransportMessageListener() {
++            @Override
++            public void onResponseSent(long requestId, String action, Exception error) {
++                exceptionCaptor.set(error);
++            }
++        };
++        InboundHandler handler = handlerForVersion(version, listener);
++
++        final BytesReference fullRequestBytes = request.serialize(new BytesStreamOutput());
++        // Create the request payload by intentionally stripping 1 byte away
++        BytesReference requestContent = fullRequestBytes.slice(headerSize, fullRequestBytes.length() - headerSize - 1);
++        Header requestHeader = new Header(fullRequestBytes.length() - 6, requestId, TransportStatus.setRequest((byte) 0), version);
++        InboundMessage requestMessage = new InboundMessage(requestHeader, ReleasableBytesReference.wrap(requestContent), () -> {});
++        requestHeader.finishParsingHeader(requestMessage.openOrGetStreamInput());
++        handler.inboundMessage(channel, requestMessage);
++
++        assertThat(exceptionCaptor.get()).isExactlyInstanceOf(IllegalStateException.class);
++        assertThat(exceptionCaptor.get().getCause()).isExactlyInstanceOf(EOFException.class);
++        assertThat(exceptionCaptor.get().getMessage()).startsWith("Message fully read (request) but more data is expected for requestId");
++    }
++
++    @Test
++    public void testResponseNotFullyRead() throws Exception {
++        String action = "test-request";
++        int headerSize = TcpHeader.headerSize(version);
++        AtomicReference<TestRequest> requestCaptor = new AtomicReference<>();
++        AtomicReference<Exception> exceptionCaptor = new AtomicReference<>();
++        AtomicReference<TestResponse> responseCaptor = new AtomicReference<>();
++        AtomicReference<TransportChannel> channelCaptor = new AtomicReference<>();
++        final long requestId = responseHandlers.newRequestId();
++        responseHandlers.add(requestId, new Transport.ResponseContext<>(new TransportResponseHandler<TestResponse>() {
++            @Override
++            public void handleResponse(TestResponse response) {
++                responseCaptor.set(response);
++            }
++
++            @Override
++            public void handleException(TransportException exp) {
++                exceptionCaptor.set(exp);
++            }
++
++            @Override
++            public String executor() {
++                return ThreadPool.Names.SAME;
++            }
++
++            @Override
++            public TestResponse read(StreamInput in) throws IOException {
++                return new TestResponse(in);
++            }
++        }, null, action));
++        RequestHandlerRegistry<TestRequest> registry = new RequestHandlerRegistry<>(
++            action,
++            TestRequest::new,
++            (request, channel) -> {
++                channelCaptor.set(channel);
++                requestCaptor.set(request);
++            },
++            ThreadPool.Names.SAME,
++            false,
++            true
++        );
++        requestHandlers.registerHandler(registry);
++        String requestValue = randomAlphaOfLength(10);
++        OutboundMessage.Request request = new OutboundMessage.Request(
++            new TestRequest(requestValue),
++            version,
++            action,
++            requestId,
++            false,
++            false
++        );
++
++        BytesReference fullRequestBytes = request.serialize(new BytesStreamOutput());
++        BytesReference requestContent = fullRequestBytes.slice(headerSize, fullRequestBytes.length() - headerSize);
++        Header requestHeader = new Header(fullRequestBytes.length() - 6, requestId, TransportStatus.setRequest((byte) 0), version);
++        InboundMessage requestMessage = new InboundMessage(requestHeader, ReleasableBytesReference.wrap(requestContent), () -> {});
++        requestHeader.finishParsingHeader(requestMessage.openOrGetStreamInput());
++        handler.inboundMessage(channel, requestMessage);
++
++        TransportChannel transportChannel = channelCaptor.get();
++        assertThat(transportChannel.getVersion()).isEqualTo(Version.CURRENT);
++        assertThat(transportChannel.getChannelType()).isEqualTo("transport");
++        assertThat(requestValue).isEqualTo(requestCaptor.get().value);
++
++        String responseValue = randomAlphaOfLength(10);
++        byte responseStatus = TransportStatus.setResponse((byte) 0);
++        transportChannel.sendResponse(new TestResponse(responseValue));
++
++        // Create the response payload with 1 byte overflow
++        ByteBuf msg = (ByteBuf) embeddedChannel.outboundMessages().poll();
++        final BytesRef bytes = Netty4Utils.toBytesReference(msg).toBytesRef();
++        final ByteBuffer buffer = ByteBuffer.allocate(bytes.length + 1);
++        buffer.put(bytes.bytes, 0, bytes.length);
++        buffer.put((byte) 1);
++
++        BytesReference fullResponseBytes = new BytesArray(buffer.array(), 0, buffer.position());
++        BytesReference responseContent = fullResponseBytes.slice(headerSize, fullResponseBytes.length() - headerSize);
++        Header responseHeader = new Header(fullResponseBytes.length() - 6, requestId, responseStatus, version);
++        InboundMessage responseMessage = new InboundMessage(responseHeader, ReleasableBytesReference.wrap(responseContent), () -> {});
++        responseHeader.finishParsingHeader(responseMessage.openOrGetStreamInput());
++        handler.inboundMessage(channel, responseMessage);
++
++        assertThat(exceptionCaptor.get()).isExactlyInstanceOf(RemoteTransportException.class);
++        assertThat(exceptionCaptor.get().getCause()).isExactlyInstanceOf(TransportSerializationException.class);
++        assertThat(exceptionCaptor.get().getMessage()).contains("Failed to deserialize response from handler");
++    }
++
++    @Test
++    public void testResponseFullyReadButMoreDataIsAvailable() throws Exception {
++        String action = "test-request";
++        int headerSize = TcpHeader.headerSize(version);
++        AtomicReference<TestRequest> requestCaptor = new AtomicReference<>();
++        AtomicReference<Exception> exceptionCaptor = new AtomicReference<>();
++        AtomicReference<TestResponse> responseCaptor = new AtomicReference<>();
++        AtomicReference<TransportChannel> channelCaptor = new AtomicReference<>();
++
++        final long requestId = responseHandlers.newRequestId();
++        responseHandlers.add(requestId, new Transport.ResponseContext<>(new TransportResponseHandler<TestResponse>() {
++            @Override
++            public void handleResponse(TestResponse response) {
++                responseCaptor.set(response);
++            }
++
++            @Override
++            public void handleException(TransportException exp) {
++                exceptionCaptor.set(exp);
++            }
++
++            @Override
++            public String executor() {
++                return ThreadPool.Names.SAME;
++            }
++
++            @Override
++            public TestResponse read(StreamInput in) throws IOException {
++                return new TestResponse(in);
++            }
++        }, null, action));
++        RequestHandlerRegistry<TestRequest> registry = new RequestHandlerRegistry<>(
++            action,
++            TestRequest::new,
++            (request, channel) -> {
++                channelCaptor.set(channel);
++                requestCaptor.set(request);
++            },
++            ThreadPool.Names.SAME,
++            false,
++            true
++        );
++        requestHandlers.registerHandler(registry);
++        String requestValue = randomAlphaOfLength(10);
++        OutboundMessage.Request request = new OutboundMessage.Request(
++            new TestRequest(requestValue),
++            version,
++            action,
++            requestId,
++            false,
++            false
++        );
++
++        BytesReference fullRequestBytes = request.serialize(new BytesStreamOutput());
++        BytesReference requestContent = fullRequestBytes.slice(headerSize, fullRequestBytes.length() - headerSize);
++        Header requestHeader = new Header(fullRequestBytes.length() - 6, requestId, TransportStatus.setRequest((byte) 0), version);
++        InboundMessage requestMessage = new InboundMessage(requestHeader, ReleasableBytesReference.wrap(requestContent), () -> {});
++        requestHeader.finishParsingHeader(requestMessage.openOrGetStreamInput());
++        handler.inboundMessage(channel, requestMessage);
++
++        TransportChannel transportChannel = channelCaptor.get();
++        assertThat(transportChannel.getVersion()).isEqualTo(Version.CURRENT);
++        assertThat(transportChannel.getChannelType()).isEqualTo("transport");
++        assertThat(requestValue).isEqualTo(requestCaptor.get().value);
++
++        String responseValue = randomAlphaOfLength(10);
++        byte responseStatus = TransportStatus.setResponse((byte) 0);
++        transportChannel.sendResponse(new TestResponse(responseValue));
++
++        ByteBuf msg = (ByteBuf) embeddedChannel.outboundMessages().poll();
++        BytesReference fullResponseBytes = Netty4Utils.toBytesReference(msg);
++
++        // Create the response payload by intentionally stripping 1 byte away
++        BytesReference responseContent = fullResponseBytes.slice(headerSize, fullResponseBytes.length() - headerSize - 1);
++        Header responseHeader = new Header(fullResponseBytes.length() - 6, requestId, responseStatus, version);
++        InboundMessage responseMessage = new InboundMessage(responseHeader, ReleasableBytesReference.wrap(responseContent), () -> {});
++        responseHeader.finishParsingHeader(responseMessage.openOrGetStreamInput());
++        handler.inboundMessage(channel, responseMessage);
++
++        assertThat(exceptionCaptor.get()).isExactlyInstanceOf(RemoteTransportException.class);
++        assertThat(exceptionCaptor.get().getCause()).isExactlyInstanceOf(TransportSerializationException.class);
++        assertThat(exceptionCaptor.get().getMessage()).contains("Failed to deserialize response from handler");
++    }
++
+     private static InboundMessage unreadableInboundHandshake(Version remoteVersion, Header requestHeader) {
+         return new InboundMessage(requestHeader, ReleasableBytesReference.wrap(BytesArray.EMPTY), () -> { }) {
+             @Override
+@@ -453,7 +767,7 @@ public class InboundHandlerTests extends ESTestCase {
+         };
+     }
+ 
+-    private InboundHandler handlerForVersion(Version localVersion) {
++    private InboundHandler handlerForVersion(Version localVersion, @Nullable TransportMessageListener listener) {
+         NamedWriteableRegistry namedWriteableRegistry = new NamedWriteableRegistry(Collections.emptyList());
+         TransportHandshaker handshaker = new TransportHandshaker(localVersion, threadPool, (n, c, r, v) -> {});
+         TransportKeepAlive keepAlive = new TransportKeepAlive(threadPool, (c, b) -> channel.writeAndFlush(Unpooled.wrappedBuffer(b)));
+@@ -464,6 +778,9 @@ public class InboundHandlerTests extends ESTestCase {
+             threadPool,
+             BigArrays.NON_RECYCLING_INSTANCE
+         );
++        if (listener != null) {
++            outboundHandler.setMessageListener(listener);
++        }
+         return new InboundHandler(
+             threadPool,
+             outboundHandler,
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/docs/appendices/release-notes/5.10.13.rst b/docs/appendices/release-notes/5.10.13.rst
+    index 2953b4da61..d85a61e9dc 100644
+    --- a/docs/appendices/release-notes/5.10.13.rst
+    +++ b/docs/appendices/release-notes/5.10.13.rst
+    @@ -51,3 +51,7 @@ Fixes
+     - Fixed an issue that could lead to PostgreSQL wire protocol messages being sent
+       in the wrong order to the client. The issue was triggered when using batched
+       statements where one of the statements caused a parse or bind error.
+    +
+    +- Fixed an issue that could lead to stuck jobs, memory leaks and even make a
+    +  cluster unstable when a query with a ``LIMIT`` clause was interrupted by a
+    +  ``CircuitBreakingException``.
+    diff --git a/docs/appendices/release-notes/6.0.3.rst b/docs/appendices/release-notes/6.0.3.rst
+    index a82a63c457..c713ba8896 100644
+    --- a/docs/appendices/release-notes/6.0.3.rst
+    +++ b/docs/appendices/release-notes/6.0.3.rst
+    @@ -47,4 +47,6 @@ series.
+     Fixes
+     =====
+     
+    -None
+    +- Fixed an issue that could lead to stuck jobs, memory leaks and even make a
+    +  cluster unstable when a query with a ``LIMIT`` clause was interrupted by a
+    +  ``CircuitBreakingException``.
+    diff --git a/server/src/main/java/org/elasticsearch/transport/InboundHandler.java b/server/src/main/java/org/elasticsearch/transport/InboundHandler.java
+    index 86d3f3ef0b..fe196df22d 100644
+    --- a/server/src/main/java/org/elasticsearch/transport/InboundHandler.java
+    +++ b/server/src/main/java/org/elasticsearch/transport/InboundHandler.java
+    @@ -19,6 +19,7 @@
+     
+     package org.elasticsearch.transport;
+     
+    +import java.io.EOFException;
+     import java.io.IOException;
+     import java.net.InetSocketAddress;
+     import java.nio.ByteBuffer;
+    @@ -128,21 +129,13 @@ public class InboundHandler {
+                             streamInput = namedWriteableStream(message.openOrGetStreamInput());
+                             assertRemoteVersion(streamInput, header.getVersion());
+                             if (header.isError()) {
+    -                            handlerResponseError(streamInput, handler);
+    +                            handlerResponseError(requestId, streamInput, handler);
+                             } else {
+    -                            handleResponse(remoteAddress, streamInput, handler);
+    -                        }
+    -                        // Check the entire message has been read
+    -                        final int nextByte = streamInput.read();
+    -                        // calling read() is useful to make sure the message is fully read, even if there is an EOS marker
+    -                        if (nextByte != -1) {
+    -                            throw new IllegalStateException("Message not fully read (response) for requestId ["
+    -                                + requestId + "], handler [" + handler + "], error [" + header.isError()
+    -                                + "]; resetting");
+    +                            handleResponse(requestId, remoteAddress, streamInput, handler);
+                             }
+                         } else {
+                             assert header.isError() == false;
+    -                        handleResponse(remoteAddress, EMPTY_STREAM_INPUT, handler);
+    +                        handleResponse(requestId, remoteAddress, EMPTY_STREAM_INPUT, handler);
+                         }
+                     }
+                 }
+    @@ -210,14 +203,8 @@ public class InboundHandler {
+                         assertRemoteVersion(stream, header.getVersion());
+                         final RequestHandlerRegistry<T> reg = requestHandlers.getHandler(action);
+                         assert reg != null;
+    -                    final T request = reg.newRequest(stream);
+    -                    // in case we throw an exception, i.e. when the limit is hit, we don't want to verify
+    -                    final int nextByte = stream.read();
+    -                    // calling read() is useful to make sure the message is fully read, even if there some kind of EOS marker
+    -                    if (nextByte != -1) {
+    -                        throw new IllegalStateException("Message not fully read (request) for requestId [" + requestId + "], action ["
+    -                            + action + "], available [" + stream.available() + "]; resetting");
+    -                    }
+    +                    final T request = newRequest(requestId, action, stream, reg);
+    +                    checkStreamIsFullyConsumed(requestId, action, stream);
+                         final String executor = reg.getExecutor();
+                         if (ThreadPool.Names.SAME.equals(executor)) {
+                             try {
+    @@ -236,6 +223,97 @@ public class InboundHandler {
+             }
+         }
+     
+    +    /**
+    +     * Creates new request instance out of input stream. Throws IllegalStateException if the end of
+    +     * the stream was reached before the request is fully deserialized from the stream.
+    +     * @param <T> transport request type
+    +     * @param requestId request identifier
+    +     * @param action action name
+    +     * @param stream stream
+    +     * @param reg request handler registry
+    +     * @return new request instance
+    +     * @throws IOException IOException
+    +     * @throws IllegalStateException IllegalStateException
+    +     */
+    +    private <T extends TransportRequest> T newRequest(
+    +        final long requestId,
+    +        final String action,
+    +        final StreamInput stream,
+    +        final RequestHandlerRegistry<T> reg
+    +    ) throws IOException {
+    +        try {
+    +            return reg.newRequest(stream);
+    +        } catch (final EOFException e) {
+    +            // Another favor of (de)serialization issues is when stream contains less bytes than
+    +            // the request handler needs to deserialize the payload.
+    +            throw new IllegalStateException(
+    +                "Message fully read (request) but more data is expected for requestId ["
+    +                    + requestId
+    +                    + "], action ["
+    +                    + action
+    +                    + "]; resetting",
+    +                e
+    +            );
+    +        }
+    +    }
+    +
+    +    /**
+    +     * Checks if the stream is fully consumed and throws the exceptions if that is not the case.
+    +     * @param requestId request identifier
+    +     * @param action action name
+    +     * @param stream stream
+    +     * @throws IOException IOException
+    +     */
+    +    private void checkStreamIsFullyConsumed(final long requestId, final String action, final StreamInput stream) throws IOException {
+    +        // in case we throw an exception, i.e. when the limit is hit, we don't want to verify
+    +        final int nextByte = stream.read();
+    +
+    +        // calling read() is useful to make sure the message is fully read, even if there some kind of EOS marker
+    +        if (nextByte != -1) {
+    +            throw new IllegalStateException(
+    +                "Message not fully read (request) for requestId ["
+    +                    + requestId
+    +                    + "], action ["
+    +                    + action
+    +                    + "], available ["
+    +                    + stream.available()
+    +                    + "]; resetting"
+    +            );
+    +        }
+    +    }
+    +
+    +    /**
+    +     * Checks if the stream is fully consumed and throws the exceptions if that is not the case.
+    +     * @param requestId request identifier
+    +     * @param handler response handler
+    +     * @param stream stream
+    +     * @param error "true" if response represents error, "false" otherwise
+    +     * @throws IOException IOException
+    +     */
+    +    private void checkStreamIsFullyConsumed(
+    +        final long requestId,
+    +        final TransportResponseHandler<?> handler,
+    +        final StreamInput stream,
+    +        final boolean error
+    +    ) throws IOException {
+    +        if (stream != EMPTY_STREAM_INPUT) {
+    +            // Check the entire message has been read
+    +            final int nextByte = stream.read();
+    +            // calling read() is useful to make sure the message is fully read, even if there is an EOS marker
+    +            if (nextByte != -1) {
+    +                throw new IllegalStateException(
+    +                    "Message not fully read (response) for requestId ["
+    +                        + requestId
+    +                        + "], handler ["
+    +                        + handler
+    +                        + "], error ["
+    +                        + error
+    +                        + "]; resetting"
+    +                );
+    +            }
+    +        }
+    +    }
+    +
+         private static void sendErrorResponse(String actionName, TransportChannel transportChannel, Exception e) {
+             try {
+                 transportChannel.sendResponse(e);
+    @@ -245,11 +323,14 @@ public class InboundHandler {
+             }
+         }
+     
+    -    private <T extends TransportResponse> void handleResponse(InetSocketAddress remoteAddress, final StreamInput stream,
+    +    private <T extends TransportResponse> void handleResponse(final long requestId,
+    +                                                              InetSocketAddress remoteAddress,
+    +                                                              final StreamInput stream,
+                                                                   final TransportResponseHandler<T> handler) {
+             final T response;
+             try {
+                 response = handler.read(stream);
+    +            checkStreamIsFullyConsumed(requestId, handler, stream, false);
+             } catch (Exception e) {
+                 final Exception serializationException = new TransportSerializationException(
+                     "Failed to deserialize response from handler [" + handler + "]", e);
+    @@ -273,10 +354,11 @@ public class InboundHandler {
+             }
+         }
+     
+    -    private void handlerResponseError(StreamInput stream, final TransportResponseHandler<?> handler) {
+    +    private void handlerResponseError(final long requestId, StreamInput stream, final TransportResponseHandler<?> handler) {
+             Exception error;
+             try {
+                 error = stream.readException();
+    +            checkStreamIsFullyConsumed(requestId, handler, stream, true);
+             } catch (Exception e) {
+                 error = new TransportSerializationException(
+                         "Failed to deserialize exception response from stream for handler [" + handler + "]", e);
+    diff --git a/server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java b/server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java
+    index d974a2c565..f0ff1540a5 100644
+    --- a/server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java
+    +++ b/server/src/test/java/org/elasticsearch/transport/InboundHandlerTests.java
+    @@ -21,9 +21,11 @@ package org.elasticsearch.transport;
+     
+     import static org.assertj.core.api.Assertions.assertThat;
+     
+    +import java.io.EOFException;
+     import java.io.IOException;
+     import java.io.InputStream;
+     import java.net.InetSocketAddress;
+    +import java.nio.ByteBuffer;
+     import java.util.Collections;
+     import java.util.concurrent.TimeUnit;
+     import java.util.concurrent.atomic.AtomicBoolean;
+    @@ -32,6 +34,7 @@ import java.util.concurrent.atomic.AtomicReference;
+     import org.apache.logging.log4j.Level;
+     import org.apache.logging.log4j.LogManager;
+     import org.apache.logging.log4j.Logger;
+    +import org.apache.lucene.util.BytesRef;
+     import org.elasticsearch.ElasticsearchException;
+     import org.elasticsearch.Version;
+     import org.elasticsearch.action.ActionListener;
+    @@ -51,6 +54,7 @@ import org.elasticsearch.test.VersionUtils;
+     import org.elasticsearch.threadpool.TestThreadPool;
+     import org.elasticsearch.threadpool.ThreadPool;
+     import org.elasticsearch.transport.netty4.Netty4Utils;
+    +import org.jetbrains.annotations.Nullable;
+     import org.junit.After;
+     import org.junit.Before;
+     import org.junit.Test;
+    @@ -92,7 +96,7 @@ public class InboundHandlerTests extends ESTestCase {
+             };
+             requestHandlers = new Transport.RequestHandlers();
+             responseHandlers = new Transport.ResponseHandlers();
+    -        handler = handlerForVersion(version);
+    +        handler = handlerForVersion(version, null);
+         }
+     
+         @After
+    @@ -279,7 +283,7 @@ public class InboundHandlerTests extends ESTestCase {
+             // minimum compatible one.
+             Version localVersion = Version.V_6_0_0;
+             Version remoteVersion = Version.V_5_10_1;
+    -        InboundHandler handler = handlerForVersion(localVersion);
+    +        InboundHandler handler = handlerForVersion(localVersion, null);
+             int headerSize = TcpHeader.headerSize(remoteVersion);
+     
+             final long requestId = randomNonNegativeLong();
+    @@ -322,7 +326,7 @@ public class InboundHandlerTests extends ESTestCase {
+         public void test_handshake_checks_minimum_compatible_version_if_normal_version_is_not_compatible() throws Exception {
+             Version localVersion = Version.V_6_0_0;
+             Version remoteVersion = Version.V_5_10_1;
+    -        InboundHandler handler = handlerForVersion(remoteVersion);
+    +        InboundHandler handler = handlerForVersion(remoteVersion, null);
+     
+             int headerSize = TcpHeader.headerSize(localVersion.minimumCompatibilityVersion());
+             final long requestId = randomNonNegativeLong();
+    @@ -359,7 +363,7 @@ public class InboundHandlerTests extends ESTestCase {
+         public void test_handshake_error_if_version_and_minimum_compatible_version_is_not_compatible() throws Exception {
+             Version localVersion = Version.V_6_0_0;
+             Version remoteVersion = Version.V_4_8_4;
+    -        InboundHandler handler = handlerForVersion(localVersion);
+    +        InboundHandler handler = handlerForVersion(localVersion, null);
+             int headerSize = TcpHeader.headerSize(remoteVersion);
+     
+             final long requestId = randomNonNegativeLong();
+    @@ -437,6 +441,316 @@ public class InboundHandlerTests extends ESTestCase {
+             }
+         }
+     
+    +    @Test
+    +    public void testRequestNotFullyRead() throws Exception {
+    +        String action = "test-request";
+    +        int headerSize = TcpHeader.headerSize(version);
+    +        AtomicReference<Exception> exceptionCaptor = new AtomicReference<>();
+    +        final long requestId = responseHandlers.newRequestId();
+    +        responseHandlers.add(requestId, new Transport.ResponseContext<>(new TransportResponseHandler<TestResponse>() {
+    +            @Override
+    +            public void handleResponse(TestResponse response) {}
+    +
+    +            @Override
+    +            public void handleException(TransportException exp) {
+    +                exceptionCaptor.set(exp);
+    +            }
+    +
+    +            @Override
+    +            public String executor() {
+    +                return ThreadPool.Names.SAME;
+    +            }
+    +
+    +            @Override
+    +            public TestResponse read(StreamInput in) throws IOException {
+    +                return new TestResponse(in);
+    +            }
+    +        }, null, action));
+    +
+    +        RequestHandlerRegistry<TestRequest> registry = new RequestHandlerRegistry<>(
+    +            action,
+    +            TestRequest::new,
+    +            (request, channel) -> {},
+    +            ThreadPool.Names.SAME,
+    +            false,
+    +            true
+    +        );
+    +
+    +        requestHandlers.registerHandler(registry);
+    +        String requestValue = randomAlphaOfLength(10);
+    +
+    +        OutboundMessage.Request request = new OutboundMessage.Request(
+    +            new TestRequest(requestValue),
+    +            version,
+    +            action,
+    +            requestId,
+    +            false,
+    +            false
+    +        );
+    +
+    +        var listener = new TransportMessageListener() {
+    +            @Override
+    +            public void onResponseSent(long requestId, String action, Exception error) {
+    +                exceptionCaptor.set(error);
+    +            }
+    +        };
+    +        InboundHandler handler = handlerForVersion(version, listener);
+    +
+    +        // Create the request payload with 1 byte overflow
+    +        final BytesRef bytes = request.serialize(new BytesStreamOutput()).toBytesRef();
+    +        final ByteBuffer buffer = ByteBuffer.allocate(bytes.length + 1);
+    +        buffer.put(bytes.bytes, 0, bytes.length);
+    +        buffer.put((byte) 1);
+    +
+    +        BytesReference fullRequestBytes = new BytesArray(buffer.array(), 0, buffer.position());
+    +        BytesReference requestContent = fullRequestBytes.slice(headerSize, fullRequestBytes.length() - headerSize);
+    +        Header requestHeader = new Header(fullRequestBytes.length() - 6, requestId, TransportStatus.setRequest((byte) 0), version);
+    +        InboundMessage requestMessage = new InboundMessage(requestHeader, ReleasableBytesReference.wrap(requestContent), () -> {});
+    +        requestHeader.finishParsingHeader(requestMessage.openOrGetStreamInput());
+    +        handler.inboundMessage(channel, requestMessage);
+    +
+    +        assertThat(exceptionCaptor.get()).isExactlyInstanceOf(IllegalStateException.class);
+    +        assertThat(exceptionCaptor.get().getMessage()).startsWith("Message not fully read (request) for requestId");
+    +    }
+    +
+    +    @Test
+    +    public void testRequestFullyReadButMoreDataIsAvailable() throws Exception {
+    +        String action = "test-request";
+    +        int headerSize = TcpHeader.headerSize(version);
+    +        AtomicReference<Exception> exceptionCaptor = new AtomicReference<>();
+    +        final long requestId = responseHandlers.newRequestId();
+    +        responseHandlers.add(requestId, new Transport.ResponseContext<>(new TransportResponseHandler<TestResponse>() {
+    +            @Override
+    +            public void handleResponse(TestResponse response) {}
+    +
+    +            @Override
+    +            public void handleException(TransportException exp) {
+    +                exceptionCaptor.set(exp);
+    +            }
+    +
+    +            @Override
+    +            public String executor() {
+    +                return ThreadPool.Names.SAME;
+    +            }
+    +
+    +            @Override
+    +            public TestResponse read(StreamInput in) throws IOException {
+    +                return new TestResponse(in);
+    +            }
+    +        }, null, action));
+    +
+    +        RequestHandlerRegistry<TestRequest> registry = new RequestHandlerRegistry<>(
+    +            action,
+    +            TestRequest::new,
+    +            (request, channel) -> {},
+    +            ThreadPool.Names.SAME,
+    +            false,
+    +            true
+    +        );
+    +
+    +        requestHandlers.registerHandler(registry);
+    +        String requestValue = randomAlphaOfLength(10);
+    +        OutboundMessage.Request request = new OutboundMessage.Request(
+    +            new TestRequest(requestValue),
+    +            version,
+    +            action,
+    +            requestId,
+    +            false,
+    +            false
+    +        );
+    +
+    +        var listener = new TransportMessageListener() {
+    +            @Override
+    +            public void onResponseSent(long requestId, String action, Exception error) {
+    +                exceptionCaptor.set(error);
+    +            }
+    +        };
+    +        InboundHandler handler = handlerForVersion(version, listener);
+    +
+    +        final BytesReference fullRequestBytes = request.serialize(new BytesStreamOutput());
+    +        // Create the request payload by intentionally stripping 1 byte away
+    +        BytesReference requestContent = fullRequestBytes.slice(headerSize, fullRequestBytes.length() - headerSize - 1);
+    +        Header requestHeader = new Header(fullRequestBytes.length() - 6, requestId, TransportStatus.setRequest((byte) 0), version);
+    +        InboundMessage requestMessage = new InboundMessage(requestHeader, ReleasableBytesReference.wrap(requestContent), () -> {});
+    +        requestHeader.finishParsingHeader(requestMessage.openOrGetStreamInput());
+    +        handler.inboundMessage(channel, requestMessage);
+    +
+    +        assertThat(exceptionCaptor.get()).isExactlyInstanceOf(IllegalStateException.class);
+    +        assertThat(exceptionCaptor.get().getCause()).isExactlyInstanceOf(EOFException.class);
+    +        assertThat(exceptionCaptor.get().getMessage()).startsWith("Message fully read (request) but more data is expected for requestId");
+    +    }
+    +
+    +    @Test
+    +    public void testResponseNotFullyRead() throws Exception {
+    +        String action = "test-request";
+    +        int headerSize = TcpHeader.headerSize(version);
+    +        AtomicReference<TestRequest> requestCaptor = new AtomicReference<>();
+    +        AtomicReference<Exception> exceptionCaptor = new AtomicReference<>();
+    +        AtomicReference<TestResponse> responseCaptor = new AtomicReference<>();
+    +        AtomicReference<TransportChannel> channelCaptor = new AtomicReference<>();
+    +        final long requestId = responseHandlers.newRequestId();
+    +        responseHandlers.add(requestId, new Transport.ResponseContext<>(new TransportResponseHandler<TestResponse>() {
+    +            @Override
+    +            public void handleResponse(TestResponse response) {
+    +                responseCaptor.set(response);
+    +            }
+    +
+    +            @Override
+    +            public void handleException(TransportException exp) {
+    +                exceptionCaptor.set(exp);
+    +            }
+    +
+    +            @Override
+    +            public String executor() {
+    +                return ThreadPool.Names.SAME;
+    +            }
+    +
+    +            @Override
+    +            public TestResponse read(StreamInput in) throws IOException {
+    +                return new TestResponse(in);
+    +            }
+    +        }, null, action));
+    +        RequestHandlerRegistry<TestRequest> registry = new RequestHandlerRegistry<>(
+    +            action,
+    +            TestRequest::new,
+    +            (request, channel) -> {
+    +                channelCaptor.set(channel);
+    +                requestCaptor.set(request);
+    +            },
+    +            ThreadPool.Names.SAME,
+    +            false,
+    +            true
+    +        );
+    +        requestHandlers.registerHandler(registry);
+    +        String requestValue = randomAlphaOfLength(10);
+    +        OutboundMessage.Request request = new OutboundMessage.Request(
+    +            new TestRequest(requestValue),
+    +            version,
+    +            action,
+    +            requestId,
+    +            false,
+    +            false
+    +        );
+    +
+    +        BytesReference fullRequestBytes = request.serialize(new BytesStreamOutput());
+    +        BytesReference requestContent = fullRequestBytes.slice(headerSize, fullRequestBytes.length() - headerSize);
+    +        Header requestHeader = new Header(fullRequestBytes.length() - 6, requestId, TransportStatus.setRequest((byte) 0), version);
+    +        InboundMessage requestMessage = new InboundMessage(requestHeader, ReleasableBytesReference.wrap(requestContent), () -> {});
+    +        requestHeader.finishParsingHeader(requestMessage.openOrGetStreamInput());
+    +        handler.inboundMessage(channel, requestMessage);
+    +
+    +        TransportChannel transportChannel = channelCaptor.get();
+    +        assertThat(transportChannel.getVersion()).isEqualTo(Version.CURRENT);
+    +        assertThat(transportChannel.getChannelType()).isEqualTo("transport");
+    +        assertThat(requestValue).isEqualTo(requestCaptor.get().value);
+    +
+    +        String responseValue = randomAlphaOfLength(10);
+    +        byte responseStatus = TransportStatus.setResponse((byte) 0);
+    +        transportChannel.sendResponse(new TestResponse(responseValue));
+    +
+    +        // Create the response payload with 1 byte overflow
+    +        ByteBuf msg = (ByteBuf) embeddedChannel.outboundMessages().poll();
+    +        final BytesRef bytes = Netty4Utils.toBytesReference(msg).toBytesRef();
+    +        final ByteBuffer buffer = ByteBuffer.allocate(bytes.length + 1);
+    +        buffer.put(bytes.bytes, 0, bytes.length);
+    +        buffer.put((byte) 1);
+    +
+    +        BytesReference fullResponseBytes = new BytesArray(buffer.array(), 0, buffer.position());
+    +        BytesReference responseContent = fullResponseBytes.slice(headerSize, fullResponseBytes.length() - headerSize);
+    +        Header responseHeader = new Header(fullResponseBytes.length() - 6, requestId, responseStatus, version);
+    +        InboundMessage responseMessage = new InboundMessage(responseHeader, ReleasableBytesReference.wrap(responseContent), () -> {});
+    +        responseHeader.finishParsingHeader(responseMessage.openOrGetStreamInput());
+    +        handler.inboundMessage(channel, responseMessage);
+    +
+    +        assertThat(exceptionCaptor.get()).isExactlyInstanceOf(RemoteTransportException.class);
+    +        assertThat(exceptionCaptor.get().getCause()).isExactlyInstanceOf(TransportSerializationException.class);
+    +        assertThat(exceptionCaptor.get().getMessage()).contains("Failed to deserialize response from handler");
+    +    }
+    +
+    +    @Test
+    +    public void testResponseFullyReadButMoreDataIsAvailable() throws Exception {
+    +        String action = "test-request";
+    +        int headerSize = TcpHeader.headerSize(version);
+    +        AtomicReference<TestRequest> requestCaptor = new AtomicReference<>();
+    +        AtomicReference<Exception> exceptionCaptor = new AtomicReference<>();
+    +        AtomicReference<TestResponse> responseCaptor = new AtomicReference<>();
+    +        AtomicReference<TransportChannel> channelCaptor = new AtomicReference<>();
+    +
+    +        final long requestId = responseHandlers.newRequestId();
+    +        responseHandlers.add(requestId, new Transport.ResponseContext<>(new TransportResponseHandler<TestResponse>() {
+    +            @Override
+    +            public void handleResponse(TestResponse response) {
+    +                responseCaptor.set(response);
+    +            }
+    +
+    +            @Override
+    +            public void handleException(TransportException exp) {
+    +                exceptionCaptor.set(exp);
+    +            }
+    +
+    +            @Override
+    +            public String executor() {
+    +                return ThreadPool.Names.SAME;
+    +            }
+    +
+    +            @Override
+    +            public TestResponse read(StreamInput in) throws IOException {
+    +                return new TestResponse(in);
+    +            }
+    +        }, null, action));
+    +        RequestHandlerRegistry<TestRequest> registry = new RequestHandlerRegistry<>(
+    +            action,
+    +            TestRequest::new,
+    +            (request, channel) -> {
+    +                channelCaptor.set(channel);
+    +                requestCaptor.set(request);
+    +            },
+    +            ThreadPool.Names.SAME,
+    +            false,
+    +            true
+    +        );
+    +        requestHandlers.registerHandler(registry);
+    +        String requestValue = randomAlphaOfLength(10);
+    +        OutboundMessage.Request request = new OutboundMessage.Request(
+    +            new TestRequest(requestValue),
+    +            version,
+    +            action,
+    +            requestId,
+    +            false,
+    +            false
+    +        );
+    +
+    +        BytesReference fullRequestBytes = request.serialize(new BytesStreamOutput());
+    +        BytesReference requestContent = fullRequestBytes.slice(headerSize, fullRequestBytes.length() - headerSize);
+    +        Header requestHeader = new Header(fullRequestBytes.length() - 6, requestId, TransportStatus.setRequest((byte) 0), version);
+    +        InboundMessage requestMessage = new InboundMessage(requestHeader, ReleasableBytesReference.wrap(requestContent), () -> {});
+    +        requestHeader.finishParsingHeader(requestMessage.openOrGetStreamInput());
+    +        handler.inboundMessage(channel, requestMessage);
+    +
+    +        TransportChannel transportChannel = channelCaptor.get();
+    +        assertThat(transportChannel.getVersion()).isEqualTo(Version.CURRENT);
+    +        assertThat(transportChannel.getChannelType()).isEqualTo("transport");
+    +        assertThat(requestValue).isEqualTo(requestCaptor.get().value);
+    +
+    +        String responseValue = randomAlphaOfLength(10);
+    +        byte responseStatus = TransportStatus.setResponse((byte) 0);
+    +        transportChannel.sendResponse(new TestResponse(responseValue));
+    +
+    +        ByteBuf msg = (ByteBuf) embeddedChannel.outboundMessages().poll();
+    +        BytesReference fullResponseBytes = Netty4Utils.toBytesReference(msg);
+    +
+    +        // Create the response payload by intentionally stripping 1 byte away
+    +        BytesReference responseContent = fullResponseBytes.slice(headerSize, fullResponseBytes.length() - headerSize - 1);
+    +        Header responseHeader = new Header(fullResponseBytes.length() - 6, requestId, responseStatus, version);
+    +        InboundMessage responseMessage = new InboundMessage(responseHeader, ReleasableBytesReference.wrap(responseContent), () -> {});
+    +        responseHeader.finishParsingHeader(responseMessage.openOrGetStreamInput());
+    +        handler.inboundMessage(channel, responseMessage);
+    +
+    +        assertThat(exceptionCaptor.get()).isExactlyInstanceOf(RemoteTransportException.class);
+    +        assertThat(exceptionCaptor.get().getCause()).isExactlyInstanceOf(TransportSerializationException.class);
+    +        assertThat(exceptionCaptor.get().getMessage()).contains("Failed to deserialize response from handler");
+    +    }
+    +
+         private static InboundMessage unreadableInboundHandshake(Version remoteVersion, Header requestHeader) {
+             return new InboundMessage(requestHeader, ReleasableBytesReference.wrap(BytesArray.EMPTY), () -> { }) {
+                 @Override
+    @@ -453,7 +767,7 @@ public class InboundHandlerTests extends ESTestCase {
+             };
+         }
+     
+    -    private InboundHandler handlerForVersion(Version localVersion) {
+    +    private InboundHandler handlerForVersion(Version localVersion, @Nullable TransportMessageListener listener) {
+             NamedWriteableRegistry namedWriteableRegistry = new NamedWriteableRegistry(Collections.emptyList());
+             TransportHandshaker handshaker = new TransportHandshaker(localVersion, threadPool, (n, c, r, v) -> {});
+             TransportKeepAlive keepAlive = new TransportKeepAlive(threadPool, (c, b) -> channel.writeAndFlush(Unpooled.wrappedBuffer(b)));
+    @@ -464,6 +778,9 @@ public class InboundHandlerTests extends ESTestCase {
+                 threadPool,
+                 BigArrays.NON_RECYCLING_INSTANCE
+             );
+    +        if (listener != null) {
+    +            outboundHandler.setMessageListener(listener);
+    +        }
+             return new InboundHandler(
+                 threadPool,
+                 outboundHandler,
+  notes: >
+    Backported the transport stream-consumption fix, EOF handling, regression tests, and release notes to 6.0; committed as 17f919b9e5. Local Maven tests could not run because JAVA_HOME is unset, and the post-commit validator attempted to reapply the patch to the already-patched checkout.
+```
+
+--- END CLI OUTPUT ---
+[00:48:30]   Done in 680.5s | status=success

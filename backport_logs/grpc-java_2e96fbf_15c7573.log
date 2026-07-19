@@ -1,0 +1,113 @@
+[14:27:40] === Row 25: grpc-java  2e96fbf1 -> 15c75739  [TYPE-I] ===
+[14:27:40]   Resolving parent of backport commit 15c75739...
+[14:27:40]   Backport parent (target ref): b04c673fdfec6191afdca06fa254b9e4da0150f6
+[14:27:40]   Extracting new-version patch for 2e96fbf1...
+[14:27:40]   New-version patch size: 2845 chars
+[14:27:40]   Checking out backport parent b04c673f...
+[14:27:41]   Invoking OpenCode CLI (6736 chars)...
+[14:27:41]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the target branch context for the two affected methods and validate the adapted hunks against the specified parent ref without switching commits.
+[0m# [0mTodos
+[•] Study original commit metadata and target code context
+[ ] Construct unified diff for target ref
+[ ] Validate each hunk applies cleanly
+[ ] Return parseable YAML result
+[0m
+[0m⚙ [0mlocate_symbol {"ref":"b04c673fdfec6191afdca06fa254b9e4da0150f6","symbol":"NettyClientHandler"}
+[0m⚙ [0mlocate_symbol {"ref":"b04c673fdfec6191afdca06fa254b9e4da0150f6","symbol":"NettyClientHandlerTest"}
+[0m⚙ [0mlocate_symbol {"ref":"b04c673fdfec6191afdca06fa254b9e4da0150f6","symbol":"writeHeaders"}
+[0m⚙ [0mgit_show {"ref":"2e96fbf1e851242f8028af2cbc16dbc96e1037ff"}
+[0m⚙ [0mlocate_symbol {"ref":"b04c673fdfec6191afdca06fa254b9e4da0150f6","symbol":"receivedAbruptGoAwayShouldFailBufferedStream"}
+The original commit only adds eager stream-property association after header write registration plus a regression test. A stale `.git/index.lock` is blocking some git-backed symbol lookups, so I’ll rely on direct target-ref code views and history tools that don’t need changing the worktree.
+[0m⚙ [0mgit_history {"filepath":"netty/src/main/java/io/grpc/netty/NettyClientHandler.java","start_line":760,"end_line":780,"start_commit":"b04c673fdfec6191afdca06fa254b9e4da0150f6","end_commit":"b04c673fdfec6191afdca06fa254b9e4da0150f6"}
+[0m⚙ [0mviewcode {"ref":"b04c673fdfec6191afdca06fa254b9e4da0150f6","path":"netty/src/main/java/io/grpc/netty/NettyClientHandler.java","startline":720,"endline":800}
+[0m⚙ [0mviewcode {"ref":"b04c673fdfec6191afdca06fa254b9e4da0150f6","path":"netty/src/test/java/io/grpc/netty/NettyClientHandlerTest.java","startline":420,"endline":550}
+[0m⚙ [0mgit_history {"filepath":"netty/src/test/java/io/grpc/netty/NettyClientHandlerTest.java","start_line":440,"end_line":470,"start_commit":"b04c673fdfec6191afdca06fa254b9e4da0150f6","end_commit":"b04c673fdfec6191afdca06fa254b9e4da0150f6"}
+The target branch has the same functional locations. The test context differs only because an adjacent method is already named `receivedAbruptGoAwayShouldFailRacingQueuedStreamid`; the new regression test can be inserted immediately after it, before the buffered-stream GOAWAY test.
+[0m
+[0m# [0mTodos
+[✓] Study original commit metadata and target code context
+[•] Construct unified diff for target ref
+[ ] Validate each hunk applies cleanly
+[ ] Return parseable YAML result
+[0m
+I’m validating the two hunks independently now: one production hunk in `NettyClientHandler` and one regression-test hunk in `NettyClientHandlerTest`.
+[0m⚙ [0mvalidate {"ref":"b04c673fdfec6191afdca06fa254b9e4da0150f6","mode":"hunk","patch":"diff --git a/netty/src/main/java/io/grpc/netty/NettyClientHandler.java b/netty/src/main/java/io/grpc/netty/NettyClientHandler.java\n--- a/netty/src/main/java/io/grpc/netty/NettyClientHandler.java\n+++ b/netty/src/main/java/io/grpc/netty/NettyClientHandler.java\n@@ -765,6 +765,19 @@ class NettyClientHandler extends AbstractNettyHandler {\n             }\n           }\n         });\n+    // When the HEADERS are not buffered because of MAX_CONCURRENT_STREAMS in\n+    // StreamBufferingEncoder, the stream is created immediately even if the bytes of the HEADERS\n+    // are delayed because the OS may have too much buffered and isn't accepting the write. The\n+    // write promise is also delayed until flush(). However, we need to associate the netty stream\n+    // with the transport state so that goingAway() and forcefulClose() and able to notify the\n+    // stream of failures.\n+    //\n+    // This leaves a hole when MAX_CONCURRENT_STREAMS is reached, as http2Stream will be null, but\n+    // it is better than nothing.\n+    Http2Stream http2Stream = connection().stream(streamId);\n+    if (http2Stream != null) {\n+      http2Stream.setProperty(streamKey, stream);\n+    }\n   }\n \n   /**\n"}
+The production hunk applies cleanly.
+[0m⚙ [0mvalidate {"ref":"b04c673fdfec6191afdca06fa254b9e4da0150f6","mode":"hunk","patch":"diff --git a/netty/src/test/java/io/grpc/netty/NettyClientHandlerTest.java b/netty/src/test/java/io/grpc/netty/NettyClientHandlerTest.java\n--- a/netty/src/test/java/io/grpc/netty/NettyClientHandlerTest.java\n+++ b/netty/src/test/java/io/grpc/netty/NettyClientHandlerTest.java\n@@ -453,6 +453,26 @@ public class NettyClientHandlerTest extends NettyHandlerTestBase<NettyClientHand\n     assertTrue(future.isDone());\n   }\n \n+  @Test\n+  public void receivedAbruptGoAwayShouldFailRacingQueuedIoStreamid() throws Exception {\n+    // Purposefully avoid flush(), since we want the write to not actually complete.\n+    // EmbeddedChannel doesn't support flow control, so this is the next closest approximation.\n+    ChannelFuture future = channel().write(\n+        newCreateStreamCommand(grpcHeaders, streamTransportState));\n+    // Read a GOAWAY that indicates our stream can't be sent\n+    channelRead(goAwayFrame(0, 0 /* NO_ERROR */, Unpooled.copiedBuffer(\"this is a test\", UTF_8)));\n+\n+    ArgumentCaptor<Status> captor = ArgumentCaptor.forClass(Status.class);\n+    verify(streamListener).closed(captor.capture(), same(REFUSED),\n+        ArgumentMatchers.<Metadata>notNull());\n+    assertEquals(Status.UNAVAILABLE.getCode(), captor.getValue().getCode());\n+    assertEquals(\n+        \"Abrupt GOAWAY closed sent stream. HTTP/2 error code: NO_ERROR, \"\n+          + \"debug data: this is a test\",\n+        captor.getValue().getDescription());\n+    assertTrue(future.isDone());\n+  }\n+\n   @Test\n   public void receivedGoAway_shouldFailBufferedStreamsExceedingMaxConcurrentStreams()\n       throws Exception {\n"}
+The regression-test hunk also applies cleanly; as requested, I’m skipping full validation.
+[0m
+[0m# [0mTodos
+[✓] Study original commit metadata and target code context
+[✓] Construct unified diff for target ref
+[✓] Validate each hunk applies cleanly
+[•] Return parseable YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/netty/src/main/java/io/grpc/netty/NettyClientHandler.java b/netty/src/main/java/io/grpc/netty/NettyClientHandler.java
+    --- a/netty/src/main/java/io/grpc/netty/NettyClientHandler.java
+    +++ b/netty/src/main/java/io/grpc/netty/NettyClientHandler.java
+    @@ -765,6 +765,19 @@ class NettyClientHandler extends AbstractNettyHandler {
+                 }
+               }
+             });
+    +    // When the HEADERS are not buffered because of MAX_CONCURRENT_STREAMS in
+    +    // StreamBufferingEncoder, the stream is created immediately even if the bytes of the HEADERS
+    +    // are delayed because the OS may have too much buffered and isn't accepting the write. The
+    +    // write promise is also delayed until flush(). However, we need to associate the netty stream
+    +    // with the transport state so that goingAway() and forcefulClose() and able to notify the
+    +    // stream of failures.
+    +    //
+    +    // This leaves a hole when MAX_CONCURRENT_STREAMS is reached, as http2Stream will be null, but
+    +    // it is better than nothing.
+    +    Http2Stream http2Stream = connection().stream(streamId);
+    +    if (http2Stream != null) {
+    +      http2Stream.setProperty(streamKey, stream);
+    +    }
+       }
+     
+       /**
+    diff --git a/netty/src/test/java/io/grpc/netty/NettyClientHandlerTest.java b/netty/src/test/java/io/grpc/netty/NettyClientHandlerTest.java
+    --- a/netty/src/test/java/io/grpc/netty/NettyClientHandlerTest.java
+    +++ b/netty/src/test/java/io/grpc/netty/NettyClientHandlerTest.java
+    @@ -453,6 +453,26 @@ public class NettyClientHandlerTest extends NettyHandlerTestBase<NettyClientHand
+         assertTrue(future.isDone());
+       }
+     
+    +  @Test
+    +  public void receivedAbruptGoAwayShouldFailRacingQueuedIoStreamid() throws Exception {
+    +    // Purposefully avoid flush(), since we want the write to not actually complete.
+    +    // EmbeddedChannel doesn't support flow control, so this is the next closest approximation.
+    +    ChannelFuture future = channel().write(
+    +        newCreateStreamCommand(grpcHeaders, streamTransportState));
+    +    // Read a GOAWAY that indicates our stream can't be sent
+    +    channelRead(goAwayFrame(0, 0 /* NO_ERROR */, Unpooled.copiedBuffer("this is a test", UTF_8)));
+    +
+    +    ArgumentCaptor<Status> captor = ArgumentCaptor.forClass(Status.class);
+    +    verify(streamListener).closed(captor.capture(), same(REFUSED),
+    +        ArgumentMatchers.<Metadata>notNull());
+    +    assertEquals(Status.UNAVAILABLE.getCode(), captor.getValue().getCode());
+    +    assertEquals(
+    +        "Abrupt GOAWAY closed sent stream. HTTP/2 error code: NO_ERROR, "
+    +          + "debug data: this is a test",
+    +        captor.getValue().getDescription());
+    +    assertTrue(future.isDone());
+    +  }
+    +
+       @Test
+       public void receivedGoAway_shouldFailBufferedStreamsExceedingMaxConcurrentStreams()
+           throws Exception {
+  notes: >
+    Backported the eager Netty stream association and added the racing queued-I/O GOAWAY regression test; both hunks validated cleanly against b04c673fdfec6191afdca06fa254b9e4da0150f6.
+```
+
+--- END CLI OUTPUT ---
+[14:29:19]   Done in 99.2s | status=success

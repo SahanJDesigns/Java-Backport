@@ -1,0 +1,83 @@
+[13:53:15] === Row 15: graylog  42768151 -> 78296cab  [TYPE-V] ===
+[13:53:15]   Resolving parent of backport commit 78296cab...
+[13:53:15]   Backport parent (target ref): d52773f26739ef2dab06b0f64ba4aa731c892178
+[13:53:15]   Extracting new-version patch for 42768151...
+[13:53:16]   New-version patch size: 2576 chars
+[13:53:16]   Checking out backport parent d52773f2...
+[13:53:20]   Invoking OpenCode CLI (6435 chars)...
+[13:53:20]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll map the original hunks onto the checked-out `5.2` ref, then validate the resulting unified diff hunk-by-hunk without switching branches.
+[0m⚙ [0mviewcode {"ref":"d52773f26739ef2dab06b0f64ba4aa731c892178","path":"graylog2-server/src/test/java/org/graylog2/grok/GrokPatternRegistryTest.java","startline":1,"endline":160}
+[0m⚙ [0mviewcode {"ref":"d52773f26739ef2dab06b0f64ba4aa731c892178","path":"graylog2-server/src/main/java/org/graylog2/grok/GrokPatternRegistry.java","startline":1,"endline":140}
+[0m⚙ [0mgit_show {"ref":"427681515d45bbe38a63899f10d7297d0a0094a5"}
+[0m⚙ [0mlocate_symbol {"ref":"d52773f26739ef2dab06b0f64ba4aa731c892178","symbol":"GrokPatternRegistry"}
+The target code exists in the same files on `5.2`. The only source adaptation needed is that `5.2` still uses `javax.inject` imports, so the master import-order hunk is not part of the behavioral backport; the exact-match bug fix and regression test are applicable.
+[0m✱ [0mGlob "changelog/unreleased/pr-20263.toml"[90m 0 matches[0m
+[0m⚙ [0mgit_history {"filepath":"graylog2-server/src/test/java/org/graylog2/grok/GrokPatternRegistryTest.java","start_line":106,"end_line":113,"start_commit":"d52773f26739ef2dab06b0f64ba4aa731c892178","end_commit":"d52773f26739ef2dab06b0f64ba4aa731c892178"}
+[0m⚙ [0mgit_history {"filepath":"graylog2-server/src/main/java/org/graylog2/grok/GrokPatternRegistry.java","start_line":84,"end_line":86,"start_commit":"d52773f26739ef2dab06b0f64ba4aa731c892178","end_commit":"d52773f26739ef2dab06b0f64ba4aa731c892178"}
+`git_history` cannot operate on an empty commit range, so I’ll re-run it over the immediate parent-to-target range to satisfy lineage tracing without inspecting later commits.
+[0m⚙ [0mgit_history {"filepath":"graylog2-server/src/main/java/org/graylog2/grok/GrokPatternRegistry.java","start_line":84,"end_line":86,"start_commit":"d52773f26739ef2dab06b0f64ba4aa731c892178^","end_commit":"d52773f26739ef2dab06b0f64ba4aa731c892178"}
+[0m⚙ [0mgit_history {"filepath":"graylog2-server/src/test/java/org/graylog2/grok/GrokPatternRegistryTest.java","start_line":106,"end_line":113,"start_commit":"d52773f26739ef2dab06b0f64ba4aa731c892178^","end_commit":"d52773f26739ef2dab06b0f64ba4aa731c892178"}
+The changelog file does not already exist on the target ref. Since the original commit introduced it as release metadata and the target has the same `changelog/unreleased` structure, I’ll include it in the backport patch along with the Java fix and test.
+[0m✱ [0mGlob "changelog/unreleased/*.toml"[90m 2 matches[0m
+[0m⚙ [0mviewcode {"ref":"d52773f26739ef2dab06b0f64ba4aa731c892178","path":"graylog2-server/src/main/java/org/graylog2/grok/GrokPatternRegistry.java","startline":76,"endline":90}
+[0m⚙ [0mviewcode {"ref":"d52773f26739ef2dab06b0f64ba4aa731c892178","path":"graylog2-server/src/test/java/org/graylog2/grok/GrokPatternRegistryTest.java","startline":103,"endline":113}
+I’ll validate the three applicable hunks independently now: changelog addition, exact-name comparison, and the regression test.
+[0m⚙ [0mvalidate {"ref":"d52773f26739ef2dab06b0f64ba4aa731c892178","mode":"hunk","patch":"diff --git a/changelog/unreleased/pr-20263.toml b/changelog/unreleased/pr-20263.toml\nnew file mode 100644\nindex 0000000000..1647f57485\n--- /dev/null\n+++ b/changelog/unreleased/pr-20263.toml\n@@ -0,0 +1,5 @@\n+type = \"f\"\n+message = \"Fixed issue where grok_exists pipeline rule would return true for substrings of pattern names.\"\n+\n+issues = [\"20264\"]\n+pulls = [\"20263\"]\n"}
+[0m⚙ [0mvalidate {"ref":"d52773f26739ef2dab06b0f64ba4aa731c892178","mode":"hunk","patch":"diff --git a/graylog2-server/src/main/java/org/graylog2/grok/GrokPatternRegistry.java b/graylog2-server/src/main/java/org/graylog2/grok/GrokPatternRegistry.java\nindex 232230626a..9f36c122d2 100644\n--- a/graylog2-server/src/main/java/org/graylog2/grok/GrokPatternRegistry.java\n+++ b/graylog2-server/src/main/java/org/graylog2/grok/GrokPatternRegistry.java\n@@ -84,7 +84,7 @@ public class GrokPatternRegistry {\n     }\n \n     public boolean grokPatternExists(String patternName) {\n-        return patterns.get().stream().anyMatch(pattern -> pattern.name().contains(patternName));\n+        return patterns.get().stream().anyMatch(pattern -> pattern.name().equals(patternName));\n     }\n \n     public Grok cachedGrokForPattern(String pattern) {\n"}
+[0m⚙ [0mvalidate {"ref":"d52773f26739ef2dab06b0f64ba4aa731c892178","mode":"hunk","patch":"diff --git a/graylog2-server/src/test/java/org/graylog2/grok/GrokPatternRegistryTest.java b/graylog2-server/src/test/java/org/graylog2/grok/GrokPatternRegistryTest.java\nindex 8e1d2b0101..3e35dde06e 100644\n--- a/graylog2-server/src/test/java/org/graylog2/grok/GrokPatternRegistryTest.java\n+++ b/graylog2-server/src/test/java/org/graylog2/grok/GrokPatternRegistryTest.java\n@@ -110,4 +110,11 @@ public class GrokPatternRegistryTest {\n     public void patterns() {\n         assertThat(grokPatternRegistry.patterns()).isEqualTo(GROK_PATTERNS);\n     }\n+\n+    @Test\n+    public void patternExists() {\n+        assertThat(grokPatternRegistry.grokPatternExists(\"TEST\")).isFalse();\n+        assertThat(grokPatternRegistry.grokPatternExists(\"NUM\")).isFalse();\n+        assertThat(grokPatternRegistry.grokPatternExists(\"TESTNUM\")).isTrue();\n+    }\n }\n"}
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/changelog/unreleased/pr-20263.toml b/changelog/unreleased/pr-20263.toml
+    new file mode 100644
+    index 0000000000..1647f57485
+    --- /dev/null
+    +++ b/changelog/unreleased/pr-20263.toml
+    @@ -0,0 +1,5 @@
+    +type = "f"
+    +message = "Fixed issue where grok_exists pipeline rule would return true for substrings of pattern names."
+    +
+    +issues = ["20264"]
+    +pulls = ["20263"]
+    diff --git a/graylog2-server/src/main/java/org/graylog2/grok/GrokPatternRegistry.java b/graylog2-server/src/main/java/org/graylog2/grok/GrokPatternRegistry.java
+    index 232230626a..9f36c122d2 100644
+    --- a/graylog2-server/src/main/java/org/graylog2/grok/GrokPatternRegistry.java
+    +++ b/graylog2-server/src/main/java/org/graylog2/grok/GrokPatternRegistry.java
+    @@ -84,7 +84,7 @@ public class GrokPatternRegistry {
+         }
+     
+         public boolean grokPatternExists(String patternName) {
+    -        return patterns.get().stream().anyMatch(pattern -> pattern.name().contains(patternName));
+    +        return patterns.get().stream().anyMatch(pattern -> pattern.name().equals(patternName));
+         }
+     
+         public Grok cachedGrokForPattern(String pattern) {
+    diff --git a/graylog2-server/src/test/java/org/graylog2/grok/GrokPatternRegistryTest.java b/graylog2-server/src/test/java/org/graylog2/grok/GrokPatternRegistryTest.java
+    index 8e1d2b0101..3e35dde06e 100644
+    --- a/graylog2-server/src/test/java/org/graylog2/grok/GrokPatternRegistryTest.java
+    +++ b/graylog2-server/src/test/java/org/graylog2/grok/GrokPatternRegistryTest.java
+    @@ -110,4 +110,11 @@ public class GrokPatternRegistryTest {
+         public void patterns() {
+             assertThat(grokPatternRegistry.patterns()).isEqualTo(GROK_PATTERNS);
+         }
+    +
+    +    @Test
+    +    public void patternExists() {
+    +        assertThat(grokPatternRegistry.grokPatternExists("TEST")).isFalse();
+    +        assertThat(grokPatternRegistry.grokPatternExists("NUM")).isFalse();
+    +        assertThat(grokPatternRegistry.grokPatternExists("TESTNUM")).isTrue();
+    +    }
+     }
+  notes: >
+    Backported the grok_exists exact-name fix, changelog entry, and regression test; the master-only jakarta import ordering hunk was not applicable to 5.2.
+```
+
+--- END CLI OUTPUT ---
+[13:55:27]   Done in 131.3s | status=success

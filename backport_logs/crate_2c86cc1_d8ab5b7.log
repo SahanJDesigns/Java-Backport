@@ -1,0 +1,415 @@
+[11:19:47] === Row 1: crate  2c86cc10 -> d8ab5b71  [TYPE-V] ===
+[11:19:47]   Resolving parent of backport commit d8ab5b71...
+[11:19:47]   Backport parent (target ref): 6c24e99e6d83ba6cec4d2af87411ffe999815ed0
+[11:19:47]   Extracting new-version patch for 2c86cc10...
+[11:19:47]   New-version patch size: 15709 chars
+[11:19:47]   Checking out backport parent 6c24e99e...
+[11:19:52]   Invoking OpenCode CLI (19393 chars)...
+[11:19:52]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll map the provided master diff onto the checked-out `5.7` parent, verify the relevant code shape, then validate the resulting unified diff hunk-by-hunk.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target branch file contexts
+[ ] Construct adapted backport patch for 5.7 parent
+[ ] Validate each patch hunk against target ref
+[ ] Return final YAML result
+[0m
+[0m⚙ [0mviewcode {"ref":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","path":"server/src/main/java/io/crate/execution/dsl/phases/ForeignCollectPhase.java","startline":1,"endline":180}
+[0m⚙ [0mviewcode {"ref":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","path":"server/src/main/java/io/crate/fdw/ForeignDataWrappers.java","startline":90,"endline":150}
+[0m⚙ [0mviewcode {"ref":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","path":"server/src/main/java/io/crate/fdw/JdbcForeignDataWrapper.java","startline":105,"endline":140}
+[0m⚙ [0mgit_show {"ref":"2c86cc10d4fc00a287e2b96f6d97984e387f6574"}
+The core foreign-table execution code exists in the target with the same shape, but serialization compatibility likely needs adapting because `Version.V_5_8_0` may not exist on the `5.7` parent. I’m checking version constants and planner/test contexts next.
+[0m⚙ [0mviewcode {"ref":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","path":"server/src/main/java/io/crate/planner/operators/ForeignCollect.java","startline":1,"endline":180}
+[0m⚙ [0mviewcode {"ref":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","path":"server/src/main/java/io/crate/planner/operators/LogicalPlanner.java","startline":1,"endline":470}
+[0m⚙ [0mviewcode {"ref":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","path":"server/src/main/java/io/crate/planner/optimizer/rule/MergeFilterAndForeignCollect.java","startline":1,"endline":120}
+[0m⚙ [0mviewcode {"ref":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","path":"server/src/test/java/io/crate/integrationtests/ForeignDataWrapperITest.java","startline":1,"endline":440}
+[0m⚙ [0mviewcode {"ref":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","path":"docs/appendices/release-notes/5.7.2.rst","startline":60,"endline":90}
+[0m✱ [0mGrep "V_5_8_0|V_5_7_"[90m in server/src/main/java · 30 matches[0m
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/planner/operators/LogicalPlanner.java","start_line":398,"end_line":420,"start_commit":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","end_commit":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0"}
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/execution/dsl/phases/ForeignCollectPhase.java","start_line":38,"end_line":72,"start_commit":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","end_commit":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0"}
+[0m⚙ [0mlocate_symbol {"ref":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","symbol":"ForeignCollect"}
+[0m⚙ [0mlocate_symbol {"ref":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","symbol":"ForeignCollectPhase"}
+[0m⚙ [0mlocate_symbol {"ref":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","symbol":"visitView"}
+The symbol/history tooling hit a transient `.git/index.lock` from concurrent git operations, so I’m avoiding further ref-changing helpers and using the already-read target contexts plus non-destructive checks.
+[0m✱ [0mGrep "new PlanBuilder\(|new ForeignCollect\(|new ForeignCollectPhase\("[90m in server/src/main/java · 6 matches[0m
+[0m✱ [0mGrep "class CoordinatorSessionSettings|setSessionUser\(|sessionUser\("[90m in server/src/main/java · 54 matches[0m
+[0m✱ [0mGrep "drop user if exists user_a|user_b"[90m in server/src/test/java · 1 match[0m
+[0m⚙ [0mviewcode {"ref":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","path":"server/src/main/java/io/crate/fdw/ForeignDataWrappers.java","startline":1,"endline":35}
+[0m⚙ [0mviewcode {"ref":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","path":"server/src/main/java/io/crate/metadata/settings/CoordinatorSessionSettings.java","startline":80,"endline":130}
+[0m⚙ [0mviewcode {"ref":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","path":"server/src/main/java/io/crate/metadata/NodeContext.java","startline":1,"endline":120}
+The backport adaptation is straightforward: carry the new `executeAs` through planning/execution, but gate the serialized field on `Version.V_5_7_2` instead of the master-only `V_5_8_0`.
+[0m⚙ [0mvalidate {"ref":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.7.2.rst b/docs/appendices/release-notes/5.7.2.rst\n--- a/docs/appendices/release-notes/5.7.2.rst\n+++ b/docs/appendices/release-notes/5.7.2.rst\n@@ -76,6 +76,9 @@ Fixes\n   ``table_rename_pattern`` or ``table_rename_replacement``. Renamed table was\n   created but used to be empty.\n \n+- Fixed an issue that prevented users with ``DQL`` privilege on a view to be\n+  able to query the view when foreign tables are referenced by the view.\n+\n - Fixed an issue leading to a ``ArrayIndexOutOfBoundsException`` when using a\n   correlated sub-query where some of its outputs weren't used in a parent\n   query.\n"}
+The release-note hunk applies cleanly. I’m validating the Java hunks next, starting with the wire-format carrier class.
+[0m⚙ [0mvalidate {"ref":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/execution/dsl/phases/ForeignCollectPhase.java b/server/src/main/java/io/crate/execution/dsl/phases/ForeignCollectPhase.java\n--- a/server/src/main/java/io/crate/execution/dsl/phases/ForeignCollectPhase.java\n+++ b/server/src/main/java/io/crate/execution/dsl/phases/ForeignCollectPhase.java\n@@ -26,8 +26,11 @@ import java.util.Collection;\n import java.util.List;\n import java.util.UUID;\n \n+import org.elasticsearch.Version;\n import org.elasticsearch.common.io.stream.StreamInput;\n import org.elasticsearch.common.io.stream.StreamOutput;\n+import org.jetbrains.annotations.NotNull;\n+import org.jetbrains.annotations.Nullable;\n \n import io.crate.expression.symbol.Symbol;\n import io.crate.expression.symbol.Symbols;\n@@ -40,6 +43,8 @@ public class ForeignCollectPhase extends AbstractProjectionsPhase implements Col\n     private final RelationName relationName;\n     private final List<Symbol> toCollect;\n     private final Symbol query;\n+    @Nullable\n+    private final String executeAs;\n \n     private DistributionInfo distributionInfo = DistributionInfo.DEFAULT_BROADCAST;\n \n@@ -48,13 +53,15 @@ public class ForeignCollectPhase extends AbstractProjectionsPhase implements Col\n                                String handlerNode,\n                                RelationName relationName,\n                                List<Symbol> toCollect,\n-                               Symbol query) {\n+                               Symbol query,\n+                               @NotNull String executeAs) {\n         super(jobId, phaseId, relationName.fqn(), null);\n         this.handlerNode = handlerNode;\n         this.relationName = relationName;\n         this.toCollect = toCollect;\n         this.outputTypes = Symbols.typeView(toCollect);\n         this.query = query;\n+        this.executeAs = executeAs;\n     }\n \n     public ForeignCollectPhase(StreamInput in) throws IOException {\n@@ -65,6 +72,11 @@ public class ForeignCollectPhase extends AbstractProjectionsPhase implements Col\n         this.outputTypes = extractOutputTypes(toCollect, projections);\n         this.distributionInfo = new DistributionInfo(in);\n         this.query = Symbols.fromStream(in);\n+        if (in.getVersion().onOrAfter(Version.V_5_7_2)) {\n+            this.executeAs = in.readOptionalString();\n+        } else {\n+            this.executeAs = null;\n+        }\n     }\n \n     @Override\n@@ -75,6 +87,9 @@ public class ForeignCollectPhase extends AbstractProjectionsPhase implements Col\n         Symbols.toStream(toCollect, out);\n         distributionInfo.writeTo(out);\n         Symbols.toStream(query, out);\n+        if (out.getVersion().onOrAfter(Version.V_5_7_2)) {\n+            out.writeOptionalString(executeAs);\n+        }\n     }\n \n     @Override\n@@ -114,4 +129,9 @@ public class ForeignCollectPhase extends AbstractProjectionsPhase implements Col\n     public Symbol query() {\n         return query;\n     }\n+\n+    @Nullable\n+    public String executeAs() {\n+        return executeAs;\n+    }\n }\n"}
+The `ForeignCollectPhase` hunk applies with the `5.7.2` version gate. Next I’m validating the execution wrapper and JDBC user-mapping changes.
+[0m⚙ [0mvalidate {"ref":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/fdw/ForeignDataWrappers.java b/server/src/main/java/io/crate/fdw/ForeignDataWrappers.java\n--- a/server/src/main/java/io/crate/fdw/ForeignDataWrappers.java\n+++ b/server/src/main/java/io/crate/fdw/ForeignDataWrappers.java\n@@ -122,8 +122,12 @@ public class ForeignDataWrappers implements CollectSource {\n                 foreignTable.server()\n             ));\n         }\n+        String executeAs = phase.executeAs();\n+        if (executeAs == null) {\n+            executeAs = txnCtx.sessionSettings().userName();\n+        }\n         return fdw.getIterator(\n-            requireNonNull(roles.findUser(txnCtx.sessionSettings().userName()), \"current user must exit\"),\n+            requireNonNull(roles.findUser(executeAs), \"current user must exist\"),\n             server,\n             foreignTable,\n             txnCtx,\n"}
+[0m⚙ [0mvalidate {"ref":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/fdw/JdbcForeignDataWrapper.java b/server/src/main/java/io/crate/fdw/JdbcForeignDataWrapper.java\n--- a/server/src/main/java/io/crate/fdw/JdbcForeignDataWrapper.java\n+++ b/server/src/main/java/io/crate/fdw/JdbcForeignDataWrapper.java\n@@ -123,7 +123,7 @@ final class JdbcForeignDataWrapper implements ForeignDataWrapper {\n                                                              List<Symbol> collect,\n                                                              Symbol query) {\n         SessionSettings sessionSettings = txnCtx.sessionSettings();\n-        Settings userOptions = server.users().get(sessionSettings.userName());\n+        Settings userOptions = server.users().get(currentUser.name());\n         if (userOptions == null) {\n             userOptions = Settings.EMPTY;\n         }\n"}
+The FDW execution hunks apply cleanly. I’m validating planner propagation and the view-owner session switch now.
+[0m⚙ [0mvalidate {"ref":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/planner/operators/ForeignCollect.java b/server/src/main/java/io/crate/planner/operators/ForeignCollect.java\n--- a/server/src/main/java/io/crate/planner/operators/ForeignCollect.java\n+++ b/server/src/main/java/io/crate/planner/operators/ForeignCollect.java\n@@ -50,15 +50,18 @@ public class ForeignCollect implements LogicalPlan {\n     private final ForeignTableRelation relation;\n     private final List<Symbol> toCollect;\n     private final WhereClause where;\n+    private final String executeAs;\n \n     public ForeignCollect(ForeignDataWrapper fdw,\n                           ForeignTableRelation relation,\n                           List<Symbol> toCollect,\n-                          WhereClause where) {\n+                          WhereClause where,\n+                          String executeAs) {\n         this.fdw = fdw;\n         this.relation = relation;\n         this.toCollect = toCollect;\n         this.where = where;\n+        this.executeAs = executeAs;\n     }\n \n     @Override\n@@ -80,7 +83,8 @@ public class ForeignCollect implements LogicalPlan {\n             plannerContext.handlerNode(),\n             relation.relationName(),\n             Lists.map(toCollect, binder),\n-            where.map(binder).queryOrFallback()\n+            where.map(binder).queryOrFallback(),\n+            executeAs\n         );\n         return new io.crate.planner.node.dql.Collect(\n             phase,\n@@ -125,7 +129,11 @@ public class ForeignCollect implements LogicalPlan {\n         if (outputsToKeep.containsAll(toCollect)) {\n             return this;\n         }\n-        return new ForeignCollect(fdw, relation, List.copyOf(outputsToKeep), where);\n+        return new ForeignCollect(fdw, relation, List.copyOf(outputsToKeep), where, executeAs);\n+    }\n+\n+    public String executeAs() {\n+        return executeAs;\n     }\n \n     @Override\n"}
+[0m⚙ [0mvalidate {"ref":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/planner/operators/LogicalPlanner.java b/server/src/main/java/io/crate/planner/operators/LogicalPlanner.java\n--- a/server/src/main/java/io/crate/planner/operators/LogicalPlanner.java\n+++ b/server/src/main/java/io/crate/planner/operators/LogicalPlanner.java\n@@ -21,6 +21,8 @@\n \n package io.crate.planner.operators;\n \n+import static java.util.Objects.requireNonNull;\n+\n import java.util.Collection;\n import java.util.Collections;\n import java.util.LinkedHashSet;\n@@ -80,6 +82,7 @@ import io.crate.metadata.CoordinatorTxnCtx;\n import io.crate.metadata.NodeContext;\n import io.crate.metadata.Reference;\n import io.crate.metadata.TransactionContext;\n+import io.crate.metadata.settings.CoordinatorSessionSettings;\n import io.crate.planner.DependencyCarrier;\n import io.crate.planner.ExecutionPlan;\n import io.crate.planner.PlannerContext;\n@@ -123,6 +126,7 @@ import io.crate.planner.optimizer.rule.RewriteGroupByKeysLimitToLimitDistinct;\n import io.crate.planner.optimizer.rule.RewriteJoinPlan;\n import io.crate.planner.optimizer.rule.RewriteToQueryThenFetch;\n import io.crate.planner.optimizer.tracer.OptimizerTracer;\n+import io.crate.role.Role;\n import io.crate.types.DataTypes;\n \n /**\n@@ -250,7 +254,9 @@ public class LogicalPlanner {\n             subqueryPlanner,\n             foreignDataWrappers,\n             plannerContext.planStats(),\n-            plannerContext.clusterState()\n+            plannerContext.clusterState(),\n+            plannerContext.transactionContext(),\n+            plannerContext.nodeContext()\n         );\n         LogicalPlan plan = relation.accept(planBuilder, relation.outputs());\n \n@@ -313,7 +319,9 @@ public class LogicalPlanner {\n             subqueryPlanner,\n             foreignDataWrappers,\n             planStats,\n-            plannerContext.clusterState()\n+            plannerContext.clusterState(),\n+            coordinatorTxnCtx,\n+            plannerContext.nodeContext()\n         );\n         LogicalPlan logicalPlan = relation.accept(planBuilder, relation.outputs());\n         LogicalPlan optimizedPlan = optimizer.optimize(logicalPlan, planStats, coordinatorTxnCtx, tracer);\n@@ -345,15 +353,21 @@ public class LogicalPlanner {\n         private final PlanStats planStats;\n         private final ForeignDataWrappers foreignDataWrappers;\n         private final ClusterState clusterState;\n+        private final CoordinatorTxnCtx coordinatorTxnCtx;\n+        private final NodeContext nodeContext;\n \n         private PlanBuilder(SubqueryPlanner subqueryPlanner,\n                             ForeignDataWrappers foreignDataWrappers,\n                             PlanStats planStats,\n-                            ClusterState clusterState) {\n+                            ClusterState clusterState,\n+                            CoordinatorTxnCtx coordinatorTxnCtx,\n+                            NodeContext nodeContext) {\n             this.subqueryPlanner = subqueryPlanner;\n             this.foreignDataWrappers = foreignDataWrappers;\n             this.planStats = planStats;\n             this.clusterState = clusterState;\n+            this.coordinatorTxnCtx = coordinatorTxnCtx;\n+            this.nodeContext = nodeContext;\n         }\n \n         @Override\n@@ -394,7 +408,8 @@ public class LogicalPlanner {\n                 foreignDataWrapper,\n                 relation,\n                 outputs,\n-                WhereClause.MATCH_ALL\n+                WhereClause.MATCH_ALL,\n+                coordinatorTxnCtx.sessionSettings().userName()\n             );\n         }\n \n@@ -415,8 +430,12 @@ public class LogicalPlanner {\n \n         @Override\n         public LogicalPlan visitView(AnalyzedView view, List<Symbol> outputs) {\n+            CoordinatorSessionSettings sessionSettings = coordinatorTxnCtx.sessionSettings();\n+            Role sessionUser = sessionSettings.sessionUser();\n+            sessionSettings.setSessionUser(requireNonNull(nodeContext.roles().findUser(view.owner()), \"view owner must exist\"));\n             var child = view.relation();\n             var source = child.accept(this, child.outputs());\n+            sessionSettings.setSessionUser(sessionUser);\n             return new Rename(view.outputs(), view.relationName(), view, source);\n         }\n \n"}
+[0m⚙ [0mvalidate {"ref":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/planner/optimizer/rule/MergeFilterAndForeignCollect.java b/server/src/main/java/io/crate/planner/optimizer/rule/MergeFilterAndForeignCollect.java\n--- a/server/src/main/java/io/crate/planner/optimizer/rule/MergeFilterAndForeignCollect.java\n+++ b/server/src/main/java/io/crate/planner/optimizer/rule/MergeFilterAndForeignCollect.java\n@@ -74,7 +74,8 @@ public class MergeFilterAndForeignCollect implements Rule<Filter> {\n                 collect.fdw(),\n                 collect.relation(),\n                 collect.outputs(),\n-                collect.where().add(filter.query())\n+                collect.where().add(filter.query()),\n+                collect.executeAs()\n             );\n         }\n         return null;\n"}
+[0m⚙ [0mvalidate {"ref":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/integrationtests/ForeignDataWrapperITest.java b/server/src/test/java/io/crate/integrationtests/ForeignDataWrapperITest.java\n--- a/server/src/test/java/io/crate/integrationtests/ForeignDataWrapperITest.java\n+++ b/server/src/test/java/io/crate/integrationtests/ForeignDataWrapperITest.java\n@@ -376,4 +376,54 @@ public class ForeignDataWrapperITest extends IntegTestCase {\n         execute(\"drop user mapping for trillian server pg\");\n         assertThat(execute(\"select * from information_schema.user_mapping_options where option_name = 'password'\")).isEmpty();\n     }\n+\n+    @Test\n+    public void test_users_with_dql_on_view_can_access_foreign_table_via_view_with_view_owners_user_mapping() {\n+        PostgresNetty postgresNetty = cluster().getInstance(PostgresNetty.class);\n+        int port = postgresNetty.boundAddress().publishAddress().getPort();\n+        String url = \"jdbc:postgresql://127.0.0.1:\" + port + '/';\n+\n+        execute(\"create user user_a with (password = 'fooa')\");\n+        execute(\"grant al to user_a\");\n+        execute(\"grant ddl, dql on schema doc to user_a\"); // required for the create-view stmt\n+        var roles = cluster().getInstance(Roles.class);\n+        Role user_a = roles.getUser(\"user_a\");\n+        sqlExecutor.executeAs(\n+            String.format(\"CREATE SERVER pg FOREIGN DATA WRAPPER jdbc OPTIONS (url '%s')\", url),\n+            user_a);\n+        sqlExecutor.executeAs(\"\"\"\n+            CREATE FOREIGN TABLE doc.remote_documents (name text)\n+            SERVER pg\n+            OPTIONS (schema_name 'public', table_name 'documents');\n+            \"\"\", user_a);\n+        sqlExecutor.executeAs(\"\"\"\n+            CREATE USER MAPPING FOR user_a\n+            SERVER pg\n+            OPTIONS (\"user\" 'foreign-user-a', password 'foreign-pw');\n+            \"\"\", user_a);\n+        sqlExecutor.executeAs(\n+            \"CREATE VIEW doc.remote_documents_view AS SELECT * FROM doc.remote_documents\",\n+            user_a);\n+\n+        execute(\"create user user_b with (password = 'foob')\");\n+        execute(\"grant dql on view doc.remote_documents_view to user_b\");\n+        Role user_b = roles.getUser(\"user_b\");\n+        assertThatThrownBy(\n+            () -> sqlExecutor.executeAs(\"SELECT * FROM doc.remote_documents_view\", user_b))\n+            .isExactlyInstanceOf(RuntimeException.class)\n+            // Notice that when 'user_b' accesses the foreign table implicitly via the view,\n+            // 'foreign-user-a' is used which is mapped to 'user_a'(the view owner)\n+            .hasMessageContaining(\"FATAL: trust authentication failed for user \\\"foreign-user-a\\\"\");\n+\n+        // even when 'user-b' has its own mapping to the foreign server, 'foreign-user-a' is used\n+        sqlExecutor.executeAs(\"\"\"\n+            CREATE USER MAPPING FOR user_b\n+            SERVER pg\n+            OPTIONS (\"user\" 'foreign-user-b', password 'foreign-pw');\n+            \"\"\", user_a);\n+        assertThatThrownBy(\n+            () -> sqlExecutor.executeAs(\"SELECT * FROM doc.remote_documents_view\", user_b))\n+            .isExactlyInstanceOf(RuntimeException.class)\n+            .hasMessageContaining(\"FATAL: trust authentication failed for user \\\"foreign-user-a\\\"\");\n+    }\n }\n"}
+All individual hunks apply cleanly against the target ref. I’ll run one full patch application validation to catch cross-hunk/context issues before returning the YAML.
+[0m⚙ [0mvalidate {"ref":"6c24e99e6d83ba6cec4d2af87411ffe999815ed0","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.7.2.rst b/docs/appendices/release-notes/5.7.2.rst\n--- a/docs/appendices/release-notes/5.7.2.rst\n+++ b/docs/appendices/release-notes/5.7.2.rst\n@@ -76,6 +76,9 @@ Fixes\n   ``table_rename_pattern`` or ``table_rename_replacement``. Renamed table was\n   created but used to be empty.\n \n+- Fixed an issue that prevented users with ``DQL`` privilege on a view to be\n+  able to query the view when foreign tables are referenced by the view.\n+\n - Fixed an issue leading to a ``ArrayIndexOutOfBoundsException`` when using a\n   correlated sub-query where some of its outputs weren't used in a parent\n   query.\ndiff --git a/server/src/main/java/io/crate/execution/dsl/phases/ForeignCollectPhase.java b/server/src/main/java/io/crate/execution/dsl/phases/ForeignCollectPhase.java\n--- a/server/src/main/java/io/crate/execution/dsl/phases/ForeignCollectPhase.java\n+++ b/server/src/main/java/io/crate/execution/dsl/phases/ForeignCollectPhase.java\n@@ -26,8 +26,11 @@ import java.util.Collection;\n import java.util.List;\n import java.util.UUID;\n \n+import org.elasticsearch.Version;\n import org.elasticsearch.common.io.stream.StreamInput;\n import org.elasticsearch.common.io.stream.StreamOutput;\n+import org.jetbrains.annotations.NotNull;\n+import org.jetbrains.annotations.Nullable;\n \n import io.crate.expression.symbol.Symbol;\n import io.crate.expression.symbol.Symbols;\n@@ -40,6 +43,8 @@ public class ForeignCollectPhase extends AbstractProjectionsPhase implements Col\n     private final RelationName relationName;\n     private final List<Symbol> toCollect;\n     private final Symbol query;\n+    @Nullable\n+    private final String executeAs;\n \n     private DistributionInfo distributionInfo = DistributionInfo.DEFAULT_BROADCAST;\n \n@@ -48,13 +53,15 @@ public class ForeignCollectPhase extends AbstractProjectionsPhase implements Col\n                                String handlerNode,\n                                RelationName relationName,\n                                List<Symbol> toCollect,\n-                               Symbol query) {\n+                               Symbol query,\n+                               @NotNull String executeAs) {\n         super(jobId, phaseId, relationName.fqn(), null);\n         this.handlerNode = handlerNode;\n         this.relationName = relationName;\n         this.toCollect = toCollect;\n         this.outputTypes = Symbols.typeView(toCollect);\n         this.query = query;\n+        this.executeAs = executeAs;\n     }\n \n     public ForeignCollectPhase(StreamInput in) throws IOException {\n@@ -65,6 +72,11 @@ public class ForeignCollectPhase extends AbstractProjectionsPhase implements Col\n         this.outputTypes = extractOutputTypes(toCollect, projections);\n         this.distributionInfo = new DistributionInfo(in);\n         this.query = Symbols.fromStream(in);\n+        if (in.getVersion().onOrAfter(Version.V_5_7_2)) {\n+            this.executeAs = in.readOptionalString();\n+        } else {\n+            this.executeAs = null;\n+        }\n     }\n \n     @Override\n@@ -75,6 +87,9 @@ public class ForeignCollectPhase extends AbstractProjectionsPhase implements Col\n         Symbols.toStream(toCollect, out);\n         distributionInfo.writeTo(out);\n         Symbols.toStream(query, out);\n+        if (out.getVersion().onOrAfter(Version.V_5_7_2)) {\n+            out.writeOptionalString(executeAs);\n+        }\n     }\n \n     @Override\n@@ -114,4 +129,9 @@ public class ForeignCollectPhase extends AbstractProjectionsPhase implements Col\n     public Symbol query() {\n         return query;\n     }\n+\n+    @Nullable\n+    public String executeAs() {\n+        return executeAs;\n+    }\n }\ndiff --git a/server/src/main/java/io/crate/fdw/ForeignDataWrappers.java b/server/src/main/java/io/crate/fdw/ForeignDataWrappers.java\n--- a/server/src/main/java/io/crate/fdw/ForeignDataWrappers.java\n+++ b/server/src/main/java/io/crate/fdw/ForeignDataWrappers.java\n@@ -122,8 +122,12 @@ public class ForeignDataWrappers implements CollectSource {\n                 foreignTable.server()\n             ));\n         }\n+        String executeAs = phase.executeAs();\n+        if (executeAs == null) {\n+            executeAs = txnCtx.sessionSettings().userName();\n+        }\n         return fdw.getIterator(\n-            requireNonNull(roles.findUser(txnCtx.sessionSettings().userName()), \"current user must exit\"),\n+            requireNonNull(roles.findUser(executeAs), \"current user must exist\"),\n             server,\n             foreignTable,\n             txnCtx,\ndiff --git a/server/src/main/java/io/crate/fdw/JdbcForeignDataWrapper.java b/server/src/main/java/io/crate/fdw/JdbcForeignDataWrapper.java\n--- a/server/src/main/java/io/crate/fdw/JdbcForeignDataWrapper.java\n+++ b/server/src/main/java/io/crate/fdw/JdbcForeignDataWrapper.java\n@@ -123,7 +123,7 @@ final class JdbcForeignDataWrapper implements ForeignDataWrapper {\n                                                              List<Symbol> collect,\n                                                              Symbol query) {\n         SessionSettings sessionSettings = txnCtx.sessionSettings();\n-        Settings userOptions = server.users().get(sessionSettings.userName());\n+        Settings userOptions = server.users().get(currentUser.name());\n         if (userOptions == null) {\n             userOptions = Settings.EMPTY;\n         }\ndiff --git a/server/src/main/java/io/crate/planner/operators/ForeignCollect.java b/server/src/main/java/io/crate/planner/operators/ForeignCollect.java\n--- a/server/src/main/java/io/crate/planner/operators/ForeignCollect.java\n+++ b/server/src/main/java/io/crate/planner/operators/ForeignCollect.java\n@@ -50,15 +50,18 @@ public class ForeignCollect implements LogicalPlan {\n     private final ForeignTableRelation relation;\n     private final List<Symbol> toCollect;\n     private final WhereClause where;\n+    private final String executeAs;\n \n     public ForeignCollect(ForeignDataWrapper fdw,\n                           ForeignTableRelation relation,\n                           List<Symbol> toCollect,\n-                          WhereClause where) {\n+                          WhereClause where,\n+                          String executeAs) {\n         this.fdw = fdw;\n         this.relation = relation;\n         this.toCollect = toCollect;\n         this.where = where;\n+        this.executeAs = executeAs;\n     }\n \n     @Override\n@@ -80,7 +83,8 @@ public class ForeignCollect implements LogicalPlan {\n             plannerContext.handlerNode(),\n             relation.relationName(),\n             Lists.map(toCollect, binder),\n-            where.map(binder).queryOrFallback()\n+            where.map(binder).queryOrFallback(),\n+            executeAs\n         );\n         return new io.crate.planner.node.dql.Collect(\n             phase,\n@@ -125,7 +129,11 @@ public class ForeignCollect implements LogicalPlan {\n         if (outputsToKeep.containsAll(toCollect)) {\n             return this;\n         }\n-        return new ForeignCollect(fdw, relation, List.copyOf(outputsToKeep), where);\n+        return new ForeignCollect(fdw, relation, List.copyOf(outputsToKeep), where, executeAs);\n+    }\n+\n+    public String executeAs() {\n+        return executeAs;\n     }\n \n     @Override\ndiff --git a/server/src/main/java/io/crate/planner/operators/LogicalPlanner.java b/server/src/main/java/io/crate/planner/operators/LogicalPlanner.java\n--- a/server/src/main/java/io/crate/planner/operators/LogicalPlanner.java\n+++ b/server/src/main/java/io/crate/planner/operators/LogicalPlanner.java\n@@ -21,6 +21,8 @@\n \n package io.crate.planner.operators;\n \n+import static java.util.Objects.requireNonNull;\n+\n import java.util.Collection;\n import java.util.Collections;\n import java.util.LinkedHashSet;\n@@ -80,6 +82,7 @@ import io.crate.metadata.CoordinatorTxnCtx;\n import io.crate.metadata.NodeContext;\n import io.crate.metadata.Reference;\n import io.crate.metadata.TransactionContext;\n+import io.crate.metadata.settings.CoordinatorSessionSettings;\n import io.crate.planner.DependencyCarrier;\n import io.crate.planner.ExecutionPlan;\n import io.crate.planner.PlannerContext;\n@@ -123,6 +126,7 @@ import io.crate.planner.optimizer.rule.RewriteGroupByKeysLimitToLimitDistinct;\n import io.crate.planner.optimizer.rule.RewriteJoinPlan;\n import io.crate.planner.optimizer.rule.RewriteToQueryThenFetch;\n import io.crate.planner.optimizer.tracer.OptimizerTracer;\n+import io.crate.role.Role;\n import io.crate.types.DataTypes;\n \n /**\n@@ -250,7 +254,9 @@ public class LogicalPlanner {\n             subqueryPlanner,\n             foreignDataWrappers,\n             plannerContext.planStats(),\n-            plannerContext.clusterState()\n+            plannerContext.clusterState(),\n+            plannerContext.transactionContext(),\n+            plannerContext.nodeContext()\n         );\n         LogicalPlan plan = relation.accept(planBuilder, relation.outputs());\n \n@@ -313,7 +319,9 @@ public class LogicalPlanner {\n             subqueryPlanner,\n             foreignDataWrappers,\n             planStats,\n-            plannerContext.clusterState()\n+            plannerContext.clusterState(),\n+            coordinatorTxnCtx,\n+            plannerContext.nodeContext()\n         );\n         LogicalPlan logicalPlan = relation.accept(planBuilder, relation.outputs());\n         LogicalPlan optimizedPlan = optimizer.optimize(logicalPlan, planStats, coordinatorTxnCtx, tracer);\n@@ -345,15 +353,21 @@ public class LogicalPlanner {\n         private final PlanStats planStats;\n         private final ForeignDataWrappers foreignDataWrappers;\n         private final ClusterState clusterState;\n+        private final CoordinatorTxnCtx coordinatorTxnCtx;\n+        private final NodeContext nodeContext;\n \n         private PlanBuilder(SubqueryPlanner subqueryPlanner,\n                             ForeignDataWrappers foreignDataWrappers,\n                             PlanStats planStats,\n-                            ClusterState clusterState) {\n+                            ClusterState clusterState,\n+                            CoordinatorTxnCtx coordinatorTxnCtx,\n+                            NodeContext nodeContext) {\n             this.subqueryPlanner = subqueryPlanner;\n             this.foreignDataWrappers = foreignDataWrappers;\n             this.planStats = planStats;\n             this.clusterState = clusterState;\n+            this.coordinatorTxnCtx = coordinatorTxnCtx;\n+            this.nodeContext = nodeContext;\n         }\n \n         @Override\n@@ -394,7 +408,8 @@ public class LogicalPlanner {\n                 foreignDataWrapper,\n                 relation,\n                 outputs,\n-                WhereClause.MATCH_ALL\n+                WhereClause.MATCH_ALL,\n+                coordinatorTxnCtx.sessionSettings().userName()\n             );\n         }\n \n@@ -415,8 +430,12 @@ public class LogicalPlanner {\n \n         @Override\n         public LogicalPlan visitView(AnalyzedView view, List<Symbol> outputs) {\n+            CoordinatorSessionSettings sessionSettings = coordinatorTxnCtx.sessionSettings();\n+            Role sessionUser = sessionSettings.sessionUser();\n+            sessionSettings.setSessionUser(requireNonNull(nodeContext.roles().findUser(view.owner()), \"view owner must exist\"));\n             var child = view.relation();\n             var source = child.accept(this, child.outputs());\n+            sessionSettings.setSessionUser(sessionUser);\n             return new Rename(view.outputs(), view.relationName(), view, source);\n         }\n \ndiff --git a/server/src/main/java/io/crate/planner/optimizer/rule/MergeFilterAndForeignCollect.java b/server/src/main/java/io/crate/planner/optimizer/rule/MergeFilterAndForeignCollect.java\n--- a/server/src/main/java/io/crate/planner/optimizer/rule/MergeFilterAndForeignCollect.java\n+++ b/server/src/main/java/io/crate/planner/optimizer/rule/MergeFilterAndForeignCollect.java\n@@ -74,7 +74,8 @@ public class MergeFilterAndForeignCollect implements Rule<Filter> {\n                 collect.fdw(),\n                 collect.relation(),\n                 collect.outputs(),\n-                collect.where().add(filter.query())\n+                collect.where().add(filter.query()),\n+                collect.executeAs()\n             );\n         }\n         return null;\ndiff --git a/server/src/test/java/io/crate/integrationtests/ForeignDataWrapperITest.java b/server/src/test/java/io/crate/integrationtests/ForeignDataWrapperITest.java\n--- a/server/src/test/java/io/crate/integrationtests/ForeignDataWrapperITest.java\n+++ b/server/src/test/java/io/crate/integrationtests/ForeignDataWrapperITest.java\n@@ -376,4 +376,54 @@ public class ForeignDataWrapperITest extends IntegTestCase {\n         execute(\"drop user mapping for trillian server pg\");\n         assertThat(execute(\"select * from information_schema.user_mapping_options where option_name = 'password'\")).isEmpty();\n     }\n+\n+    @Test\n+    public void test_users_with_dql_on_view_can_access_foreign_table_via_view_with_view_owners_user_mapping() {\n+        PostgresNetty postgresNetty = cluster().getInstance(PostgresNetty.class);\n+        int port = postgresNetty.boundAddress().publishAddress().getPort();\n+        String url = \"jdbc:postgresql://127.0.0.1:\" + port + '/';\n+\n+        execute(\"create user user_a with (password = 'fooa')\");\n+        execute(\"grant al to user_a\");\n+        execute(\"grant ddl, dql on schema doc to user_a\"); // required for the create-view stmt\n+        var roles = cluster().getInstance(Roles.class);\n+        Role user_a = roles.getUser(\"user_a\");\n+        sqlExecutor.executeAs(\n+            String.format(\"CREATE SERVER pg FOREIGN DATA WRAPPER jdbc OPTIONS (url '%s')\", url),\n+            user_a);\n+        sqlExecutor.executeAs(\"\"\"\n+            CREATE FOREIGN TABLE doc.remote_documents (name text)\n+            SERVER pg\n+            OPTIONS (schema_name 'public', table_name 'documents');\n+            \"\"\", user_a);\n+        sqlExecutor.executeAs(\"\"\"\n+            CREATE USER MAPPING FOR user_a\n+            SERVER pg\n+            OPTIONS (\"user\" 'foreign-user-a', password 'foreign-pw');\n+            \"\"\", user_a);\n+        sqlExecutor.executeAs(\n+            \"CREATE VIEW doc.remote_documents_view AS SELECT * FROM doc.remote_documents\",\n+            user_a);\n+\n+        execute(\"create user user_b with (password = 'foob')\");\n+        execute(\"grant dql on view doc.remote_documents_view to user_b\");\n+        Role user_b = roles.getUser(\"user_b\");\n+        assertThatThrownBy(\n+            () -> sqlExecutor.executeAs(\"SELECT * FROM doc.remote_documents_view\", user_b))\n+            .isExactlyInstanceOf(RuntimeException.class)\n+            // Notice that when 'user_b' accesses the foreign table implicitly via the view,\n+            // 'foreign-user-a' is used which is mapped to 'user_a'(the view owner)\n+            .hasMessageContaining(\"FATAL: trust authentication failed for user \\\"foreign-user-a\\\"\");\n+\n+        // even when 'user-b' has its own mapping to the foreign server, 'foreign-user-a' is used\n+        sqlExecutor.executeAs(\"\"\"\n+            CREATE USER MAPPING FOR user_b\n+            SERVER pg\n+            OPTIONS (\"user\" 'foreign-user-b', password 'foreign-pw');\n+            \"\"\", user_a);\n+        assertThatThrownBy(\n+            () -> sqlExecutor.executeAs(\"SELECT * FROM doc.remote_documents_view\", user_b))\n+            .isExactlyInstanceOf(RuntimeException.class)\n+            .hasMessageContaining(\"FATAL: trust authentication failed for user \\\"foreign-user-a\\\"\");\n+    }\n }\n"}
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch file contexts
+[✓] Construct adapted backport patch for 5.7 parent
+[✓] Validate each patch hunk against target ref
+[•] Return final YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/docs/appendices/release-notes/5.7.2.rst b/docs/appendices/release-notes/5.7.2.rst
+    --- a/docs/appendices/release-notes/5.7.2.rst
+    +++ b/docs/appendices/release-notes/5.7.2.rst
+    @@ -76,6 +76,9 @@ Fixes
+       ``table_rename_pattern`` or ``table_rename_replacement``. Renamed table was
+       created but used to be empty.
+     
+    +- Fixed an issue that prevented users with ``DQL`` privilege on a view to be
+    +  able to query the view when foreign tables are referenced by the view.
+    +
+     - Fixed an issue leading to a ``ArrayIndexOutOfBoundsException`` when using a
+       correlated sub-query where some of its outputs weren't used in a parent
+       query.
+    diff --git a/server/src/main/java/io/crate/execution/dsl/phases/ForeignCollectPhase.java b/server/src/main/java/io/crate/execution/dsl/phases/ForeignCollectPhase.java
+    --- a/server/src/main/java/io/crate/execution/dsl/phases/ForeignCollectPhase.java
+    +++ b/server/src/main/java/io/crate/execution/dsl/phases/ForeignCollectPhase.java
+    @@ -26,8 +26,11 @@ import java.util.Collection;
+     import java.util.List;
+     import java.util.UUID;
+     
+    +import org.elasticsearch.Version;
+     import org.elasticsearch.common.io.stream.StreamInput;
+     import org.elasticsearch.common.io.stream.StreamOutput;
+    +import org.jetbrains.annotations.NotNull;
+    +import org.jetbrains.annotations.Nullable;
+     
+     import io.crate.expression.symbol.Symbol;
+     import io.crate.expression.symbol.Symbols;
+    @@ -40,6 +43,8 @@ public class ForeignCollectPhase extends AbstractProjectionsPhase implements Col
+         private final RelationName relationName;
+         private final List<Symbol> toCollect;
+         private final Symbol query;
+    +    @Nullable
+    +    private final String executeAs;
+     
+         private DistributionInfo distributionInfo = DistributionInfo.DEFAULT_BROADCAST;
+     
+    @@ -48,13 +53,15 @@ public class ForeignCollectPhase extends AbstractProjectionsPhase implements Col
+                                    String handlerNode,
+                                    RelationName relationName,
+                                    List<Symbol> toCollect,
+    -                               Symbol query) {
+    +                               Symbol query,
+    +                               @NotNull String executeAs) {
+             super(jobId, phaseId, relationName.fqn(), null);
+             this.handlerNode = handlerNode;
+             this.relationName = relationName;
+             this.toCollect = toCollect;
+             this.outputTypes = Symbols.typeView(toCollect);
+             this.query = query;
+    +        this.executeAs = executeAs;
+         }
+     
+         public ForeignCollectPhase(StreamInput in) throws IOException {
+    @@ -65,6 +72,11 @@ public class ForeignCollectPhase extends AbstractProjectionsPhase implements Col
+             this.outputTypes = extractOutputTypes(toCollect, projections);
+             this.distributionInfo = new DistributionInfo(in);
+             this.query = Symbols.fromStream(in);
+    +        if (in.getVersion().onOrAfter(Version.V_5_7_2)) {
+    +            this.executeAs = in.readOptionalString();
+    +        } else {
+    +            this.executeAs = null;
+    +        }
+         }
+     
+         @Override
+    @@ -75,6 +87,9 @@ public class ForeignCollectPhase extends AbstractProjectionsPhase implements Col
+             Symbols.toStream(toCollect, out);
+             distributionInfo.writeTo(out);
+             Symbols.toStream(query, out);
+    +        if (out.getVersion().onOrAfter(Version.V_5_7_2)) {
+    +            out.writeOptionalString(executeAs);
+    +        }
+         }
+     
+         @Override
+    @@ -114,4 +129,9 @@ public class ForeignCollectPhase extends AbstractProjectionsPhase implements Col
+         public Symbol query() {
+             return query;
+         }
+    +
+    +    @Nullable
+    +    public String executeAs() {
+    +        return executeAs;
+    +    }
+     }
+    diff --git a/server/src/main/java/io/crate/fdw/ForeignDataWrappers.java b/server/src/main/java/io/crate/fdw/ForeignDataWrappers.java
+    --- a/server/src/main/java/io/crate/fdw/ForeignDataWrappers.java
+    +++ b/server/src/main/java/io/crate/fdw/ForeignDataWrappers.java
+    @@ -122,8 +122,12 @@ public class ForeignDataWrappers implements CollectSource {
+                     foreignTable.server()
+                 ));
+             }
+    +        String executeAs = phase.executeAs();
+    +        if (executeAs == null) {
+    +            executeAs = txnCtx.sessionSettings().userName();
+    +        }
+             return fdw.getIterator(
+    -            requireNonNull(roles.findUser(txnCtx.sessionSettings().userName()), "current user must exit"),
+    +            requireNonNull(roles.findUser(executeAs), "current user must exist"),
+                 server,
+                 foreignTable,
+                 txnCtx,
+    diff --git a/server/src/main/java/io/crate/fdw/JdbcForeignDataWrapper.java b/server/src/main/java/io/crate/fdw/JdbcForeignDataWrapper.java
+    --- a/server/src/main/java/io/crate/fdw/JdbcForeignDataWrapper.java
+    +++ b/server/src/main/java/io/crate/fdw/JdbcForeignDataWrapper.java
+    @@ -123,7 +123,7 @@ final class JdbcForeignDataWrapper implements ForeignDataWrapper {
+                                                                  List<Symbol> collect,
+                                                                  Symbol query) {
+             SessionSettings sessionSettings = txnCtx.sessionSettings();
+    -        Settings userOptions = server.users().get(sessionSettings.userName());
+    +        Settings userOptions = server.users().get(currentUser.name());
+             if (userOptions == null) {
+                 userOptions = Settings.EMPTY;
+             }
+    diff --git a/server/src/main/java/io/crate/planner/operators/ForeignCollect.java b/server/src/main/java/io/crate/planner/operators/ForeignCollect.java
+    --- a/server/src/main/java/io/crate/planner/operators/ForeignCollect.java
+    +++ b/server/src/main/java/io/crate/planner/operators/ForeignCollect.java
+    @@ -50,15 +50,18 @@ public class ForeignCollect implements LogicalPlan {
+         private final ForeignTableRelation relation;
+         private final List<Symbol> toCollect;
+         private final WhereClause where;
+    +    private final String executeAs;
+     
+         public ForeignCollect(ForeignDataWrapper fdw,
+                               ForeignTableRelation relation,
+                               List<Symbol> toCollect,
+    -                          WhereClause where) {
+    +                          WhereClause where,
+    +                          String executeAs) {
+             this.fdw = fdw;
+             this.relation = relation;
+             this.toCollect = toCollect;
+             this.where = where;
+    +        this.executeAs = executeAs;
+         }
+     
+         @Override
+    @@ -80,7 +83,8 @@ public class ForeignCollect implements LogicalPlan {
+                 plannerContext.handlerNode(),
+                 relation.relationName(),
+                 Lists.map(toCollect, binder),
+    -            where.map(binder).queryOrFallback()
+    +            where.map(binder).queryOrFallback(),
+    +            executeAs
+             );
+             return new io.crate.planner.node.dql.Collect(
+                 phase,
+    @@ -125,7 +129,11 @@ public class ForeignCollect implements LogicalPlan {
+             if (outputsToKeep.containsAll(toCollect)) {
+                 return this;
+             }
+    -        return new ForeignCollect(fdw, relation, List.copyOf(outputsToKeep), where);
+    +        return new ForeignCollect(fdw, relation, List.copyOf(outputsToKeep), where, executeAs);
+    +    }
+    +
+    +    public String executeAs() {
+    +        return executeAs;
+         }
+     
+         @Override
+    diff --git a/server/src/main/java/io/crate/planner/operators/LogicalPlanner.java b/server/src/main/java/io/crate/planner/operators/LogicalPlanner.java
+    --- a/server/src/main/java/io/crate/planner/operators/LogicalPlanner.java
+    +++ b/server/src/main/java/io/crate/planner/operators/LogicalPlanner.java
+    @@ -21,6 +21,8 @@
+     
+     package io.crate.planner.operators;
+     
+    +import static java.util.Objects.requireNonNull;
+    +
+     import java.util.Collection;
+     import java.util.Collections;
+     import java.util.LinkedHashSet;
+    @@ -80,6 +82,7 @@ import io.crate.metadata.CoordinatorTxnCtx;
+     import io.crate.metadata.NodeContext;
+     import io.crate.metadata.Reference;
+     import io.crate.metadata.TransactionContext;
+    +import io.crate.metadata.settings.CoordinatorSessionSettings;
+     import io.crate.planner.DependencyCarrier;
+     import io.crate.planner.ExecutionPlan;
+     import io.crate.planner.PlannerContext;
+    @@ -123,6 +126,7 @@ import io.crate.planner.optimizer.rule.RewriteGroupByKeysLimitToLimitDistinct;
+     import io.crate.planner.optimizer.rule.RewriteJoinPlan;
+     import io.crate.planner.optimizer.rule.RewriteToQueryThenFetch;
+     import io.crate.planner.optimizer.tracer.OptimizerTracer;
+    +import io.crate.role.Role;
+     import io.crate.types.DataTypes;
+     
+     /**
+    @@ -250,7 +254,9 @@ public class LogicalPlanner {
+                 subqueryPlanner,
+                 foreignDataWrappers,
+                 plannerContext.planStats(),
+    -            plannerContext.clusterState()
+    +            plannerContext.clusterState(),
+    +            plannerContext.transactionContext(),
+    +            plannerContext.nodeContext()
+             );
+             LogicalPlan plan = relation.accept(planBuilder, relation.outputs());
+     
+    @@ -313,7 +319,9 @@ public class LogicalPlanner {
+                 subqueryPlanner,
+                 foreignDataWrappers,
+                 planStats,
+    -            plannerContext.clusterState()
+    +            plannerContext.clusterState(),
+    +            coordinatorTxnCtx,
+    +            plannerContext.nodeContext()
+             );
+             LogicalPlan logicalPlan = relation.accept(planBuilder, relation.outputs());
+             LogicalPlan optimizedPlan = optimizer.optimize(logicalPlan, planStats, coordinatorTxnCtx, tracer);
+    @@ -345,15 +353,21 @@ public class LogicalPlanner {
+             private final PlanStats planStats;
+             private final ForeignDataWrappers foreignDataWrappers;
+             private final ClusterState clusterState;
+    +        private final CoordinatorTxnCtx coordinatorTxnCtx;
+    +        private final NodeContext nodeContext;
+     
+             private PlanBuilder(SubqueryPlanner subqueryPlanner,
+                                 ForeignDataWrappers foreignDataWrappers,
+                                 PlanStats planStats,
+    -                            ClusterState clusterState) {
+    +                            ClusterState clusterState,
+    +                            CoordinatorTxnCtx coordinatorTxnCtx,
+    +                            NodeContext nodeContext) {
+                 this.subqueryPlanner = subqueryPlanner;
+                 this.foreignDataWrappers = foreignDataWrappers;
+                 this.planStats = planStats;
+                 this.clusterState = clusterState;
+    +            this.coordinatorTxnCtx = coordinatorTxnCtx;
+    +            this.nodeContext = nodeContext;
+             }
+     
+             @Override
+    @@ -394,7 +408,8 @@ public class LogicalPlanner {
+                     foreignDataWrapper,
+                     relation,
+                     outputs,
+    -                WhereClause.MATCH_ALL
+    +                WhereClause.MATCH_ALL,
+    +                coordinatorTxnCtx.sessionSettings().userName()
+                 );
+             }
+     
+    @@ -415,8 +430,12 @@ public class LogicalPlanner {
+     
+             @Override
+             public LogicalPlan visitView(AnalyzedView view, List<Symbol> outputs) {
+    +            CoordinatorSessionSettings sessionSettings = coordinatorTxnCtx.sessionSettings();
+    +            Role sessionUser = sessionSettings.sessionUser();
+    +            sessionSettings.setSessionUser(requireNonNull(nodeContext.roles().findUser(view.owner()), "view owner must exist"));
+                 var child = view.relation();
+                 var source = child.accept(this, child.outputs());
+    +            sessionSettings.setSessionUser(sessionUser);
+                 return new Rename(view.outputs(), view.relationName(), view, source);
+             }
+     
+    diff --git a/server/src/main/java/io/crate/planner/optimizer/rule/MergeFilterAndForeignCollect.java b/server/src/main/java/io/crate/planner/optimizer/rule/MergeFilterAndForeignCollect.java
+    --- a/server/src/main/java/io/crate/planner/optimizer/rule/MergeFilterAndForeignCollect.java
+    +++ b/server/src/main/java/io/crate/planner/optimizer/rule/MergeFilterAndForeignCollect.java
+    @@ -74,7 +74,8 @@ public class MergeFilterAndForeignCollect implements Rule<Filter> {
+                     collect.fdw(),
+                     collect.relation(),
+                     collect.outputs(),
+    -                collect.where().add(filter.query())
+    +                collect.where().add(filter.query()),
+    +                collect.executeAs()
+                 );
+             }
+             return null;
+    diff --git a/server/src/test/java/io/crate/integrationtests/ForeignDataWrapperITest.java b/server/src/test/java/io/crate/integrationtests/ForeignDataWrapperITest.java
+    --- a/server/src/test/java/io/crate/integrationtests/ForeignDataWrapperITest.java
+    +++ b/server/src/test/java/io/crate/integrationtests/ForeignDataWrapperITest.java
+    @@ -376,4 +376,54 @@ public class ForeignDataWrapperITest extends IntegTestCase {
+             execute("drop user mapping for trillian server pg");
+             assertThat(execute("select * from information_schema.user_mapping_options where option_name = 'password'")).isEmpty();
+         }
+    +
+    +    @Test
+    +    public void test_users_with_dql_on_view_can_access_foreign_table_via_view_with_view_owners_user_mapping() {
+    +        PostgresNetty postgresNetty = cluster().getInstance(PostgresNetty.class);
+    +        int port = postgresNetty.boundAddress().publishAddress().getPort();
+    +        String url = "jdbc:postgresql://127.0.0.1:" + port + '/';
+    +
+    +        execute("create user user_a with (password = 'fooa')");
+    +        execute("grant al to user_a");
+    +        execute("grant ddl, dql on schema doc to user_a"); // required for the create-view stmt
+    +        var roles = cluster().getInstance(Roles.class);
+    +        Role user_a = roles.getUser("user_a");
+    +        sqlExecutor.executeAs(
+    +            String.format("CREATE SERVER pg FOREIGN DATA WRAPPER jdbc OPTIONS (url '%s')", url),
+    +            user_a);
+    +        sqlExecutor.executeAs("""
+    +            CREATE FOREIGN TABLE doc.remote_documents (name text)
+    +            SERVER pg
+    +            OPTIONS (schema_name 'public', table_name 'documents');
+    +            """, user_a);
+    +        sqlExecutor.executeAs("""
+    +            CREATE USER MAPPING FOR user_a
+    +            SERVER pg
+    +            OPTIONS ("user" 'foreign-user-a', password 'foreign-pw');
+    +            """, user_a);
+    +        sqlExecutor.executeAs(
+    +            "CREATE VIEW doc.remote_documents_view AS SELECT * FROM doc.remote_documents",
+    +            user_a);
+    +
+    +        execute("create user user_b with (password = 'foob')");
+    +        execute("grant dql on view doc.remote_documents_view to user_b");
+    +        Role user_b = roles.getUser("user_b");
+    +        assertThatThrownBy(
+    +            () -> sqlExecutor.executeAs("SELECT * FROM doc.remote_documents_view", user_b))
+    +            .isExactlyInstanceOf(RuntimeException.class)
+    +            // Notice that when 'user_b' accesses the foreign table implicitly via the view,
+    +            // 'foreign-user-a' is used which is mapped to 'user_a'(the view owner)
+    +            .hasMessageContaining("FATAL: trust authentication failed for user \"foreign-user-a\"");
+    +
+    +        // even when 'user-b' has its own mapping to the foreign server, 'foreign-user-a' is used
+    +        sqlExecutor.executeAs("""
+    +            CREATE USER MAPPING FOR user_b
+    +            SERVER pg
+    +            OPTIONS ("user" 'foreign-user-b', password 'foreign-pw');
+    +            """, user_a);
+    +        assertThatThrownBy(
+    +            () -> sqlExecutor.executeAs("SELECT * FROM doc.remote_documents_view", user_b))
+    +            .isExactlyInstanceOf(RuntimeException.class)
+    +            .hasMessageContaining("FATAL: trust authentication failed for user \"foreign-user-a\"");
+    +    }
+     }
+  notes: >
+    Ported the view-owner foreign-table user-mapping fix to 5.7, adapting the serialization gate from V_5_8_0 to V_5_7_2; all hunks validated cleanly against the target ref.
+```
+
+--- END CLI OUTPUT ---
+[11:26:09]   Done in 382.7s | status=success
+[12:53:13] === Row 31: crate  2c86cc10 -> d8ab5b71  [TYPE-V] ===
+[12:53:13]   Resolving parent of backport commit d8ab5b71...
+[12:53:14]   Backport parent (target ref): 6c24e99e6d83ba6cec4d2af87411ffe999815ed0
+[12:53:14]   Extracting new-version patch for 2c86cc10...
+[12:53:14]   New-version patch size: 15709 chars
+[12:53:14]   Checking out backport parent 6c24e99e...
+[12:53:14]   ERROR: Could not checkout backport parent 6c24e99e6d83ba6cec4d2af87411ffe999815ed0: error: Your local changes to the following files would be overwritten by checkout:
+	docs/appendices/release-notes/5.5.3.rst
+	server/src/main/java/io/crate/expression/tablefunctions/UnnestFunction.java
+	server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java
+	server/src/test/java/io/crate/integrationtests/TransportSQLActionSingleNodeTest.java
+Please commit your changes or stash them before you switch branches.
+Aborting

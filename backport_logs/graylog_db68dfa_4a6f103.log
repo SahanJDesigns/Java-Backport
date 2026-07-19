@@ -1,0 +1,166 @@
+[13:15:36] === Row 5: graylog  db68dfa9 -> 4a6f103c  [TYPE-I] ===
+[13:15:36]   Resolving parent of backport commit 4a6f103c...
+[13:15:36]   Backport parent (target ref): cbf1fed0ce16ce3a97d6be1602a8e116912d406e
+[13:15:36]   Extracting new-version patch for db68dfa9...
+[13:15:36]   New-version patch size: 5475 chars
+[13:15:36]   Checking out backport parent cbf1fed0...
+[13:15:37]   Invoking OpenCode CLI (9334 chars)...
+[13:15:37]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll map the provided master diff onto the checked-out `6.1` ref, inspect the equivalent journal/test code, then validate the resulting hunks individually.
+[0m⚙ [0mgit_show {"ref":"db68dfa92255dc14f03f2e9d21c471daf3162518"}
+[0m⚙ [0mlocate_symbol {"ref":"cbf1fed0ce16ce3a97d6be1602a8e116912d406e","symbol":"LocalKafkaJournalTest"}
+[0m⚙ [0mviewcode {"ref":"cbf1fed0ce16ce3a97d6be1602a8e116912d406e","path":"graylog2-server/src/main/java/org/graylog2/shared/journal/LocalKafkaJournal.java","startline":1,"endline":80}
+[0m⚙ [0mviewcode {"ref":"cbf1fed0ce16ce3a97d6be1602a8e116912d406e","path":"graylog2-server/src/main/java/org/graylog2/shared/journal/LocalKafkaJournal.java","startline":600,"endline":650}
+[0m⚙ [0mviewcode {"ref":"cbf1fed0ce16ce3a97d6be1602a8e116912d406e","path":"graylog2-server/src/main/java/org/graylog2/shared/journal/LocalKafkaJournal.java","startline":840,"endline":885}
+[0m⚙ [0mviewcode {"ref":"cbf1fed0ce16ce3a97d6be1602a8e116912d406e","path":"graylog2-server/src/test/java/org/graylog2/shared/journal/LocalKafkaJournalTest.java","startline":1,"endline":95}
+[0m⚙ [0mviewcode {"ref":"cbf1fed0ce16ce3a97d6be1602a8e116912d406e","path":"graylog2-server/src/test/java/org/graylog2/shared/journal/LocalKafkaJournalTest.java","startline":510,"endline":560}
+[0m⚙ [0mlocate_symbol {"ref":"cbf1fed0ce16ce3a97d6be1602a8e116912d406e","symbol":"LocalKafkaJournal"}
+[0m⚙ [0mgit_history {"filepath":"graylog2-server/src/main/java/org/graylog2/shared/journal/LocalKafkaJournal.java","start_line":617,"end_line":645,"start_commit":"cbf1fed0ce16ce3a97d6be1602a8e116912d406e","end_commit":"cbf1fed0ce16ce3a97d6be1602a8e116912d406e"}
+[0m⚙ [0mviewcode {"ref":"cbf1fed0ce16ce3a97d6be1602a8e116912d406e","path":"graylog2-server/src/test/java/org/graylog2/shared/journal/LocalKafkaJournalTest.java","startline":470,"endline":545}
+The relevant `6.1` code is structurally the same as the master patch: `readNext` has the retry loop, `shutDown` sets `shuttingDown` directly, and the existing `truncatedSegment` test provides the insertion point for the shutdown-specific regression test.
+I’m going to validate the adapted unified diff hunk-by-hunk against `cbf1fed0...`; no full build/test validation will be run per the instructions.
+[0m⚙ [0mvalidate {"ref":"cbf1fed0ce16ce3a97d6be1602a8e116912d406e","mode":"hunk","patch":"diff --git a/changelog/unreleased/pr-22715.toml b/changelog/unreleased/pr-22715.toml\nnew file mode 100644\nindex 0000000000..22cd0c080d\n--- /dev/null\n+++ b/changelog/unreleased/pr-22715.toml\n@@ -0,0 +1,4 @@\n+type = \"fixed\"\n+message = \"Fix issue with message journal recovery on server shutdown.\"\n+\n+pulls = [\"22715\"]\n"}
+[0m⚙ [0mvalidate {"ref":"cbf1fed0ce16ce3a97d6be1602a8e116912d406e","mode":"hunk","patch":"diff --git a/graylog2-server/src/main/java/org/graylog2/shared/journal/LocalKafkaJournal.java b/graylog2-server/src/main/java/org/graylog2/shared/journal/LocalKafkaJournal.java\n--- a/graylog2-server/src/main/java/org/graylog2/shared/journal/LocalKafkaJournal.java\n+++ b/graylog2-server/src/main/java/org/graylog2/shared/journal/LocalKafkaJournal.java\n@@ -22,6 +22,7 @@ import com.codahale.metrics.MetricFilter;\n import com.codahale.metrics.MetricRegistry;\n import com.codahale.metrics.Timer;\n import com.github.joschi.jadconfig.util.Size;\n+import com.google.common.annotations.VisibleForTesting;\n import com.google.common.collect.ImmutableMap;\n import com.google.common.collect.Iterables;\n import com.google.common.collect.Sets;\n"}
+[0m⚙ [0mvalidate {"ref":"cbf1fed0ce16ce3a97d6be1602a8e116912d406e","mode":"hunk","patch":"diff --git a/graylog2-server/src/main/java/org/graylog2/shared/journal/LocalKafkaJournal.java b/graylog2-server/src/main/java/org/graylog2/shared/journal/LocalKafkaJournal.java\n--- a/graylog2-server/src/main/java/org/graylog2/shared/journal/LocalKafkaJournal.java\n+++ b/graylog2-server/src/main/java/org/graylog2/shared/journal/LocalKafkaJournal.java\n@@ -621,7 +622,7 @@ public class LocalKafkaJournal extends AbstractIdleService implements Journal {\n \n         List<JournalReadEntry> messages = read(startOffset, requestedMaximumCount);\n \n-        if (messages.isEmpty()) {\n+        if (messages.isEmpty() && !shuttingDown) {\n             // If we got an empty result BUT we know that there are more messages in the log, we bump the readOffset\n             // by 1 and try to read again. We continue until we either get an non-empty result or we reached the\n             // end of the log.\n"}
+[0m⚙ [0mvalidate {"ref":"cbf1fed0ce16ce3a97d6be1602a8e116912d406e","mode":"hunk","patch":"diff --git a/graylog2-server/src/main/java/org/graylog2/shared/journal/LocalKafkaJournal.java b/graylog2-server/src/main/java/org/graylog2/shared/journal/LocalKafkaJournal.java\n--- a/graylog2-server/src/main/java/org/graylog2/shared/journal/LocalKafkaJournal.java\n+++ b/graylog2-server/src/main/java/org/graylog2/shared/journal/LocalKafkaJournal.java\n@@ -855,7 +856,7 @@ public class LocalKafkaJournal extends AbstractIdleService implements Journal {\n     @Override\n     protected void shutDown() throws Exception {\n         LOG.debug(\"Shutting down journal!\");\n-        shuttingDown = true;\n+        triggerShutDown();\n \n         offsetFlusherFuture.cancel(false);\n         logRetentionFuture.cancel(false);\n@@ -871,6 +872,11 @@ public class LocalKafkaJournal extends AbstractIdleService implements Journal {\n         teardownLogMetrics();\n     }\n \n+    @VisibleForTesting\n+    void triggerShutDown() {\n+        shuttingDown = true;\n+    }\n+\n     /**\n      * Executes the retention policy on the journal by invoking the {@code logRetentionCleaner}.\n      * This method handles the following tasks:\n"}
+[0m⚙ [0mvalidate {"ref":"cbf1fed0ce16ce3a97d6be1602a8e116912d406e","mode":"hunk","patch":"diff --git a/graylog2-server/src/test/java/org/graylog2/shared/journal/LocalKafkaJournalTest.java b/graylog2-server/src/test/java/org/graylog2/shared/journal/LocalKafkaJournalTest.java\n--- a/graylog2-server/src/test/java/org/graylog2/shared/journal/LocalKafkaJournalTest.java\n+++ b/graylog2-server/src/test/java/org/graylog2/shared/journal/LocalKafkaJournalTest.java\n@@ -44,6 +44,7 @@ import org.junit.Ignore;\n import org.junit.Rule;\n import org.junit.Test;\n import org.junit.rules.TemporaryFolder;\n+import org.mockito.Mockito;\n import org.mockito.junit.MockitoJUnit;\n import org.mockito.junit.MockitoRule;\n \n"}
+[0m⚙ [0mvalidate {"ref":"cbf1fed0ce16ce3a97d6be1602a8e116912d406e","mode":"hunk","patch":"diff --git a/graylog2-server/src/test/java/org/graylog2/shared/journal/LocalKafkaJournalTest.java b/graylog2-server/src/test/java/org/graylog2/shared/journal/LocalKafkaJournalTest.java\n--- a/graylog2-server/src/test/java/org/graylog2/shared/journal/LocalKafkaJournalTest.java\n+++ b/graylog2-server/src/test/java/org/graylog2/shared/journal/LocalKafkaJournalTest.java\n@@ -75,6 +76,9 @@ import static org.junit.Assert.assertNotNull;\n import static org.junit.Assert.assertTrue;\n import static org.junit.Assert.fail;\n import static org.junit.Assume.assumeTrue;\n+import static org.mockito.ArgumentMatchers.anyLong;\n+import static org.mockito.Mockito.times;\n+import static org.mockito.Mockito.verify;\n \n public class LocalKafkaJournalTest {\n     @Rule\n"}
+[0m⚙ [0mvalidate {"ref":"cbf1fed0ce16ce3a97d6be1602a8e116912d406e","mode":"hunk","patch":"diff --git a/graylog2-server/src/test/java/org/graylog2/shared/journal/LocalKafkaJournalTest.java b/graylog2-server/src/test/java/org/graylog2/shared/journal/LocalKafkaJournalTest.java\n--- a/graylog2-server/src/test/java/org/graylog2/shared/journal/LocalKafkaJournalTest.java\n+++ b/graylog2-server/src/test/java/org/graylog2/shared/journal/LocalKafkaJournalTest.java\n@@ -538,6 +542,50 @@ public class LocalKafkaJournalTest {\n         assertThat(entriesFromSecondSegment).hasSize(25);\n     }\n \n+    @Test\n+    public void noRetryOnShutdown() throws Exception {\n+        final Size segmentSize = Size.kilobytes(1L);\n+        final LocalKafkaJournal journal = new LocalKafkaJournal(journalDirectory.toPath(),\n+                scheduler,\n+                segmentSize,\n+                Duration.standardHours(1),\n+                Size.kilobytes(10L),\n+                Duration.standardDays(1),\n+                1_000_000,\n+                Duration.standardMinutes(1),\n+                100,\n+                new MetricRegistry(),\n+                serverStatus);\n+\n+        // this will create two segments, each containing 25 messages\n+        createBulkChunks(journal, segmentSize, 2);\n+\n+        final Path firstSegmentPath =\n+                Paths.get(journalDirectory.getAbsolutePath(), \"messagejournal-0\", \"00000000000000000000.log\");\n+\n+        assertThat(firstSegmentPath).isRegularFile();\n+\n+        // truncate the first segment so that the last message is cut off\n+        final File firstSegment = firstSegmentPath.toFile();\n+        try (FileChannel channel = new FileOutputStream(firstSegment, true).getChannel()) {\n+            channel.truncate(firstSegment.length() - 1);\n+        }\n+\n+        final List<Journal.JournalReadEntry> entriesFromFirstSegment = journal.read(25);\n+        assertThat(entriesFromFirstSegment).hasSize(24);\n+\n+        // Trigger a shutdown of the journal.\n+        journal.triggerShutDown();\n+\n+        final LocalKafkaJournal journalSpy = Mockito.spy(journal);\n+        final List<Journal.JournalReadEntry> entriesFromSecondSegment = journalSpy.read(25);\n+\n+        // When the journal is shut down, we don't want to enter the retry loop in the read method.\n+        assertThat(entriesFromSecondSegment).isEmpty();\n+        verify(journalSpy, times(1)).read(25);\n+        verify(journalSpy, times(1)).read(anyLong(), anyLong());\n+    }\n+\n     /**\n      * Test a race condition between reading and writing:\n      *\n"}
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/changelog/unreleased/pr-22715.toml b/changelog/unreleased/pr-22715.toml
+    new file mode 100644
+    index 0000000000..22cd0c080d
+    --- /dev/null
+    +++ b/changelog/unreleased/pr-22715.toml
+    @@ -0,0 +1,4 @@
+    +type = "fixed"
+    +message = "Fix issue with message journal recovery on server shutdown."
+    +
+    +pulls = ["22715"]
+    diff --git a/graylog2-server/src/main/java/org/graylog2/shared/journal/LocalKafkaJournal.java b/graylog2-server/src/main/java/org/graylog2/shared/journal/LocalKafkaJournal.java
+    --- a/graylog2-server/src/main/java/org/graylog2/shared/journal/LocalKafkaJournal.java
+    +++ b/graylog2-server/src/main/java/org/graylog2/shared/journal/LocalKafkaJournal.java
+    @@ -22,6 +22,7 @@ import com.codahale.metrics.MetricFilter;
+     import com.codahale.metrics.MetricRegistry;
+     import com.codahale.metrics.Timer;
+     import com.github.joschi.jadconfig.util.Size;
+    +import com.google.common.annotations.VisibleForTesting;
+     import com.google.common.collect.ImmutableMap;
+     import com.google.common.collect.Iterables;
+     import com.google.common.collect.Sets;
+    @@ -621,7 +622,7 @@ public class LocalKafkaJournal extends AbstractIdleService implements Journal {
+     
+             List<JournalReadEntry> messages = read(startOffset, requestedMaximumCount);
+     
+    -        if (messages.isEmpty()) {
+    +        if (messages.isEmpty() && !shuttingDown) {
+                 // If we got an empty result BUT we know that there are more messages in the log, we bump the readOffset
+                 // by 1 and try to read again. We continue until we either get an non-empty result or we reached the
+                 // end of the log.
+    @@ -855,7 +856,7 @@ public class LocalKafkaJournal extends AbstractIdleService implements Journal {
+         @Override
+         protected void shutDown() throws Exception {
+             LOG.debug("Shutting down journal!");
+    -        shuttingDown = true;
+    +        triggerShutDown();
+     
+             offsetFlusherFuture.cancel(false);
+             logRetentionFuture.cancel(false);
+    @@ -871,6 +872,11 @@ public class LocalKafkaJournal extends AbstractIdleService implements Journal {
+             teardownLogMetrics();
+         }
+     
+    +    @VisibleForTesting
+    +    void triggerShutDown() {
+    +        shuttingDown = true;
+    +    }
+    +
+         /**
+          * Executes the retention policy on the journal by invoking the {@code logRetentionCleaner}.
+          * This method handles the following tasks:
+    diff --git a/graylog2-server/src/test/java/org/graylog2/shared/journal/LocalKafkaJournalTest.java b/graylog2-server/src/test/java/org/graylog2/shared/journal/LocalKafkaJournalTest.java
+    --- a/graylog2-server/src/test/java/org/graylog2/shared/journal/LocalKafkaJournalTest.java
+    +++ b/graylog2-server/src/test/java/org/graylog2/shared/journal/LocalKafkaJournalTest.java
+    @@ -44,6 +44,7 @@ import org.junit.Ignore;
+     import org.junit.Rule;
+     import org.junit.Test;
+     import org.junit.rules.TemporaryFolder;
+    +import org.mockito.Mockito;
+     import org.mockito.junit.MockitoJUnit;
+     import org.mockito.junit.MockitoRule;
+     
+    @@ -75,6 +76,9 @@ import static org.junit.Assert.assertNotNull;
+     import static org.junit.Assert.assertTrue;
+     import static org.junit.Assert.fail;
+     import static org.junit.Assume.assumeTrue;
+    +import static org.mockito.ArgumentMatchers.anyLong;
+    +import static org.mockito.Mockito.times;
+    +import static org.mockito.Mockito.verify;
+     
+     public class LocalKafkaJournalTest {
+         @Rule
+    @@ -538,6 +542,50 @@ public class LocalKafkaJournalTest {
+             assertThat(entriesFromSecondSegment).hasSize(25);
+         }
+     
+    +    @Test
+    +    public void noRetryOnShutdown() throws Exception {
+    +        final Size segmentSize = Size.kilobytes(1L);
+    +        final LocalKafkaJournal journal = new LocalKafkaJournal(journalDirectory.toPath(),
+    +                scheduler,
+    +                segmentSize,
+    +                Duration.standardHours(1),
+    +                Size.kilobytes(10L),
+    +                Duration.standardDays(1),
+    +                1_000_000,
+    +                Duration.standardMinutes(1),
+    +                100,
+    +                new MetricRegistry(),
+    +                serverStatus);
+    +
+    +        // this will create two segments, each containing 25 messages
+    +        createBulkChunks(journal, segmentSize, 2);
+    +
+    +        final Path firstSegmentPath =
+    +                Paths.get(journalDirectory.getAbsolutePath(), "messagejournal-0", "00000000000000000000.log");
+    +
+    +        assertThat(firstSegmentPath).isRegularFile();
+    +
+    +        // truncate the first segment so that the last message is cut off
+    +        final File firstSegment = firstSegmentPath.toFile();
+    +        try (FileChannel channel = new FileOutputStream(firstSegment, true).getChannel()) {
+    +            channel.truncate(firstSegment.length() - 1);
+    +        }
+    +
+    +        final List<Journal.JournalReadEntry> entriesFromFirstSegment = journal.read(25);
+    +        assertThat(entriesFromFirstSegment).hasSize(24);
+    +
+    +        // Trigger a shutdown of the journal.
+    +        journal.triggerShutDown();
+    +
+    +        final LocalKafkaJournal journalSpy = Mockito.spy(journal);
+    +        final List<Journal.JournalReadEntry> entriesFromSecondSegment = journalSpy.read(25);
+    +
+    +        // When the journal is shut down, we don't want to enter the retry loop in the read method.
+    +        assertThat(entriesFromSecondSegment).isEmpty();
+    +        verify(journalSpy, times(1)).read(25);
+    +        verify(journalSpy, times(1)).read(anyLong(), anyLong());
+    +    }
+    +
+         /**
+          * Test a race condition between reading and writing:
+          *
+  notes: >
+    Backported the shutdown guard for journal recovery, exposed the shutdown trigger for testing, added the changelog, and validated all hunks individually against the target ref.
+```
+
+--- END CLI OUTPUT ---
+[13:17:54]   Done in 137.4s | status=success

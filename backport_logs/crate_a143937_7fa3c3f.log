@@ -1,0 +1,221 @@
+[11:40:07] === Row 1: crate  a143937a -> 7fa3c3f6  [TYPE-V] ===
+[11:40:07]   Resolving parent of backport commit 7fa3c3f6...
+[11:40:07]   Backport parent (target ref): ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79
+[11:40:07]   Extracting new-version patch for a143937a...
+[11:40:07]   New-version patch size: 2977 chars
+[11:40:07]   Checking out backport parent ab1c036e...
+[11:40:07]   Invoking OpenCode CLI (6832 chars)...
+[11:40:07]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the target branch context for each changed file, then build and hunk-validate a minimal backport patch against the specified parent ref.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target-branch code context
+[ ] Construct unified backport diff for all applicable hunks
+[ ] Validate each hunk applies to target ref
+[ ] Return parseable YAML result
+[0m
+[0m⚙ [0mviewcode {"ref":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","path":"server/src/main/java/io/crate/planner/operators/JoinConditionSymbolsExtractor.java","startline":1,"endline":150}
+[0m⚙ [0mviewcode {"ref":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","path":"server/src/test/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractorTest.java","startline":1,"endline":170}
+[0m⚙ [0mgit_show {"ref":"a143937ad274018991f53e8839a56249f7fdb9d4"}
+[0m⚙ [0mviewcode {"ref":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","path":"docs/appendices/release-notes/5.6.3.rst","startline":80,"endline":115}
+[0m⚙ [0mlocate_symbol {"ref":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","symbol":"HashJoinConditionSymbolsExtractorTest"}
+[0m⚙ [0mlocate_symbol {"ref":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","symbol":"JoinConditionSymbolsExtractor"}
+The target branch uses `HashJoinConditionSymbolsExtractor` instead of `JoinConditionSymbolsExtractor`; the release-note hunk exists at the same section. I’ll adapt the Java production/test hunks to that older class name.
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractor.java","start_line":55,"end_line":110,"start_commit":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","end_commit":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79"}
+[0m⚙ [0mgit_history {"filepath":"server/src/test/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractorTest.java","start_line":105,"end_line":122,"start_commit":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","end_commit":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79"}
+[0m⚙ [0mviewcode {"ref":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","path":"server/src/main/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractor.java","startline":1,"endline":210}
+The target extractor has the same visitor logic but the class/test still use the older `HashJoinConditionSymbolsExtractor` name, so the production guard and test call must use that API. I’m now hunk-validating the adapted diff.
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target-branch code context
+[•] Construct unified backport diff for all applicable hunks
+[ ] Validate each hunk applies to target ref
+[ ] Return parseable YAML result
+[0m
+[0m⚙ [0mvalidate {"ref":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.6.3.rst b/docs/appendices/release-notes/5.6.3.rst\n--- a/docs/appendices/release-notes/5.6.3.rst\n+++ b/docs/appendices/release-notes/5.6.3.rst\n@@ -100,3 +100,10 @@ Fixes\n \n - Fixed an issue that caused an inner join with a ``WHERE`` clause containing\n   a ``CASE`` expression to return invalid results.\n+\n+- Fixed an issue that caused an inner join query to throw an\n+  ``UnsupportedFeatureException`` when the join condition contains columns from\n+  more than one table and the ``WHERE`` clause contains an expression better\n+  suited as the join condition e.g.::\n+\n+    SELECT * FROM t1 INNER JOIN t2 ON (t1.a = t2.b + t1.a) WHERE t1.a = t2.b + 1\n"}
+[0m⚙ [0mvalidate {"ref":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractor.java b/server/src/main/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractor.java\n--- a/server/src/main/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractor.java\n+++ b/server/src/main/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractor.java\n@@ -78,6 +78,14 @@ public final class HashJoinConditionSymbolsExtractor {\n \n         @Override\n         public Void visitFunction(Function function, Context context) {\n+            // A join condition maybe an equi-join condition but its parts may not be.\n+            // For example, consider `t1.a = t2.a AND t1.a = t1.a + t2.b`, as a whole\n+            // it is an equi-join condition due to `t1.a = t2.b`\n+            // but `t1.a = t1.a + t2.b` by itself is not an equi-join condition.\n+            if (!EquiJoinDetector.isEquiJoin(function)) {\n+                return null;\n+            }\n+\n             String functionName = function.name();\n             switch (functionName) {\n                 case AndOperator.NAME:\n"}
+[0m⚙ [0mvalidate {"ref":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractorTest.java b/server/src/test/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractorTest.java\n--- a/server/src/test/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractorTest.java\n+++ b/server/src/test/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractorTest.java\n@@ -118,4 +118,12 @@ public class HashJoinConditionSymbolsExtractorTest extends CrateDummyClusterServ\n                 RelationName.fromIndexName(\"t1\"),\n                 RelationName.fromIndexName(\"t2\"));\n     }\n+\n+    @Test\n+    public void test_can_skip_over_non_equi_join_part() {\n+        Symbol joinCondition = sqlExpressions.asSymbol(\"t1.a = t1.a + t2.b AND t1.a = t2.b\");\n+        Map<RelationName, List<Symbol>> symbolsPerRelation = HashJoinConditionSymbolsExtractor.extract(joinCondition);\n+        assertThat(symbolsPerRelation.get(tr1.relationName())).satisfiesExactly(isReference(\"a\"));\n+        assertThat(symbolsPerRelation.get(tr2.relationName())).satisfiesExactly(isReference(\"b\"));\n+    }\n }\n"}
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target-branch code context
+[✓] Construct unified backport diff for all applicable hunks
+[✓] Validate each hunk applies to target ref
+[•] Return parseable YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/docs/appendices/release-notes/5.6.3.rst b/docs/appendices/release-notes/5.6.3.rst
+    --- a/docs/appendices/release-notes/5.6.3.rst
+    +++ b/docs/appendices/release-notes/5.6.3.rst
+    @@ -100,3 +100,10 @@ Fixes
+     
+     - Fixed an issue that caused an inner join with a ``WHERE`` clause containing
+       a ``CASE`` expression to return invalid results.
+    +
+    +- Fixed an issue that caused an inner join query to throw an
+    +  ``UnsupportedFeatureException`` when the join condition contains columns from
+    +  more than one table and the ``WHERE`` clause contains an expression better
+    +  suited as the join condition e.g.::
+    +
+    +    SELECT * FROM t1 INNER JOIN t2 ON (t1.a = t2.b + t1.a) WHERE t1.a = t2.b + 1
+    diff --git a/server/src/main/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractor.java b/server/src/main/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractor.java
+    --- a/server/src/main/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractor.java
+    +++ b/server/src/main/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractor.java
+    @@ -78,6 +78,14 @@ public final class HashJoinConditionSymbolsExtractor {
+     
+             @Override
+             public Void visitFunction(Function function, Context context) {
+    +            // A join condition maybe an equi-join condition but its parts may not be.
+    +            // For example, consider `t1.a = t2.a AND t1.a = t1.a + t2.b`, as a whole
+    +            // it is an equi-join condition due to `t1.a = t2.b`
+    +            // but `t1.a = t1.a + t2.b` by itself is not an equi-join condition.
+    +            if (!EquiJoinDetector.isEquiJoin(function)) {
+    +                return null;
+    +            }
+    +
+                 String functionName = function.name();
+                 switch (functionName) {
+                     case AndOperator.NAME:
+    diff --git a/server/src/test/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractorTest.java b/server/src/test/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractorTest.java
+    --- a/server/src/test/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractorTest.java
+    +++ b/server/src/test/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractorTest.java
+    @@ -118,4 +118,12 @@ public class HashJoinConditionSymbolsExtractorTest extends CrateDummyClusterServ
+                     RelationName.fromIndexName("t1"),
+                     RelationName.fromIndexName("t2"));
+         }
+    +
+    +    @Test
+    +    public void test_can_skip_over_non_equi_join_part() {
+    +        Symbol joinCondition = sqlExpressions.asSymbol("t1.a = t1.a + t2.b AND t1.a = t2.b");
+    +        Map<RelationName, List<Symbol>> symbolsPerRelation = HashJoinConditionSymbolsExtractor.extract(joinCondition);
+    +        assertThat(symbolsPerRelation.get(tr1.relationName())).satisfiesExactly(isReference("a"));
+    +        assertThat(symbolsPerRelation.get(tr2.relationName())).satisfiesExactly(isReference("b"));
+    +    }
+     }
+  notes: >
+    Backported the non-equi join-condition skip guard to the 5.6 HashJoinConditionSymbolsExtractor name, with matching test and release note; each hunk was validated.
+```
+
+--- END CLI OUTPUT ---
+[11:42:08]   Done in 121.6s | status=success
+[11:56:40] === Row 3: crate  a143937a -> 7fa3c3f6  [TYPE-V] ===
+[11:56:40]   Resolving parent of backport commit 7fa3c3f6...
+[11:56:41]   Backport parent (target ref): ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79
+[11:56:41]   Extracting new-version patch for a143937a...
+[11:56:41]   New-version patch size: 2977 chars
+[11:56:41]   Checking out backport parent ab1c036e...
+[11:56:43]   Invoking OpenCode CLI (6832 chars)...
+[11:56:43]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll map each upstream hunk onto the checked-out `5.6` parent, then validate the resulting hunks individually against the target ref.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target branch context
+[ ] Construct adapted unified diff for 5.6 parent
+[ ] Validate each hunk applies cleanly
+[ ] Return parseable YAML result
+[0m
+[0m⚙ [0mviewcode {"ref":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","path":"server/src/main/java/io/crate/planner/operators/JoinConditionSymbolsExtractor.java","startline":1,"endline":150}
+[0m⚙ [0mviewcode {"ref":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","path":"server/src/test/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractorTest.java","startline":1,"endline":180}
+[0m⚙ [0mgit_show {"ref":"a143937ad274018991f53e8839a56249f7fdb9d4"}
+[0m⚙ [0mviewcode {"ref":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","path":"docs/appendices/release-notes/5.6.3.rst","startline":80,"endline":120}
+[0m⚙ [0mlocate_symbol {"ref":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","symbol":"JoinConditionSymbolsExtractor"}
+[0m⚙ [0mlocate_symbol {"ref":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","symbol":"HashJoinConditionSymbolsExtractorTest"}
+The production class is named differently on `5.6`: the test uses `HashJoinConditionSymbolsExtractor`, and the upstream `JoinConditionSymbolsExtractor.java` path does not exist at the target ref. I’m checking the equivalent extractor implementation before building the adapted patch.
+[0m⚙ [0mgit_history {"filepath":"server/src/test/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractorTest.java","start_line":50,"end_line":122,"start_commit":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","end_commit":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79"}
+[0m✱ [0mGrep "class HashJoinConditionSymbolsExtractor|isEquiJoin|visitFunction\(Function"[90m in server/src/main/java/io/crate/planner/operators · 9 matches[0m
+[0m⚙ [0mlocate_symbol {"ref":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","symbol":"HashJoinConditionSymbolsExtractor"}
+[0m⚙ [0mviewcode {"ref":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","path":"server/src/main/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractor.java","startline":1,"endline":180}
+[0m⚙ [0mviewcode {"ref":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","path":"server/src/main/java/io/crate/planner/operators/EquiJoinDetector.java","startline":1,"endline":120}
+`EquiJoinDetector.isEquiJoin` is private in `5.6`, so the upstream production hunk cannot be copied verbatim. The equivalent minimal adaptation is to expose that helper package-private and call it from `HashJoinConditionSymbolsExtractor` before descending into a function.
+I’m validating four hunks: release note, exposing the equi-join helper for package use, extractor guard, and the adapted regression test.
+[0m⚙ [0mvalidate {"ref":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.6.3.rst b/docs/appendices/release-notes/5.6.3.rst\n--- a/docs/appendices/release-notes/5.6.3.rst\n+++ b/docs/appendices/release-notes/5.6.3.rst\n@@ -97,3 +97,10 @@ Fixes\n \n - Fixed an issue that caused an inner join with a ``WHERE`` clause containing\n   a ``CASE`` expression to return invalid results.\n+\n+- Fixed an issue that caused an inner join query to throw an\n+  ``UnsupportedFeatureException`` when the join condition contains columns from\n+  more than one table and the ``WHERE`` clause contains an expression better\n+  suited as the join condition e.g.::\n+\n+    SELECT * FROM t1 INNER JOIN t2 ON (t1.a = t2.b + t1.a) WHERE t1.a = t2.b + 1\n"}
+[0m⚙ [0mvalidate {"ref":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/planner/operators/EquiJoinDetector.java b/server/src/main/java/io/crate/planner/operators/EquiJoinDetector.java\n--- a/server/src/main/java/io/crate/planner/operators/EquiJoinDetector.java\n+++ b/server/src/main/java/io/crate/planner/operators/EquiJoinDetector.java\n@@ -58,7 +58,7 @@ public class EquiJoinDetector {\n         return isEquiJoin(joinCondition);\n     }\n \n-    private static boolean isEquiJoin(Symbol joinCondition) {\n+    static boolean isEquiJoin(Symbol joinCondition) {\n         assert joinCondition != null : \"join condition must not be null on inner joins\";\n         Context context = new Context();\n         joinCondition.accept(VISITOR, context);\n"}
+[0m⚙ [0mvalidate {"ref":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractor.java b/server/src/main/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractor.java\n--- a/server/src/main/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractor.java\n+++ b/server/src/main/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractor.java\n@@ -82,6 +82,14 @@ public final class HashJoinConditionSymbolsExtractor {\n \n         @Override\n         public Void visitFunction(Function function, Context context) {\n+            // A join condition maybe an equi-join condition but its parts may not be.\n+            // For example, consider `t1.a = t2.a AND t1.a = t1.a + t2.b`, as a whole\n+            // it is an equi-join condition due to `t1.a = t2.b`\n+            // but `t1.a = t1.a + t2.b` by itself is not an equi-join condition.\n+            if (!EquiJoinDetector.isEquiJoin(function)) {\n+                return null;\n+            }\n+\n             String functionName = function.name();\n             switch (functionName) {\n                 case AndOperator.NAME:\n"}
+[0m⚙ [0mvalidate {"ref":"ab1c036e253d1e2b9f49ac4d35b7d0fa59d1dc79","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractorTest.java b/server/src/test/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractorTest.java\n--- a/server/src/test/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractorTest.java\n+++ b/server/src/test/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractorTest.java\n@@ -118,4 +118,12 @@ public class HashJoinConditionSymbolsExtractorTest extends CrateDummyClusterServ\n                 RelationName.fromIndexName(\"t1\"),\n                 RelationName.fromIndexName(\"t2\"));\n     }\n+\n+    @Test\n+    public void test_can_skip_over_non_equi_join_part() {\n+        Symbol joinCondition = sqlExpressions.asSymbol(\"t1.a = t1.a + t2.b AND t1.a = t2.b\");\n+        Map<RelationName, List<Symbol>> symbolsPerRelation = HashJoinConditionSymbolsExtractor.extract(joinCondition);\n+        assertThat(symbolsPerRelation.get(tr1.relationName())).satisfiesExactly(isReference(\"a\"));\n+        assertThat(symbolsPerRelation.get(tr2.relationName())).satisfiesExactly(isReference(\"b\"));\n+    }\n }\n"}
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch context
+[✓] Construct adapted unified diff for 5.6 parent
+[✓] Validate each hunk applies cleanly
+[•] Return parseable YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/docs/appendices/release-notes/5.6.3.rst b/docs/appendices/release-notes/5.6.3.rst
+    --- a/docs/appendices/release-notes/5.6.3.rst
+    +++ b/docs/appendices/release-notes/5.6.3.rst
+    @@ -97,3 +97,10 @@ Fixes
+     
+     - Fixed an issue that caused an inner join with a ``WHERE`` clause containing
+       a ``CASE`` expression to return invalid results.
+    +
+    +- Fixed an issue that caused an inner join query to throw an
+    +  ``UnsupportedFeatureException`` when the join condition contains columns from
+    +  more than one table and the ``WHERE`` clause contains an expression better
+    +  suited as the join condition e.g.::
+    +
+    +    SELECT * FROM t1 INNER JOIN t2 ON (t1.a = t2.b + t1.a) WHERE t1.a = t2.b + 1
+    diff --git a/server/src/main/java/io/crate/planner/operators/EquiJoinDetector.java b/server/src/main/java/io/crate/planner/operators/EquiJoinDetector.java
+    --- a/server/src/main/java/io/crate/planner/operators/EquiJoinDetector.java
+    +++ b/server/src/main/java/io/crate/planner/operators/EquiJoinDetector.java
+    @@ -58,7 +58,7 @@ public class EquiJoinDetector {
+             return isEquiJoin(joinCondition);
+         }
+     
+    -    private static boolean isEquiJoin(Symbol joinCondition) {
+    +    static boolean isEquiJoin(Symbol joinCondition) {
+             assert joinCondition != null : "join condition must not be null on inner joins";
+             Context context = new Context();
+             joinCondition.accept(VISITOR, context);
+    diff --git a/server/src/main/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractor.java b/server/src/main/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractor.java
+    --- a/server/src/main/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractor.java
+    +++ b/server/src/main/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractor.java
+    @@ -82,6 +82,14 @@ public final class HashJoinConditionSymbolsExtractor {
+     
+             @Override
+             public Void visitFunction(Function function, Context context) {
+    +            // A join condition maybe an equi-join condition but its parts may not be.
+    +            // For example, consider `t1.a = t2.a AND t1.a = t1.a + t2.b`, as a whole
+    +            // it is an equi-join condition due to `t1.a = t2.b`
+    +            // but `t1.a = t1.a + t2.b` by itself is not an equi-join condition.
+    +            if (!EquiJoinDetector.isEquiJoin(function)) {
+    +                return null;
+    +            }
+    +
+                 String functionName = function.name();
+                 switch (functionName) {
+                     case AndOperator.NAME:
+    diff --git a/server/src/test/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractorTest.java b/server/src/test/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractorTest.java
+    --- a/server/src/test/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractorTest.java
+    +++ b/server/src/test/java/io/crate/planner/operators/HashJoinConditionSymbolsExtractorTest.java
+    @@ -118,4 +118,12 @@ public class HashJoinConditionSymbolsExtractorTest extends CrateDummyClusterServ
+                     RelationName.fromIndexName("t1"),
+                     RelationName.fromIndexName("t2"));
+         }
+    +
+    +    @Test
+    +    public void test_can_skip_over_non_equi_join_part() {
+    +        Symbol joinCondition = sqlExpressions.asSymbol("t1.a = t1.a + t2.b AND t1.a = t2.b");
+    +        Map<RelationName, List<Symbol>> symbolsPerRelation = HashJoinConditionSymbolsExtractor.extract(joinCondition);
+    +        assertThat(symbolsPerRelation.get(tr1.relationName())).satisfiesExactly(isReference("a"));
+    +        assertThat(symbolsPerRelation.get(tr2.relationName())).satisfiesExactly(isReference("b"));
+    +    }
+     }
+  notes: >
+    Backported the non-equi join-condition skip logic to the 5.6 HashJoinConditionSymbolsExtractor equivalent, exposing EquiJoinDetector.isEquiJoin package-private as required; all hunks validated cleanly.
+```
+
+--- END CLI OUTPUT ---
+[11:59:15]   Done in 154.8s | status=success

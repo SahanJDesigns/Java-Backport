@@ -1,0 +1,196 @@
+[15:02:20] === Row 37: grpc-java  448ec4f3 -> 19c9b998  [TYPE-I] ===
+[15:02:20]   Resolving parent of backport commit 19c9b998...
+[15:02:20]   Backport parent (target ref): 752a045f10d59286d196c203d9177c6fb191241f
+[15:02:20]   Extracting new-version patch for 448ec4f3...
+[15:02:20]   New-version patch size: 6515 chars
+[15:02:20]   Checking out backport parent 752a045f...
+[15:02:21]   Invoking OpenCode CLI (10406 chars)...
+[15:02:21]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll map each upstream hunk to the checked-out `v1.66.x` parent, then validate the resulting diff hunk-by-hunk without switching refs.
+[0m# [0mTodos
+[•] Inspect upstream commit metadata and target branch code context for changed files
+[ ] Construct adapted unified diff for v1.66.x parent
+[ ] Validate each hunk against target ref
+[ ] Return parseable YAML result
+[0m
+[0m⚙ [0mgit_show {"ref":"448ec4f37e6ade0b9e547fd50bece6a22a317bf3"}
+[0m⚙ [0mviewcode {"ref":"752a045f10d59286d196c203d9177c6fb191241f","path":"xds/src/main/java/io/grpc/xds/client/ControlPlaneClient.java","startline":130,"endline":180}
+[0m⚙ [0mviewcode {"ref":"752a045f10d59286d196c203d9177c6fb191241f","path":"xds/src/main/java/io/grpc/xds/client/XdsClientImpl.java","startline":260,"endline":300}
+[0m⚙ [0mviewcode {"ref":"752a045f10d59286d196c203d9177c6fb191241f","path":"xds/src/test/java/io/grpc/xds/GrpcXdsClientImplTestBase.java","startline":120,"endline":145}
+[0m⚙ [0mviewcode {"ref":"752a045f10d59286d196c203d9177c6fb191241f","path":"xds/src/test/java/io/grpc/xds/GrpcXdsClientImplV3Test.java","startline":108,"endline":125}
+The production code matches the upstream hunk locations closely. I’m checking the test base helper signatures and nearby EDS tests to adapt the new verification overloads cleanly.
+[0m⚙ [0mviewcode {"ref":"752a045f10d59286d196c203d9177c6fb191241f","path":"xds/src/test/java/io/grpc/xds/GrpcXdsClientImplTestBase.java","startline":2725,"endline":2785}
+[0m⚙ [0mviewcode {"ref":"752a045f10d59286d196c203d9177c6fb191241f","path":"xds/src/test/java/io/grpc/xds/GrpcXdsClientImplTestBase.java","startline":3750,"endline":3835}
+[0m⚙ [0mviewcode {"ref":"752a045f10d59286d196c203d9177c6fb191241f","path":"xds/src/test/java/io/grpc/xds/GrpcXdsClientImplV3Test.java","startline":190,"endline":220}
+[0m⚙ [0mlocate_symbol {"ref":"752a045f10d59286d196c203d9177c6fb191241f","symbol":"adjustResourceSubscription"}
+[0m⚙ [0mlocate_symbol {"ref":"752a045f10d59286d196c203d9177c6fb191241f","symbol":"verifyRequest"}
+[0m✱ [0mGrep "import java\.util\.Arrays|Arrays\.asList"[90m in xds/src/test/java/io/grpc/xds/GrpcXdsClientImplTestBase.java · 100 matches[0m
+[0m⚙ [0mgit_history {"filepath":"xds/src/main/java/io/grpc/xds/client/ControlPlaneClient.java","start_line":146,"end_line":158,"start_commit":"752a045f10d59286d196c203d9177c6fb191241f","end_commit":"752a045f10d59286d196c203d9177c6fb191241f"}
+[0m⚙ [0mgit_history {"filepath":"xds/src/test/java/io/grpc/xds/GrpcXdsClientImplTestBase.java","start_line":3788,"end_line":3798,"start_commit":"752a045f10d59286d196c203d9177c6fb191241f","end_commit":"752a045f10d59286d196c203d9177c6fb191241f"}
+The target test file already imports `java.util.Arrays`, so the new test only needs the Mockito `VerificationMode` import. The `XdsClientImpl` hunk is a direct typo cleanup; the behavior fix is in `ControlPlaneClient.adjustResourceSubscription`.
+[0m
+[0m# [0mTodos
+[✓] Inspect upstream commit metadata and target branch code context for changed files
+[•] Construct adapted unified diff for v1.66.x parent
+[ ] Validate each hunk against target ref
+[ ] Return parseable YAML result
+[0m
+I’ve built the adapted diff in standard unified format. Next I’ll validate each file hunk against `752a045f10d59286d196c203d9177c6fb191241f`.
+[0m⚙ [0mvalidate {"ref":"752a045f10d59286d196c203d9177c6fb191241f","mode":"hunk","patch":"diff --git a/xds/src/main/java/io/grpc/xds/client/ControlPlaneClient.java b/xds/src/main/java/io/grpc/xds/client/ControlPlaneClient.java\n--- a/xds/src/main/java/io/grpc/xds/client/ControlPlaneClient.java\n+++ b/xds/src/main/java/io/grpc/xds/client/ControlPlaneClient.java\n@@ -152,8 +152,14 @@ final class ControlPlaneClient {\n       startRpcStream();\n     }\n     Collection<String> resources = resourceStore.getSubscribedResources(serverInfo, resourceType);\n-    if (resources != null) {\n-      adsStream.sendDiscoveryRequest(resourceType, resources);\n+    if (resources == null) {\n+      resources = Collections.emptyList();\n+    }\n+    adsStream.sendDiscoveryRequest(resourceType, resources);\n+    if (resources.isEmpty()) {\n+      // The resource type no longer has subscribing resources; clean up references to it\n+      versions.remove(resourceType);\n+      adsStream.respNonces.remove(resourceType);\n     }\n   }\n \n"}
+The production behavior hunk applies cleanly. I’m validating the remaining typo cleanup and test additions separately.
+[0m⚙ [0mvalidate {"ref":"752a045f10d59286d196c203d9177c6fb191241f","mode":"hunk","patch":"diff --git a/xds/src/main/java/io/grpc/xds/client/XdsClientImpl.java b/xds/src/main/java/io/grpc/xds/client/XdsClientImpl.java\n--- a/xds/src/main/java/io/grpc/xds/client/XdsClientImpl.java\n+++ b/xds/src/main/java/io/grpc/xds/client/XdsClientImpl.java\n@@ -281,7 +281,7 @@ public final class XdsClientImpl extends XdsClient implements XdsResponseHandler\n       @SuppressWarnings(\"unchecked\")\n       public void run() {\n         ResourceSubscriber<T> subscriber =\n-            (ResourceSubscriber<T>) resourceSubscribers.get(type).get(resourceName);;\n+            (ResourceSubscriber<T>) resourceSubscribers.get(type).get(resourceName);\n         subscriber.removeWatcher(watcher);\n         if (!subscriber.isWatched()) {\n           subscriber.cancelResourceWatch();\n"}
+[0m⚙ [0mvalidate {"ref":"752a045f10d59286d196c203d9177c6fb191241f","mode":"hunk","patch":"diff --git a/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplTestBase.java b/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplTestBase.java\n--- a/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplTestBase.java\n+++ b/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplTestBase.java\n@@ -133,6 +133,7 @@ import org.mockito.invocation.InvocationOnMock;\n import org.mockito.junit.MockitoJUnit;\n import org.mockito.junit.MockitoRule;\n import org.mockito.stubbing.Answer;\n+import org.mockito.verification.VerificationMode;\n \n /**\n  * Tests for {@link XdsClientImpl}.\n"}
+[0m⚙ [0mvalidate {"ref":"752a045f10d59286d196c203d9177c6fb191241f","mode":"hunk","patch":"diff --git a/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplV3Test.java b/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplV3Test.java\n--- a/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplV3Test.java\n+++ b/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplV3Test.java\n@@ -118,6 +118,7 @@ import org.junit.runners.Parameterized.Parameters;\n import org.mockito.ArgumentMatcher;\n import org.mockito.InOrder;\n import org.mockito.Mockito;\n+import org.mockito.verification.VerificationMode;\n \n /**\n  * Tests for {@link XdsClientImpl} with protocol version v3.\n"}
+[0m⚙ [0mvalidate {"ref":"752a045f10d59286d196c203d9177c6fb191241f","mode":"hunk","patch":"diff --git a/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplTestBase.java b/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplTestBase.java\n--- a/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplTestBase.java\n+++ b/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplTestBase.java\n@@ -3787,10 +3819,22 @@ public abstract class GrpcXdsClientImplTestBase {\n \n     protected void verifyRequest(\n         XdsResourceType<?> type, List<String> resources, String versionInfo, String nonce,\n-        Node node) {\n+        Node node, VerificationMode verificationMode) {\n       throw new UnsupportedOperationException();\n     }\n \n+    protected void verifyRequest(\n+        XdsResourceType<?> type, List<String> resources, String versionInfo, String nonce,\n+        Node node) {\n+      verifyRequest(type, resources, versionInfo, nonce, node, Mockito.timeout(2000));\n+    }\n+\n+    protected void verifyRequest(\n+        XdsResourceType<?> type, String resource, String versionInfo, String nonce,\n+        Node node, VerificationMode verificationMode) {\n+      verifyRequest(type, ImmutableList.of(resource), versionInfo, nonce, node, verificationMode);\n+    }\n+\n     protected void verifyRequest(\n         XdsResourceType<?> type, String resource, String versionInfo, String nonce, Node node) {\n       verifyRequest(type, ImmutableList.of(resource), versionInfo, nonce, node);\n"}
+[0m⚙ [0mvalidate {"ref":"752a045f10d59286d196c203d9177c6fb191241f","mode":"hunk","patch":"diff --git a/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplTestBase.java b/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplTestBase.java\n--- a/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplTestBase.java\n+++ b/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplTestBase.java\n@@ -2757,6 +2758,37 @@ public abstract class GrpcXdsClientImplTestBase {\n     verifySubscribedResourcesMetadataSizes(0, 0, 0, 1);\n   }\n \n+  @Test\n+  public void edsCleanupNonceAfterUnsubscription() {\n+    Assume.assumeFalse(ignoreResourceDeletion());\n+\n+    // Suppose we have an EDS subscription A.1\n+    xdsClient.watchXdsResource(XdsEndpointResource.getInstance(), \"A.1\", edsResourceWatcher);\n+    DiscoveryRpcCall call = resourceDiscoveryCalls.poll();\n+    assertThat(call).isNotNull();\n+    call.verifyRequest(EDS, \"A.1\", \"\", \"\", NODE);\n+\n+    // EDS -> {A.1}, version 1\n+    List<Message> dropOverloads = ImmutableList.of();\n+    List<Message> endpointsV1 = ImmutableList.of(lbEndpointHealthy);\n+    ImmutableMap<String, Any> resourcesV1 = ImmutableMap.of(\n+            \"A.1\", Any.pack(mf.buildClusterLoadAssignment(\"A.1\", endpointsV1, dropOverloads)));\n+    call.sendResponse(EDS, resourcesV1.values().asList(), VERSION_1, \"0000\");\n+    // {A.1} -> ACK, version 1\n+    call.verifyRequest(EDS, \"A.1\", VERSION_1, \"0000\", NODE);\n+    verify(edsResourceWatcher, times(1)).onChanged(any());\n+\n+    // trigger an EDS resource unsubscription.\n+    xdsClient.cancelXdsResourceWatch(XdsEndpointResource.getInstance(), \"A.1\", edsResourceWatcher);\n+    verifySubscribedResourcesMetadataSizes(0, 0, 0, 0);\n+    call.verifyRequest(EDS, Arrays.asList(), VERSION_1, \"0000\", NODE);\n+\n+    // When re-subscribing, the version and nonce were properly forgotten, so the request is the\n+    // same as the initial request\n+    xdsClient.watchXdsResource(XdsEndpointResource.getInstance(), \"A.1\", edsResourceWatcher);\n+    call.verifyRequest(EDS, \"A.1\", \"\", \"\", NODE, Mockito.timeout(2000).times(2));\n+  }\n+\n   @Test\n   public void edsResponseErrorHandling_allResourcesFailedUnpack() {\n     DiscoveryRpcCall call = startResourceWatcher(XdsEndpointResource.getInstance(), EDS_RESOURCE,\n"}
+[0m⚙ [0mvalidate {"ref":"752a045f10d59286d196c203d9177c6fb191241f","mode":"hunk","patch":"diff --git a/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplV3Test.java b/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplV3Test.java\n--- a/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplV3Test.java\n+++ b/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplV3Test.java\n@@ -205,8 +206,8 @@ public class GrpcXdsClientImplV3Test extends GrpcXdsClientImplTestBase {\n     @Override\n     protected void verifyRequest(\n         XdsResourceType<?> type, List<String> resources, String versionInfo, String nonce,\n-        EnvoyProtoData.Node node) {\n-      verify(requestObserver, Mockito.timeout(2000)).onNext(argThat(new DiscoveryRequestMatcher(\n+        EnvoyProtoData.Node node, VerificationMode verificationMode) {\n+      verify(requestObserver, verificationMode).onNext(argThat(new DiscoveryRequestMatcher(\n           node.toEnvoyProtoNode(), versionInfo, resources, type.typeUrl(), nonce, null, null)));\n     }\n"}
+[0m⚙ [0mvalidate {"ref":"752a045f10d59286d196c203d9177c6fb191241f","mode":"hunk","patch":"diff --git a/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplV3Test.java b/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplV3Test.java\n--- a/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplV3Test.java\n+++ b/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplV3Test.java\n@@ -203,10 +203,10 @@ public class GrpcXdsClientImplV3Test extends GrpcXdsClientImplTestBase {\n     }\n \n     @Override\n     protected void verifyRequest(\n         XdsResourceType<?> type, List<String> resources, String versionInfo, String nonce,\n-        EnvoyProtoData.Node node) {\n-      verify(requestObserver, Mockito.timeout(2000)).onNext(argThat(new DiscoveryRequestMatcher(\n+        EnvoyProtoData.Node node, VerificationMode verificationMode) {\n+      verify(requestObserver, verificationMode).onNext(argThat(new DiscoveryRequestMatcher(\n           node.toEnvoyProtoNode(), versionInfo, resources, type.typeUrl(), nonce, null, null)));\n     }\n \n"}
+All individual hunks validated with `mode=hunk`; I skipped full validation as requested.
+[0m
+[0m# [0mTodos
+[✓] Inspect upstream commit metadata and target branch code context for changed files
+[✓] Construct adapted unified diff for v1.66.x parent
+[✓] Validate each hunk against target ref
+[•] Return parseable YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/xds/src/main/java/io/grpc/xds/client/ControlPlaneClient.java b/xds/src/main/java/io/grpc/xds/client/ControlPlaneClient.java
+    --- a/xds/src/main/java/io/grpc/xds/client/ControlPlaneClient.java
+    +++ b/xds/src/main/java/io/grpc/xds/client/ControlPlaneClient.java
+    @@ -152,8 +152,14 @@ final class ControlPlaneClient {
+           startRpcStream();
+         }
+         Collection<String> resources = resourceStore.getSubscribedResources(serverInfo, resourceType);
+    -    if (resources != null) {
+    -      adsStream.sendDiscoveryRequest(resourceType, resources);
+    +    if (resources == null) {
+    +      resources = Collections.emptyList();
+    +    }
+    +    adsStream.sendDiscoveryRequest(resourceType, resources);
+    +    if (resources.isEmpty()) {
+    +      // The resource type no longer has subscribing resources; clean up references to it
+    +      versions.remove(resourceType);
+    +      adsStream.respNonces.remove(resourceType);
+         }
+       }
+     
+    diff --git a/xds/src/main/java/io/grpc/xds/client/XdsClientImpl.java b/xds/src/main/java/io/grpc/xds/client/XdsClientImpl.java
+    --- a/xds/src/main/java/io/grpc/xds/client/XdsClientImpl.java
+    +++ b/xds/src/main/java/io/grpc/xds/client/XdsClientImpl.java
+    @@ -281,7 +281,7 @@ public final class XdsClientImpl extends XdsClient implements XdsResponseHandler
+           @SuppressWarnings("unchecked")
+           public void run() {
+             ResourceSubscriber<T> subscriber =
+    -            (ResourceSubscriber<T>) resourceSubscribers.get(type).get(resourceName);;
+    +            (ResourceSubscriber<T>) resourceSubscribers.get(type).get(resourceName);
+             subscriber.removeWatcher(watcher);
+             if (!subscriber.isWatched()) {
+               subscriber.cancelResourceWatch();
+    diff --git a/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplTestBase.java b/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplTestBase.java
+    --- a/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplTestBase.java
+    +++ b/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplTestBase.java
+    @@ -133,6 +133,7 @@ import org.mockito.invocation.InvocationOnMock;
+     import org.mockito.junit.MockitoJUnit;
+     import org.mockito.junit.MockitoRule;
+     import org.mockito.stubbing.Answer;
+    +import org.mockito.verification.VerificationMode;
+     
+     /**
+      * Tests for {@link XdsClientImpl}.
+    @@ -2757,6 +2758,37 @@ public abstract class GrpcXdsClientImplTestBase {
+         verifySubscribedResourcesMetadataSizes(0, 0, 0, 1);
+       }
+     
+    +  @Test
+    +  public void edsCleanupNonceAfterUnsubscription() {
+    +    Assume.assumeFalse(ignoreResourceDeletion());
+    +
+    +    // Suppose we have an EDS subscription A.1
+    +    xdsClient.watchXdsResource(XdsEndpointResource.getInstance(), "A.1", edsResourceWatcher);
+    +    DiscoveryRpcCall call = resourceDiscoveryCalls.poll();
+    +    assertThat(call).isNotNull();
+    +    call.verifyRequest(EDS, "A.1", "", "", NODE);
+    +
+    +    // EDS -> {A.1}, version 1
+    +    List<Message> dropOverloads = ImmutableList.of();
+    +    List<Message> endpointsV1 = ImmutableList.of(lbEndpointHealthy);
+    +    ImmutableMap<String, Any> resourcesV1 = ImmutableMap.of(
+    +            "A.1", Any.pack(mf.buildClusterLoadAssignment("A.1", endpointsV1, dropOverloads)));
+    +    call.sendResponse(EDS, resourcesV1.values().asList(), VERSION_1, "0000");
+    +    // {A.1} -> ACK, version 1
+    +    call.verifyRequest(EDS, "A.1", VERSION_1, "0000", NODE);
+    +    verify(edsResourceWatcher, times(1)).onChanged(any());
+    +
+    +    // trigger an EDS resource unsubscription.
+    +    xdsClient.cancelXdsResourceWatch(XdsEndpointResource.getInstance(), "A.1", edsResourceWatcher);
+    +    verifySubscribedResourcesMetadataSizes(0, 0, 0, 0);
+    +    call.verifyRequest(EDS, Arrays.asList(), VERSION_1, "0000", NODE);
+    +
+    +    // When re-subscribing, the version and nonce were properly forgotten, so the request is the
+    +    // same as the initial request
+    +    xdsClient.watchXdsResource(XdsEndpointResource.getInstance(), "A.1", edsResourceWatcher);
+    +    call.verifyRequest(EDS, "A.1", "", "", NODE, Mockito.timeout(2000).times(2));
+    +  }
+    +
+       @Test
+       public void edsResponseErrorHandling_allResourcesFailedUnpack() {
+         DiscoveryRpcCall call = startResourceWatcher(XdsEndpointResource.getInstance(), EDS_RESOURCE,
+    @@ -3787,10 +3819,22 @@ public abstract class GrpcXdsClientImplTestBase {
+     
+         protected void verifyRequest(
+             XdsResourceType<?> type, List<String> resources, String versionInfo, String nonce,
+    -        Node node) {
+    +        Node node, VerificationMode verificationMode) {
+           throw new UnsupportedOperationException();
+         }
+     
+    +    protected void verifyRequest(
+    +        XdsResourceType<?> type, List<String> resources, String versionInfo, String nonce,
+    +        Node node) {
+    +      verifyRequest(type, resources, versionInfo, nonce, node, Mockito.timeout(2000));
+    +    }
+    +
+    +    protected void verifyRequest(
+    +        XdsResourceType<?> type, String resource, String versionInfo, String nonce,
+    +        Node node, VerificationMode verificationMode) {
+    +      verifyRequest(type, ImmutableList.of(resource), versionInfo, nonce, node, verificationMode);
+    +    }
+    +
+         protected void verifyRequest(
+             XdsResourceType<?> type, String resource, String versionInfo, String nonce, Node node) {
+           verifyRequest(type, ImmutableList.of(resource), versionInfo, nonce, node);
+    diff --git a/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplV3Test.java b/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplV3Test.java
+    --- a/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplV3Test.java
+    +++ b/xds/src/test/java/io/grpc/xds/GrpcXdsClientImplV3Test.java
+    @@ -118,6 +118,7 @@ import org.junit.runners.Parameterized.Parameters;
+     import org.mockito.ArgumentMatcher;
+     import org.mockito.InOrder;
+     import org.mockito.Mockito;
+    +import org.mockito.verification.VerificationMode;
+     
+     /**
+      * Tests for {@link XdsClientImpl} with protocol version v3.
+    @@ -205,8 +206,8 @@ public class GrpcXdsClientImplV3Test extends GrpcXdsClientImplTestBase {
+         @Override
+         protected void verifyRequest(
+             XdsResourceType<?> type, List<String> resources, String versionInfo, String nonce,
+    -        EnvoyProtoData.Node node) {
+    -      verify(requestObserver, Mockito.timeout(2000)).onNext(argThat(new DiscoveryRequestMatcher(
+    +        EnvoyProtoData.Node node, VerificationMode verificationMode) {
+    +      verify(requestObserver, verificationMode).onNext(argThat(new DiscoveryRequestMatcher(
+               node.toEnvoyProtoNode(), versionInfo, resources, type.typeUrl(), nonce, null, null)));
+         }
+  notes: >
+    Backported the xDS last-resource unsubscription fix, nonce/version cleanup, typo cleanup, and regression test; each hunk was validated against the target parent ref.
+```
+
+--- END CLI OUTPUT ---
+[15:05:16]   Done in 176.3s | status=success

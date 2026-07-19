@@ -1,0 +1,569 @@
+[00:48:32] === Row 22: crate  bba92b7c -> 0c103015  [TYPE-II] ===
+[00:48:32]   Resolving parent of backport commit 0c103015...
+[00:48:32]   Backport parent (target ref): 7c9bedf5f47de13aff040101d71cc5bf6dc07d79
+[00:48:32]   Extracting new-version patch for bba92b7c...
+[00:48:32]   New-version patch size: 5141 chars
+[00:48:32]   Checking out backport parent 7c9bedf5...
+[00:48:35]   Invoking OpenCode CLI (9170 chars)...
+[00:48:35]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the target ref context for the release notes, executor method, and integration test, then build the smallest equivalent patch against the current `5.9` state.
+[0m# [0mTodos
+[•] Inspect original change metadata and target branch context
+[ ] Construct and validate backport hunks
+[ ] Apply patch, commit result, and run full validation
+[ ] Return YAML result with final diff
+[0m
+[0m⚙ [0mviewcode {"ref":"7c9bedf5f47de13aff040101d71cc5bf6dc07d79","path":"server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java","startline":420,"endline":470}
+[0m⚙ [0mviewcode {"ref":"7c9bedf5f47de13aff040101d71cc5bf6dc07d79","path":"server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java","startline":240,"endline":290}
+[0m⚙ [0mgit_show {"ref":"bba92b7cff3535e822fd979d4403c415a12ca9a1"}
+[0m⚙ [0mviewcode {"ref":"7c9bedf5f47de13aff040101d71cc5bf6dc07d79","path":"docs/appendices/release-notes/5.9.13.rst","startline":45,"endline":70}
+[0m⚙ [0mviewcode {"ref":"7c9bedf5f47de13aff040101d71cc5bf6dc07d79","path":"docs/appendices/release-notes/5.10.4.rst","startline":45,"endline":75}
+[0m⚙ [0mlocate_symbol {"ref":"7c9bedf5f47de13aff040101d71cc5bf6dc07d79","symbol":"filterSettings"}
+The `5.10.4` release-note file does not exist on the `5.9` target, so that hunk has no counterpart on this branch. The code and `5.9.13` note locations match directly; the test file is shorter on `5.9`, so I’ll add the regression test at the class end with adjusted context.
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java","start_line":254,"end_line":272,"start_commit":"7c9bedf5f47de13aff040101d71cc5bf6dc07d79","end_commit":"7c9bedf5f47de13aff040101d71cc5bf6dc07d79"}
+[0m⚙ [0mgit_history {"filepath":"server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java","start_line":390,"end_line":418,"start_commit":"7c9bedf5f47de13aff040101d71cc5bf6dc07d79","end_commit":"7c9bedf5f47de13aff040101d71cc5bf6dc07d79"}
+[0m⚙ [0mviewcode {"ref":"7c9bedf5f47de13aff040101d71cc5bf6dc07d79","path":"server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java","startline":1,"endline":60}
+I found `java.util.Set` is already imported in the target executor, so the code hunk only needs the method-body change. I’m validating the three portable hunks now; the missing `5.10.4` documentation hunk is omitted.
+[0m⚙ [0mvalidate {"ref":"7c9bedf5f47de13aff040101d71cc5bf6dc07d79","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java b/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java\n--- a/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java\n+++ b/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java\n@@ -254,18 +254,16 @@ public class AlterTableClusterStateExecutor extends DDLClusterStateTaskExecutor<\n     @VisibleForTesting\n     static Settings filterSettings(Settings settings, List<Setting<?>> settingsFilter) {\n         Settings.Builder settingsBuilder = Settings.builder();\n+        Set<String> settingNames = settings.keySet();\n         for (Setting<?> setting : settingsFilter) {\n+            String key = setting.getKey();\n             if (setting.isGroupSetting()) {\n-                String prefix = setting.getKey(); // getKey() returns prefix for a group setting\n-                var settingsGroup = settings.getByPrefix(prefix);\n+                var settingsGroup = settings.getByPrefix(key);\n                 for (String name : settingsGroup.keySet()) {\n-                    settingsBuilder.put(prefix + name, settingsGroup.get(name)); // No dot added as prefix already has dot at the end.\n-                }\n-            } else {\n-                String value = settings.get(setting.getKey());\n-                if (value != null) {\n-                    settingsBuilder.put(setting.getKey(), value);\n+                    settingsBuilder.put(key + name, settingsGroup.get(name)); // No dot added as prefix already has dot at the end.\n                 }\n+            } else if (settingNames.contains(key)) {\n+                settingsBuilder.put(key, settings.get(key));\n             }\n         }\n         return settingsBuilder.build();\n"}
+[0m⚙ [0mvalidate {"ref":"7c9bedf5f47de13aff040101d71cc5bf6dc07d79","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java b/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java\n--- a/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java\n+++ b/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java\n@@ -415,4 +415,30 @@ public class AlterTableIntegrationTest extends IntegTestCase {\n         execute(\"alter table tbl partition (p = 1) set (number_of_shards = ?)\", new Object[] { numShards }, TimeValue.timeValueSeconds(30));\n         assertBusy(() -> assertThat(execute(\"select * from tbl\")).hasRowCount(4));\n     }\n+\n+    @Test\n+    public void test_reset_setting_on_complete_partitioned_table() {\n+        execute(\"CREATE TABLE t1 (a INTEGER, b INTEGER) PARTITIONED BY (a)\");\n+        execute(\"INSERT INTO t1 VALUES (1, 2), (2, 3)\");\n+        execute(\"ALTER TABLE t1 SET (\\\"blocks.write\\\" = TRUE)\");\n+        execute(\"SELECT table_name, settings['blocks']['write'] FROM information_schema.tables WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"t1| true\"\n+        );\n+        execute(\"SELECT partition_ident, settings['blocks']['write'] FROM information_schema.table_partitions WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"04132| true\",\n+            \"04134| true\"\n+        );\n+        execute(\"ALTER TABLE t1 RESET (\\\"blocks.write\\\")\");\n+        execute(\"SELECT table_name, settings['blocks']['write'] FROM information_schema.tables WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"t1| false\"\n+        );\n+        execute(\"SELECT partition_ident, settings['blocks']['write'] FROM information_schema.table_partitions WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"04132| false\",\n+            \"04134| false\"\n+        );\n+    }\n }\n"}
+[0m⚙ [0mvalidate {"ref":"7c9bedf5f47de13aff040101d71cc5bf6dc07d79","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst\n--- a/docs/appendices/release-notes/5.9.13.rst\n+++ b/docs/appendices/release-notes/5.9.13.rst\n@@ -58,3 +58,8 @@ Fixes\n   closed properly, e.g. due to an unclean node shutdown and the node was\n   restarting with still holding a lock on the shard. The existing retry logic\n   to solve this situation was not working in some cases.\n+\n+- Fixed an issue causing a ``ALTER TABLE <table> RESET <setting>`` statement on\n+  a complete partitioned table to not reset the setting on all partitions, but\n+  only on the table itself, so the reset value of the setting would only have\n+  taken effect for new partitions.\n"}
+The executor and test hunks validate cleanly. The release-note hunk hit an EOF context mismatch despite matching text, so I’m widening the hunk context around the final list item.
+[0m⚙ [0mvalidate {"ref":"7c9bedf5f47de13aff040101d71cc5bf6dc07d79","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst\n--- a/docs/appendices/release-notes/5.9.13.rst\n+++ b/docs/appendices/release-notes/5.9.13.rst\n@@ -54,9 +54,14 @@ Fixes\n - Fixed an issue that caused queries submitted via PG wire to not be logged in\n   :ref:`sys.jobs_log <sys-logs>` in case of a parsing failure.\n \n - Fixed an issue causing shards to not be allocated if the shard was not\n   closed properly, e.g. due to an unclean node shutdown and the node was\n   restarting with still holding a lock on the shard. The existing retry logic\n   to solve this situation was not working in some cases.\n+\n+- Fixed an issue causing a ``ALTER TABLE <table> RESET <setting>`` statement on\n+  a complete partitioned table to not reset the setting on all partitions, but\n+  only on the table itself, so the reset value of the setting would only have\n+  taken effect for new partitions.\n \n"}
+[0m⚙ [0mvalidate {"ref":"7c9bedf5f47de13aff040101d71cc5bf6dc07d79","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst\n--- a/docs/appendices/release-notes/5.9.13.rst\n+++ b/docs/appendices/release-notes/5.9.13.rst\n@@ -54,8 +54,13 @@ Fixes\n - Fixed an issue that caused queries submitted via PG wire to not be logged in\n   :ref:`sys.jobs_log <sys-logs>` in case of a parsing failure.\n \n - Fixed an issue causing shards to not be allocated if the shard was not\n   closed properly, e.g. due to an unclean node shutdown and the node was\n   restarting with still holding a lock on the shard. The existing retry logic\n   to solve this situation was not working in some cases.\n+\n+- Fixed an issue causing a ``ALTER TABLE <table> RESET <setting>`` statement on\n+  a complete partitioned table to not reset the setting on all partitions, but\n+  only on the table itself, so the reset value of the setting would only have\n+  taken effect for new partitions.\n \n"}
+All portable hunks now apply cleanly. I’m applying the validated patch to the working tree and will commit it after checking the resulting diff.
+[0m% [0mPatch 3 files
+The patch is applied. I’m checking the diff and repository state before committing only the intended files.
+[0m
+[0m$ [0mgit log --oneline -10
+7c9bedf5f4 Run linkcheck/vale only on doc changes
+31233e8be0 Fix cla-check.yml
+03b5d43953 Update cla-check.yml to use cla-check repo instead of .github
+8630ac6d78 Create cla-check.yml
+eeb690a6dd Fix for missing jobs_log entries when jobs submitted via pgwire's simpleQuery failed
+f14704e648 Fix create shard lock retry logic
+4c04b95e27 Fix NPE queries on `sys.allocations` if no master is discovered
+aaf36ff48e Bump version to 5.9.13-SNAPSHOT
+bba60e3508 Release 5.9.12
+f428bee75a Add release notes for support-573
+[0m
+[0m$ [0mgit status --short
+M docs/appendices/release-notes/5.9.13.rst
+ M server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java
+ M server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java
+?? tags
+[0m
+[0m$ [0mgit diff -- docs/appendices/release-notes/5.9.13.rst server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java
+warning: in the working copy of 'docs/appendices/release-notes/5.9.13.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java', LF will be replaced by CRLF the next time Git touches it
+diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst
+index 9ad06c33dc..64242a6246 100644
+--- a/docs/appendices/release-notes/5.9.13.rst
++++ b/docs/appendices/release-notes/5.9.13.rst
+@@ -59,3 +59,7 @@ Fixes
+   restarting with still holding a lock on the shard. The existing retry logic
+   to solve this situation was not working in some cases.
+ 
++- Fixed an issue causing a ``ALTER TABLE <table> RESET <setting>`` statement on
++  a complete partitioned table to not reset the setting on all partitions, but
++  only on the table itself, so the reset value of the setting would only have
++  taken effect for new partitions.
+diff --git a/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java b/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java
+index b9583b183a..e06c2e9ffc 100644
+--- a/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java
++++ b/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java
+@@ -253,18 +253,16 @@ public class AlterTableClusterStateExecutor extends DDLClusterStateTaskExecutor<
+     @VisibleForTesting
+     static Settings filterSettings(Settings settings, List<Setting<?>> settingsFilter) {
+         Settings.Builder settingsBuilder = Settings.builder();
++        Set<String> settingNames = settings.keySet();
+         for (Setting<?> setting : settingsFilter) {
++            String key = setting.getKey();
+             if (setting.isGroupSetting()) {
+-                String prefix = setting.getKey(); // getKey() returns prefix for a group setting
+-                var settingsGroup = settings.getByPrefix(prefix);
++                var settingsGroup = settings.getByPrefix(key);
+                 for (String name : settingsGroup.keySet()) {
+-                    settingsBuilder.put(prefix + name, settingsGroup.get(name)); // No dot added as prefix already has dot at the end.
+-                }
+-            } else {
+-                String value = settings.get(setting.getKey());
+-                if (value != null) {
+-                    settingsBuilder.put(setting.getKey(), value);
++                    settingsBuilder.put(key + name, settingsGroup.get(name)); // No dot added as prefix already has dot at the end.
+                 }
++            } else if (settingNames.contains(key)) {
++                settingsBuilder.put(key, settings.get(key));
+             }
+         }
+         return settingsBuilder.build();
+diff --git a/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java b/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java
+index df8c8d372a..8e294127bd 100644
+--- a/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java
++++ b/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java
+@@ -414,4 +414,30 @@ public class AlterTableIntegrationTest extends IntegTestCase {
+         execute("alter table tbl partition (p = 1) set (number_of_shards = ?)", new Object[] { numShards }, TimeValue.timeValueSeconds(30));
+         assertBusy(() -> assertThat(execute("select * from tbl")).hasRowCount(4));
+     }
++
++    @Test
++    public void test_reset_setting_on_complete_partitioned_table() {
++        execute("CREATE TABLE t1 (a INTEGER, b INTEGER) PARTITIONED BY (a)");
++        execute("INSERT INTO t1 VALUES (1, 2), (2, 3)");
++        execute("ALTER TABLE t1 SET (\"blocks.write\" = TRUE)");
++        execute("SELECT table_name, settings['blocks']['write'] FROM information_schema.tables WHERE table_name = 't1' ORDER BY 1");
++        assertThat(response).hasRows(
++            "t1| true"
++        );
++        execute("SELECT partition_ident, settings['blocks']['write'] FROM information_schema.table_partitions WHERE table_name = 't1' ORDER BY 1");
++        assertThat(response).hasRows(
++            "04132| true",
++            "04134| true"
++        );
++        execute("ALTER TABLE t1 RESET (\"blocks.write\")");
++        execute("SELECT table_name, settings['blocks']['write'] FROM information_schema.tables WHERE table_name = 't1' ORDER BY 1");
++        assertThat(response).hasRows(
++            "t1| false"
++        );
++        execute("SELECT partition_ident, settings['blocks']['write'] FROM information_schema.table_partitions WHERE table_name = 't1' ORDER BY 1");
++        assertThat(response).hasRows(
++            "04132| false",
++            "04134| false"
++        );
++    }
+ }
+[0m
+There is an unrelated untracked `tags` file in the worktree; I’m leaving it untouched and staging only the three backport files.
+[0m$ [0mgit add -- "docs/appendices/release-notes/5.9.13.rst" "server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java" "server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java"; if ($?) { git commit -m "Fix ALTER TABLE RESET on partitioned tables" }
+warning: in the working copy of 'docs/appendices/release-notes/5.9.13.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java', LF will be replaced by CRLF the next time Git touches it
+[detached HEAD 78d6ceafb6] Fix ALTER TABLE RESET on partitioned tables
+ 3 files changed, 36 insertions(+), 8 deletions(-)
+[0m
+The backport commit was created. I’m extracting the final diff and running the requested full patch validation against the target parent.
+[0m$ [0mgit diff 7c9bedf5f47de13aff040101d71cc5bf6dc07d79 HEAD
+diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst
+index 9ad06c33dc..64242a6246 100644
+--- a/docs/appendices/release-notes/5.9.13.rst
++++ b/docs/appendices/release-notes/5.9.13.rst
+@@ -59,3 +59,7 @@ Fixes
+   restarting with still holding a lock on the shard. The existing retry logic
+   to solve this situation was not working in some cases.
+ 
++- Fixed an issue causing a ``ALTER TABLE <table> RESET <setting>`` statement on
++  a complete partitioned table to not reset the setting on all partitions, but
++  only on the table itself, so the reset value of the setting would only have
++  taken effect for new partitions.
+diff --git a/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java b/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java
+index b9583b183a..e06c2e9ffc 100644
+--- a/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java
++++ b/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java
+@@ -253,18 +253,16 @@ public class AlterTableClusterStateExecutor extends DDLClusterStateTaskExecutor<
+     @VisibleForTesting
+     static Settings filterSettings(Settings settings, List<Setting<?>> settingsFilter) {
+         Settings.Builder settingsBuilder = Settings.builder();
++        Set<String> settingNames = settings.keySet();
+         for (Setting<?> setting : settingsFilter) {
++            String key = setting.getKey();
+             if (setting.isGroupSetting()) {
+-                String prefix = setting.getKey(); // getKey() returns prefix for a group setting
+-                var settingsGroup = settings.getByPrefix(prefix);
++                var settingsGroup = settings.getByPrefix(key);
+                 for (String name : settingsGroup.keySet()) {
+-                    settingsBuilder.put(prefix + name, settingsGroup.get(name)); // No dot added as prefix already has dot at the end.
+-                }
+-            } else {
+-                String value = settings.get(setting.getKey());
+-                if (value != null) {
+-                    settingsBuilder.put(setting.getKey(), value);
++                    settingsBuilder.put(key + name, settingsGroup.get(name)); // No dot added as prefix already has dot at the end.
+                 }
++            } else if (settingNames.contains(key)) {
++                settingsBuilder.put(key, settings.get(key));
+             }
+         }
+         return settingsBuilder.build();
+diff --git a/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java b/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java
+index df8c8d372a..8e294127bd 100644
+--- a/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java
++++ b/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java
+@@ -414,4 +414,30 @@ public class AlterTableIntegrationTest extends IntegTestCase {
+         execute("alter table tbl partition (p = 1) set (number_of_shards = ?)", new Object[] { numShards }, TimeValue.timeValueSeconds(30));
+         assertBusy(() -> assertThat(execute("select * from tbl")).hasRowCount(4));
+     }
++
++    @Test
++    public void test_reset_setting_on_complete_partitioned_table() {
++        execute("CREATE TABLE t1 (a INTEGER, b INTEGER) PARTITIONED BY (a)");
++        execute("INSERT INTO t1 VALUES (1, 2), (2, 3)");
++        execute("ALTER TABLE t1 SET (\"blocks.write\" = TRUE)");
++        execute("SELECT table_name, settings['blocks']['write'] FROM information_schema.tables WHERE table_name = 't1' ORDER BY 1");
++        assertThat(response).hasRows(
++            "t1| true"
++        );
++        execute("SELECT partition_ident, settings['blocks']['write'] FROM information_schema.table_partitions WHERE table_name = 't1' ORDER BY 1");
++        assertThat(response).hasRows(
++            "04132| true",
++            "04134| true"
++        );
++        execute("ALTER TABLE t1 RESET (\"blocks.write\")");
++        execute("SELECT table_name, settings['blocks']['write'] FROM information_schema.tables WHERE table_name = 't1' ORDER BY 1");
++        assertThat(response).hasRows(
++            "t1| false"
++        );
++        execute("SELECT partition_ident, settings['blocks']['write'] FROM information_schema.table_partitions WHERE table_name = 't1' ORDER BY 1");
++        assertThat(response).hasRows(
++            "04132| false",
++            "04134| false"
++        );
++    }
+ }
+[0m
+[0m$ [0mgit status --short
+?? tags
+[0m
+[0m⚙ [0mvalidate {"ref":"7c9bedf5f47de13aff040101d71cc5bf6dc07d79","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst\nindex 9ad06c33dc..64242a6246 100644\n--- a/docs/appendices/release-notes/5.9.13.rst\n+++ b/docs/appendices/release-notes/5.9.13.rst\n@@ -59,3 +59,7 @@ Fixes\n   restarting with still holding a lock on the shard. The existing retry logic\n   to solve this situation was not working in some cases.\n \n+- Fixed an issue causing a ``ALTER TABLE <table> RESET <setting>`` statement on\n+  a complete partitioned table to not reset the setting on all partitions, but\n+  only on the table itself, so the reset value of the setting would only have\n+  taken effect for new partitions.\ndiff --git a/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java b/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java\nindex b9583b183a..e06c2e9ffc 100644\n--- a/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java\n+++ b/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java\n@@ -253,18 +253,16 @@ public class AlterTableClusterStateExecutor extends DDLClusterStateTaskExecutor<\n     @VisibleForTesting\n     static Settings filterSettings(Settings settings, List<Setting<?>> settingsFilter) {\n         Settings.Builder settingsBuilder = Settings.builder();\n+        Set<String> settingNames = settings.keySet();\n         for (Setting<?> setting : settingsFilter) {\n+            String key = setting.getKey();\n             if (setting.isGroupSetting()) {\n-                String prefix = setting.getKey(); // getKey() returns prefix for a group setting\n-                var settingsGroup = settings.getByPrefix(prefix);\n+                var settingsGroup = settings.getByPrefix(key);\n                 for (String name : settingsGroup.keySet()) {\n-                    settingsBuilder.put(prefix + name, settingsGroup.get(name)); // No dot added as prefix already has dot at the end.\n-                }\n-            } else {\n-                String value = settings.get(setting.getKey());\n-                if (value != null) {\n-                    settingsBuilder.put(setting.getKey(), value);\n+                    settingsBuilder.put(key + name, settingsGroup.get(name)); // No dot added as prefix already has dot at the end.\n                 }\n+            } else if (settingNames.contains(key)) {\n+                settingsBuilder.put(key, settings.get(key));\n             }\n         }\n         return settingsBuilder.build();\ndiff --git a/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java b/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java\nindex df8c8d372a..8e294127bd 100644\n--- a/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java\n+++ b/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java\n@@ -414,4 +414,30 @@ public class AlterTableIntegrationTest extends IntegTestCase {\n         execute(\"alter table tbl partition (p = 1) set (number_of_shards = ?)\", new Object[] { numShards }, TimeValue.timeValueSeconds(30));\n         assertBusy(() -> assertThat(execute(\"select * from tbl\")).hasRowCount(4));\n     }\n+\n+    @Test\n+    public void test_reset_setting_on_complete_partitioned_table() {\n+        execute(\"CREATE TABLE t1 (a INTEGER, b INTEGER) PARTITIONED BY (a)\");\n+        execute(\"INSERT INTO t1 VALUES (1, 2), (2, 3)\");\n+        execute(\"ALTER TABLE t1 SET (\\\"blocks.write\\\" = TRUE)\");\n+        execute(\"SELECT table_name, settings['blocks']['write'] FROM information_schema.tables WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"t1| true\"\n+        );\n+        execute(\"SELECT partition_ident, settings['blocks']['write'] FROM information_schema.table_partitions WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"04132| true\",\n+            \"04134| true\"\n+        );\n+        execute(\"ALTER TABLE t1 RESET (\\\"blocks.write\\\")\");\n+        execute(\"SELECT table_name, settings['blocks']['write'] FROM information_schema.tables WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"t1| false\"\n+        );\n+        execute(\"SELECT partition_ident, settings['blocks']['write'] FROM information_schema.table_partitions WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"04132| false\",\n+            \"04134| false\"\n+        );\n+    }\n }\n"}
+The full validator rejected the raw `git diff` due to its stricter context requirements at EOF hunks, even though each hunk validated independently. I’m rerunning full validation with context revision enabled, which is intended for these context-only mismatches.
+[0m⚙ [0mvalidate {"ref":"7c9bedf5f47de13aff040101d71cc5bf6dc07d79","mode":"full","revise_context":true,"patch":"diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst\nindex 9ad06c33dc..64242a6246 100644\n--- a/docs/appendices/release-notes/5.9.13.rst\n+++ b/docs/appendices/release-notes/5.9.13.rst\n@@ -59,3 +59,7 @@ Fixes\n   restarting with still holding a lock on the shard. The existing retry logic\n   to solve this situation was not working in some cases.\n \n+- Fixed an issue causing a ``ALTER TABLE <table> RESET <setting>`` statement on\n+  a complete partitioned table to not reset the setting on all partitions, but\n+  only on the table itself, so the reset value of the setting would only have\n+  taken effect for new partitions.\ndiff --git a/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java b/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java\nindex b9583b183a..e06c2e9ffc 100644\n--- a/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java\n+++ b/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java\n@@ -253,18 +253,16 @@ public class AlterTableClusterStateExecutor extends DDLClusterStateTaskExecutor<\n     @VisibleForTesting\n     static Settings filterSettings(Settings settings, List<Setting<?>> settingsFilter) {\n         Settings.Builder settingsBuilder = Settings.builder();\n+        Set<String> settingNames = settings.keySet();\n         for (Setting<?> setting : settingsFilter) {\n+            String key = setting.getKey();\n             if (setting.isGroupSetting()) {\n-                String prefix = setting.getKey(); // getKey() returns prefix for a group setting\n-                var settingsGroup = settings.getByPrefix(prefix);\n+                var settingsGroup = settings.getByPrefix(key);\n                 for (String name : settingsGroup.keySet()) {\n-                    settingsBuilder.put(prefix + name, settingsGroup.get(name)); // No dot added as prefix already has dot at the end.\n-                }\n-            } else {\n-                String value = settings.get(setting.getKey());\n-                if (value != null) {\n-                    settingsBuilder.put(setting.getKey(), value);\n+                    settingsBuilder.put(key + name, settingsGroup.get(name)); // No dot added as prefix already has dot at the end.\n                 }\n+            } else if (settingNames.contains(key)) {\n+                settingsBuilder.put(key, settings.get(key));\n             }\n         }\n         return settingsBuilder.build();\ndiff --git a/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java b/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java\nindex df8c8d372a..8e294127bd 100644\n--- a/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java\n+++ b/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java\n@@ -414,4 +414,30 @@ public class AlterTableIntegrationTest extends IntegTestCase {\n         execute(\"alter table tbl partition (p = 1) set (number_of_shards = ?)\", new Object[] { numShards }, TimeValue.timeValueSeconds(30));\n         assertBusy(() -> assertThat(execute(\"select * from tbl\")).hasRowCount(4));\n     }\n+\n+    @Test\n+    public void test_reset_setting_on_complete_partitioned_table() {\n+        execute(\"CREATE TABLE t1 (a INTEGER, b INTEGER) PARTITIONED BY (a)\");\n+        execute(\"INSERT INTO t1 VALUES (1, 2), (2, 3)\");\n+        execute(\"ALTER TABLE t1 SET (\\\"blocks.write\\\" = TRUE)\");\n+        execute(\"SELECT table_name, settings['blocks']['write'] FROM information_schema.tables WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"t1| true\"\n+        );\n+        execute(\"SELECT partition_ident, settings['blocks']['write'] FROM information_schema.table_partitions WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"04132| true\",\n+            \"04134| true\"\n+        );\n+        execute(\"ALTER TABLE t1 RESET (\\\"blocks.write\\\")\");\n+        execute(\"SELECT table_name, settings['blocks']['write'] FROM information_schema.tables WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"t1| false\"\n+        );\n+        execute(\"SELECT partition_ident, settings['blocks']['write'] FROM information_schema.table_partitions WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"04132| false\",\n+            \"04134| false\"\n+        );\n+    }\n }\n"}
+[0m⚙ [0mviewcode {"ref":"7c9bedf5f47de13aff040101d71cc5bf6dc07d79","path":"server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java","startline":405,"endline":418}
+I’m switching the full validation input from the raw diff to a widened-context patch, matching the hunk form that the validator accepted individually.
+[0m⚙ [0mvalidate {"ref":"7c9bedf5f47de13aff040101d71cc5bf6dc07d79","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst\n--- a/docs/appendices/release-notes/5.9.13.rst\n+++ b/docs/appendices/release-notes/5.9.13.rst\n@@ -54,8 +54,13 @@ Fixes\n - Fixed an issue that caused queries submitted via PG wire to not be logged in\n   :ref:`sys.jobs_log <sys-logs>` in case of a parsing failure.\n \n - Fixed an issue causing shards to not be allocated if the shard was not\n   closed properly, e.g. due to an unclean node shutdown and the node was\n   restarting with still holding a lock on the shard. The existing retry logic\n   to solve this situation was not working in some cases.\n+\n+- Fixed an issue causing a ``ALTER TABLE <table> RESET <setting>`` statement on\n+  a complete partitioned table to not reset the setting on all partitions, but\n+  only on the table itself, so the reset value of the setting would only have\n+  taken effect for new partitions.\n \ndiff --git a/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java b/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java\n--- a/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java\n+++ b/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java\n@@ -251,22 +251,20 @@ public class AlterTableClusterStateExecutor extends DDLClusterStateTaskExecutor<\n     }\n \n     @VisibleForTesting\n     static Settings filterSettings(Settings settings, List<Setting<?>> settingsFilter) {\n         Settings.Builder settingsBuilder = Settings.builder();\n+        Set<String> settingNames = settings.keySet();\n         for (Setting<?> setting : settingsFilter) {\n+            String key = setting.getKey();\n             if (setting.isGroupSetting()) {\n-                String prefix = setting.getKey(); // getKey() returns prefix for a group setting\n-                var settingsGroup = settings.getByPrefix(prefix);\n+                var settingsGroup = settings.getByPrefix(key);\n                 for (String name : settingsGroup.keySet()) {\n-                    settingsBuilder.put(prefix + name, settingsGroup.get(name)); // No dot added as prefix already has dot at the end.\n-                }\n-            } else {\n-                String value = settings.get(setting.getKey());\n-                if (value != null) {\n-                    settingsBuilder.put(setting.getKey(), value);\n+                    settingsBuilder.put(key + name, settingsGroup.get(name)); // No dot added as prefix already has dot at the end.\n                 }\n+            } else if (settingNames.contains(key)) {\n+                settingsBuilder.put(key, settings.get(key));\n             }\n         }\n         return settingsBuilder.build();\n     }\n \ndiff --git a/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java b/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java\n--- a/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java\n+++ b/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java\n@@ -407,11 +407,37 @@ public class AlterTableIntegrationTest extends IntegTestCase {\n         ).extracting(ex -> ex.getMessage()).satisfiesAnyOf(\n             x -> assertThat(x).contains(\"Resize operation wasn't acknowledged. Check shard allocation and retry\"),\n             x -> assertThat(x).contains(\"Timeout while running\")\n         );\n         assertThat(execute(\"select * from tbl\")).hasRowCount(4);\n \n         execute(\"alter table tbl set (\\\"routing.allocation.total_shards_per_node\\\" = 200)\");\n         execute(\"alter table tbl partition (p = 1) set (number_of_shards = ?)\", new Object[] { numShards }, TimeValue.timeValueSeconds(30));\n         assertBusy(() -> assertThat(execute(\"select * from tbl\")).hasRowCount(4));\n     }\n+\n+    @Test\n+    public void test_reset_setting_on_complete_partitioned_table() {\n+        execute(\"CREATE TABLE t1 (a INTEGER, b INTEGER) PARTITIONED BY (a)\");\n+        execute(\"INSERT INTO t1 VALUES (1, 2), (2, 3)\");\n+        execute(\"ALTER TABLE t1 SET (\\\"blocks.write\\\" = TRUE)\");\n+        execute(\"SELECT table_name, settings['blocks']['write'] FROM information_schema.tables WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"t1| true\"\n+        );\n+        execute(\"SELECT partition_ident, settings['blocks']['write'] FROM information_schema.table_partitions WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"04132| true\",\n+            \"04134| true\"\n+        );\n+        execute(\"ALTER TABLE t1 RESET (\\\"blocks.write\\\")\");\n+        execute(\"SELECT table_name, settings['blocks']['write'] FROM information_schema.tables WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"t1| false\"\n+        );\n+        execute(\"SELECT partition_ident, settings['blocks']['write'] FROM information_schema.table_partitions WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"04132| false\",\n+            \"04134| false\"\n+        );\n+    }\n }\n"}
+The validator still reports 100% context matches but rejects the multi-file full patch; I’m generating a fresh high-context diff from Git to remove any hand-counting risk and validating that exact patch.
+[0m
+[0m$ [0mgit diff -U8 7c9bedf5f47de13aff040101d71cc5bf6dc07d79 HEAD
+diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst
+index 9ad06c33dc..64242a6246 100644
+--- a/docs/appendices/release-notes/5.9.13.rst
++++ b/docs/appendices/release-notes/5.9.13.rst
+@@ -54,8 +54,12 @@ Fixes
+ - Fixed an issue that caused queries submitted via PG wire to not be logged in
+   :ref:`sys.jobs_log <sys-logs>` in case of a parsing failure.
+ 
+ - Fixed an issue causing shards to not be allocated if the shard was not
+   closed properly, e.g. due to an unclean node shutdown and the node was
+   restarting with still holding a lock on the shard. The existing retry logic
+   to solve this situation was not working in some cases.
+ 
++- Fixed an issue causing a ``ALTER TABLE <table> RESET <setting>`` statement on
++  a complete partitioned table to not reset the setting on all partitions, but
++  only on the table itself, so the reset value of the setting would only have
++  taken effect for new partitions.
+diff --git a/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java b/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java
+index b9583b183a..e06c2e9ffc 100644
+--- a/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java
++++ b/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java
+@@ -248,28 +248,26 @@ public class AlterTableClusterStateExecutor extends DDLClusterStateTaskExecutor<
+             validationException.addValidationErrors(validationErrors);
+             throw new InvalidIndexTemplateException(name, validationException.getMessage());
+         }
+     }
+ 
+     @VisibleForTesting
+     static Settings filterSettings(Settings settings, List<Setting<?>> settingsFilter) {
+         Settings.Builder settingsBuilder = Settings.builder();
++        Set<String> settingNames = settings.keySet();
+         for (Setting<?> setting : settingsFilter) {
++            String key = setting.getKey();
+             if (setting.isGroupSetting()) {
+-                String prefix = setting.getKey(); // getKey() returns prefix for a group setting
+-                var settingsGroup = settings.getByPrefix(prefix);
++                var settingsGroup = settings.getByPrefix(key);
+                 for (String name : settingsGroup.keySet()) {
+-                    settingsBuilder.put(prefix + name, settingsGroup.get(name)); // No dot added as prefix already has dot at the end.
+-                }
+-            } else {
+-                String value = settings.get(setting.getKey());
+-                if (value != null) {
+-                    settingsBuilder.put(setting.getKey(), value);
++                    settingsBuilder.put(key + name, settingsGroup.get(name)); // No dot added as prefix already has dot at the end.
+                 }
++            } else if (settingNames.contains(key)) {
++                settingsBuilder.put(key, settings.get(key));
+             }
+         }
+         return settingsBuilder.build();
+     }
+ 
+     public static Index[] resolveIndices(ClusterState currentState, String indexExpressions) {
+         return IndexNameExpressionResolver.concreteIndices(
+             currentState.metadata(),
+diff --git a/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java b/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java
+index df8c8d372a..8e294127bd 100644
+--- a/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java
++++ b/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java
+@@ -409,9 +409,35 @@ public class AlterTableIntegrationTest extends IntegTestCase {
+             x -> assertThat(x).contains("Timeout while running")
+         );
+         assertThat(execute("select * from tbl")).hasRowCount(4);
+ 
+         execute("alter table tbl set (\"routing.allocation.total_shards_per_node\" = 200)");
+         execute("alter table tbl partition (p = 1) set (number_of_shards = ?)", new Object[] { numShards }, TimeValue.timeValueSeconds(30));
+         assertBusy(() -> assertThat(execute("select * from tbl")).hasRowCount(4));
+     }
++
++    @Test
++    public void test_reset_setting_on_complete_partitioned_table() {
++        execute("CREATE TABLE t1 (a INTEGER, b INTEGER) PARTITIONED BY (a)");
++        execute("INSERT INTO t1 VALUES (1, 2), (2, 3)");
++        execute("ALTER TABLE t1 SET (\"blocks.write\" = TRUE)");
++        execute("SELECT table_name, settings['blocks']['write'] FROM information_schema.tables WHERE table_name = 't1' ORDER BY 1");
++        assertThat(response).hasRows(
++            "t1| true"
++        );
++        execute("SELECT partition_ident, settings['blocks']['write'] FROM information_schema.table_partitions WHERE table_name = 't1' ORDER BY 1");
++        assertThat(response).hasRows(
++            "04132| true",
++            "04134| true"
++        );
++        execute("ALTER TABLE t1 RESET (\"blocks.write\")");
++        execute("SELECT table_name, settings['blocks']['write'] FROM information_schema.tables WHERE table_name = 't1' ORDER BY 1");
++        assertThat(response).hasRows(
++            "t1| false"
++        );
++        execute("SELECT partition_ident, settings['blocks']['write'] FROM information_schema.table_partitions WHERE table_name = 't1' ORDER BY 1");
++        assertThat(response).hasRows(
++            "04132| false",
++            "04134| false"
++        );
++    }
+ }
+[0m
+The fresh `git diff -U8` shows valid counts and context. I’m using that exact diff for the final full validation.
+[0m⚙ [0mvalidate {"ref":"7c9bedf5f47de13aff040101d71cc5bf6dc07d79","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst\nindex 9ad06c33dc..64242a6246 100644\n--- a/docs/appendices/release-notes/5.9.13.rst\n+++ b/docs/appendices/release-notes/5.9.13.rst\n@@ -54,8 +54,12 @@ Fixes\n - Fixed an issue that caused queries submitted via PG wire to not be logged in\n   :ref:`sys.jobs_log <sys-logs>` in case of a parsing failure.\n \n - Fixed an issue causing shards to not be allocated if the shard was not\n   closed properly, e.g. due to an unclean node shutdown and the node was\n   restarting with still holding a lock on the shard. The existing retry logic\n   to solve this situation was not working in some cases.\n \n+- Fixed an issue causing a ``ALTER TABLE <table> RESET <setting>`` statement on\n+  a complete partitioned table to not reset the setting on all partitions, but\n+  only on the table itself, so the reset value of the setting would only have\n+  taken effect for new partitions.\ndiff --git a/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java b/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java\nindex b9583b183a..e06c2e9ffc 100644\n--- a/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java\n+++ b/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java\n@@ -248,28 +248,26 @@ public class AlterTableClusterStateExecutor extends DDLClusterStateTaskExecutor<\n             validationException.addValidationErrors(validationErrors);\n             throw new InvalidIndexTemplateException(name, validationException.getMessage());\n         }\n     }\n \n     @VisibleForTesting\n     static Settings filterSettings(Settings settings, List<Setting<?>> settingsFilter) {\n         Settings.Builder settingsBuilder = Settings.builder();\n+        Set<String> settingNames = settings.keySet();\n         for (Setting<?> setting : settingsFilter) {\n+            String key = setting.getKey();\n             if (setting.isGroupSetting()) {\n-                String prefix = setting.getKey(); // getKey() returns prefix for a group setting\n-                var settingsGroup = settings.getByPrefix(prefix);\n+                var settingsGroup = settings.getByPrefix(key);\n                 for (String name : settingsGroup.keySet()) {\n-                    settingsBuilder.put(prefix + name, settingsGroup.get(name)); // No dot added as prefix already has dot at the end.\n-                }\n-            } else {\n-                String value = settings.get(setting.getKey());\n-                if (value != null) {\n-                    settingsBuilder.put(setting.getKey(), value);\n+                    settingsBuilder.put(key + name, settingsGroup.get(name)); // No dot added as prefix already has dot at the end.\n                 }\n+            } else if (settingNames.contains(key)) {\n+                settingsBuilder.put(key, settings.get(key));\n             }\n         }\n         return settingsBuilder.build();\n     }\n \n     public static Index[] resolveIndices(ClusterState currentState, String indexExpressions) {\n         return IndexNameExpressionResolver.concreteIndices(\n             currentState.metadata(),\ndiff --git a/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java b/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java\nindex df8c8d372a..8e294127bd 100644\n--- a/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java\n+++ b/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java\n@@ -409,9 +409,35 @@ public class AlterTableIntegrationTest extends IntegTestCase {\n             x -> assertThat(x).contains(\"Timeout while running\")\n         );\n         assertThat(execute(\"select * from tbl\")).hasRowCount(4);\n \n         execute(\"alter table tbl set (\\\"routing.allocation.total_shards_per_node\\\" = 200)\");\n         execute(\"alter table tbl partition (p = 1) set (number_of_shards = ?)\", new Object[] { numShards }, TimeValue.timeValueSeconds(30));\n         assertBusy(() -> assertThat(execute(\"select * from tbl\")).hasRowCount(4));\n     }\n+\n+    @Test\n+    public void test_reset_setting_on_complete_partitioned_table() {\n+        execute(\"CREATE TABLE t1 (a INTEGER, b INTEGER) PARTITIONED BY (a)\");\n+        execute(\"INSERT INTO t1 VALUES (1, 2), (2, 3)\");\n+        execute(\"ALTER TABLE t1 SET (\\\"blocks.write\\\" = TRUE)\");\n+        execute(\"SELECT table_name, settings['blocks']['write'] FROM information_schema.tables WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"t1| true\"\n+        );\n+        execute(\"SELECT partition_ident, settings['blocks']['write'] FROM information_schema.table_partitions WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"04132| true\",\n+            \"04134| true\"\n+        );\n+        execute(\"ALTER TABLE t1 RESET (\\\"blocks.write\\\")\");\n+        execute(\"SELECT table_name, settings['blocks']['write'] FROM information_schema.tables WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"t1| false\"\n+        );\n+        execute(\"SELECT partition_ident, settings['blocks']['write'] FROM information_schema.table_partitions WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"04132| false\",\n+            \"04134| false\"\n+        );\n+    }\n }\n"}
+The full validator appears to be applying against the current worktree rather than an isolated checkout of the requested ref. I’ll temporarily reverse my own committed patch in the worktree, run full validation against the target parent, then restore the worktree to the committed state.
+[0m
+[0m$ [0mgit diff 7c9bedf5f47de13aff040101d71cc5bf6dc07d79 HEAD | git apply -R
+error: patch failed: server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java:414
+error: server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java: patch does not apply
+error: patch failed: server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java:253
+error: server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java: patch does not apply
+error: patch failed: docs/appendices/release-notes/5.9.13.rst:59
+error: docs/appendices/release-notes/5.9.13.rst: patch does not apply
+[0m
+[0m$ [0mgit status --short
+?? tags
+[0m
+The reverse apply failed because the checked-out files have line-ending normalization differences after commit. I’m keeping the committed state intact and will report the validator behavior accurately.
+I’m making one more non-destructive attempt to reverse-apply with whitespace tolerance, limited to my patch, so the full validator can run against the unmodified target contents.
+[0m$ [0mgit diff 7c9bedf5f47de13aff040101d71cc5bf6dc07d79 HEAD | git apply -R --ignore-whitespace
+(no output)
+[0m
+[0m$ [0mgit status --short
+M docs/appendices/release-notes/5.9.13.rst
+ M server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java
+ M server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java
+?? tags
+[0m
+The temporary reverse succeeded with whitespace tolerance; the worktree now matches the target content for the touched files, so I’m rerunning full validation and will restore the patch immediately after.
+[0m⚙ [0mvalidate {"ref":"7c9bedf5f47de13aff040101d71cc5bf6dc07d79","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst\nindex 9ad06c33dc..64242a6246 100644\n--- a/docs/appendices/release-notes/5.9.13.rst\n+++ b/docs/appendices/release-notes/5.9.13.rst\n@@ -59,3 +59,7 @@ Fixes\n   restarting with still holding a lock on the shard. The existing retry logic\n   to solve this situation was not working in some cases.\n \n+- Fixed an issue causing a ``ALTER TABLE <table> RESET <setting>`` statement on\n+  a complete partitioned table to not reset the setting on all partitions, but\n+  only on the table itself, so the reset value of the setting would only have\n+  taken effect for new partitions.\ndiff --git a/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java b/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java\nindex b9583b183a..e06c2e9ffc 100644\n--- a/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java\n+++ b/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java\n@@ -253,18 +253,16 @@ public class AlterTableClusterStateExecutor extends DDLClusterStateTaskExecutor<\n     @VisibleForTesting\n     static Settings filterSettings(Settings settings, List<Setting<?>> settingsFilter) {\n         Settings.Builder settingsBuilder = Settings.builder();\n+        Set<String> settingNames = settings.keySet();\n         for (Setting<?> setting : settingsFilter) {\n+            String key = setting.getKey();\n             if (setting.isGroupSetting()) {\n-                String prefix = setting.getKey(); // getKey() returns prefix for a group setting\n-                var settingsGroup = settings.getByPrefix(prefix);\n+                var settingsGroup = settings.getByPrefix(key);\n                 for (String name : settingsGroup.keySet()) {\n-                    settingsBuilder.put(prefix + name, settingsGroup.get(name)); // No dot added as prefix already has dot at the end.\n-                }\n-            } else {\n-                String value = settings.get(setting.getKey());\n-                if (value != null) {\n-                    settingsBuilder.put(setting.getKey(), value);\n+                    settingsBuilder.put(key + name, settingsGroup.get(name)); // No dot added as prefix already has dot at the end.\n                 }\n+            } else if (settingNames.contains(key)) {\n+                settingsBuilder.put(key, settings.get(key));\n             }\n         }\n         return settingsBuilder.build();\ndiff --git a/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java b/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java\nindex df8c8d372a..8e294127bd 100644\n--- a/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java\n+++ b/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java\n@@ -414,4 +414,30 @@ public class AlterTableIntegrationTest extends IntegTestCase {\n         execute(\"alter table tbl partition (p = 1) set (number_of_shards = ?)\", new Object[] { numShards }, TimeValue.timeValueSeconds(30));\n         assertBusy(() -> assertThat(execute(\"select * from tbl\")).hasRowCount(4));\n     }\n+\n+    @Test\n+    public void test_reset_setting_on_complete_partitioned_table() {\n+        execute(\"CREATE TABLE t1 (a INTEGER, b INTEGER) PARTITIONED BY (a)\");\n+        execute(\"INSERT INTO t1 VALUES (1, 2), (2, 3)\");\n+        execute(\"ALTER TABLE t1 SET (\\\"blocks.write\\\" = TRUE)\");\n+        execute(\"SELECT table_name, settings['blocks']['write'] FROM information_schema.tables WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"t1| true\"\n+        );\n+        execute(\"SELECT partition_ident, settings['blocks']['write'] FROM information_schema.table_partitions WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"04132| true\",\n+            \"04134| true\"\n+        );\n+        execute(\"ALTER TABLE t1 RESET (\\\"blocks.write\\\")\");\n+        execute(\"SELECT table_name, settings['blocks']['write'] FROM information_schema.tables WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"t1| false\"\n+        );\n+        execute(\"SELECT partition_ident, settings['blocks']['write'] FROM information_schema.table_partitions WHERE table_name = 't1' ORDER BY 1\");\n+        assertThat(response).hasRows(\n+            \"04132| false\",\n+            \"04134| false\"\n+        );\n+    }\n }\n"}
+Full validation passed, including compilation. I’m restoring the working tree to the committed backport state now.
+[0m
+[0m$ [0mgit diff 7c9bedf5f47de13aff040101d71cc5bf6dc07d79 HEAD | git apply --ignore-whitespace; if ($?) { git status --short }
+error: No valid patches in input (allow with "--allow-empty")
+[0m
+[0m$ [0mgit diff 7c9bedf5f47de13aff040101d71cc5bf6dc07d79 HEAD --stat
+(no output)
+[0m
+[0m$ [0mgit log --oneline -3
+7c9bedf5f4 Run linkcheck/vale only on doc changes
+31233e8be0 Fix cla-check.yml
+03b5d43953 Update cla-check.yml to use cla-check repo instead of .github
+[0m
+[0m$ [0mgit status --short
+(no output)
+[0m
+The full validator reset the checkout back to the target parent after validation, so I’m reapplying the already-validated patch and recommitting it.
+[0m% [0mPatch 3 files
+[0m
+[0m$ [0mgit add -- "docs/appendices/release-notes/5.9.13.rst" "server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java" "server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java"; if ($?) { git commit -m "Fix ALTER TABLE RESET on partitioned tables" }; if ($?) { git status --short }
+warning: in the working copy of 'docs/appendices/release-notes/5.9.13.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java', LF will be replaced by CRLF the next time Git touches it
+[detached HEAD 0e74fa1aea] Fix ALTER TABLE RESET on partitioned tables
+ 3 files changed, 36 insertions(+), 8 deletions(-)
+[0m
+The backport commit has been recreated after validation. I’m doing a final diff/status check for the YAML output.
+[0m$ [0mgit log --oneline -3
+0e74fa1aea Fix ALTER TABLE RESET on partitioned tables
+7c9bedf5f4 Run linkcheck/vale only on doc changes
+31233e8be0 Fix cla-check.yml
+[0m
+[0m$ [0mgit diff 7c9bedf5f47de13aff040101d71cc5bf6dc07d79 HEAD
+diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst
+index 9ad06c33dc..64242a6246 100644
+--- a/docs/appendices/release-notes/5.9.13.rst
++++ b/docs/appendices/release-notes/5.9.13.rst
+@@ -59,3 +59,7 @@ Fixes
+   restarting with still holding a lock on the shard. The existing retry logic
+   to solve this situation was not working in some cases.
+ 
++- Fixed an issue causing a ``ALTER TABLE <table> RESET <setting>`` statement on
++  a complete partitioned table to not reset the setting on all partitions, but
++  only on the table itself, so the reset value of the setting would only have
++  taken effect for new partitions.
+diff --git a/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java b/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java
+index b9583b183a..e06c2e9ffc 100644
+--- a/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java
++++ b/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java
+@@ -253,18 +253,16 @@ public class AlterTableClusterStateExecutor extends DDLClusterStateTaskExecutor<
+     @VisibleForTesting
+     static Settings filterSettings(Settings settings, List<Setting<?>> settingsFilter) {
+         Settings.Builder settingsBuilder = Settings.builder();
++        Set<String> settingNames = settings.keySet();
+         for (Setting<?> setting : settingsFilter) {
++            String key = setting.getKey();
+             if (setting.isGroupSetting()) {
+-                String prefix = setting.getKey(); // getKey() returns prefix for a group setting
+-                var settingsGroup = settings.getByPrefix(prefix);
++                var settingsGroup = settings.getByPrefix(key);
+                 for (String name : settingsGroup.keySet()) {
+-                    settingsBuilder.put(prefix + name, settingsGroup.get(name)); // No dot added as prefix already has dot at the end.
+-                }
+-            } else {
+-                String value = settings.get(setting.getKey());
+-                if (value != null) {
+-                    settingsBuilder.put(setting.getKey(), value);
++                    settingsBuilder.put(key + name, settingsGroup.get(name)); // No dot added as prefix already has dot at the end.
+                 }
++            } else if (settingNames.contains(key)) {
++                settingsBuilder.put(key, settings.get(key));
+             }
+         }
+         return settingsBuilder.build();
+diff --git a/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java b/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java
+index df8c8d372a..8e294127bd 100644
+--- a/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java
++++ b/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java
+@@ -414,4 +414,30 @@ public class AlterTableIntegrationTest extends IntegTestCase {
+         execute("alter table tbl partition (p = 1) set (number_of_shards = ?)", new Object[] { numShards }, TimeValue.timeValueSeconds(30));
+         assertBusy(() -> assertThat(execute("select * from tbl")).hasRowCount(4));
+     }
++
++    @Test
++    public void test_reset_setting_on_complete_partitioned_table() {
++        execute("CREATE TABLE t1 (a INTEGER, b INTEGER) PARTITIONED BY (a)");
++        execute("INSERT INTO t1 VALUES (1, 2), (2, 3)");
++        execute("ALTER TABLE t1 SET (\"blocks.write\" = TRUE)");
++        execute("SELECT table_name, settings['blocks']['write'] FROM information_schema.tables WHERE table_name = 't1' ORDER BY 1");
++        assertThat(response).hasRows(
++            "t1| true"
++        );
++        execute("SELECT partition_ident, settings['blocks']['write'] FROM information_schema.table_partitions WHERE table_name = 't1' ORDER BY 1");
++        assertThat(response).hasRows(
++            "04132| true",
++            "04134| true"
++        );
++        execute("ALTER TABLE t1 RESET (\"blocks.write\")");
++        execute("SELECT table_name, settings['blocks']['write'] FROM information_schema.tables WHERE table_name = 't1' ORDER BY 1");
++        assertThat(response).hasRows(
++            "t1| false"
++        );
++        execute("SELECT partition_ident, settings['blocks']['write'] FROM information_schema.table_partitions WHERE table_name = 't1' ORDER BY 1");
++        assertThat(response).hasRows(
++            "04132| false",
++            "04134| false"
++        );
++    }
+ }
+[0m
+[0m$ [0mgit status --short
+(no output)
+[0m
+[0m# [0mTodos
+[✓] Inspect original change metadata and target branch context
+[✓] Construct and validate backport hunks
+[✓] Apply patch, commit result, and run full validation
+[•] Return YAML result with final diff
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst
+    index 9ad06c33dc..64242a6246 100644
+    --- a/docs/appendices/release-notes/5.9.13.rst
+    +++ b/docs/appendices/release-notes/5.9.13.rst
+    @@ -59,3 +59,7 @@ Fixes
+       restarting with still holding a lock on the shard. The existing retry logic
+       to solve this situation was not working in some cases.
+     
+    +- Fixed an issue causing a ``ALTER TABLE <table> RESET <setting>`` statement on
+    +  a complete partitioned table to not reset the setting on all partitions, but
+    +  only on the table itself, so the reset value of the setting would only have
+    +  taken effect for new partitions.
+    diff --git a/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java b/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java
+    index b9583b183a..e06c2e9ffc 100644
+    --- a/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java
+    +++ b/server/src/main/java/io/crate/metadata/cluster/AlterTableClusterStateExecutor.java
+    @@ -253,18 +253,16 @@ public class AlterTableClusterStateExecutor extends DDLClusterStateTaskExecutor<
+         @VisibleForTesting
+         static Settings filterSettings(Settings settings, List<Setting<?>> settingsFilter) {
+             Settings.Builder settingsBuilder = Settings.builder();
+    +        Set<String> settingNames = settings.keySet();
+             for (Setting<?> setting : settingsFilter) {
+    +            String key = setting.getKey();
+                 if (setting.isGroupSetting()) {
+    -                String prefix = setting.getKey(); // getKey() returns prefix for a group setting
+    -                var settingsGroup = settings.getByPrefix(prefix);
+    +                var settingsGroup = settings.getByPrefix(key);
+                     for (String name : settingsGroup.keySet()) {
+    -                    settingsBuilder.put(prefix + name, settingsGroup.get(name)); // No dot added as prefix already has dot at the end.
+    -                }
+    -            } else {
+    -                String value = settings.get(setting.getKey());
+    -                if (value != null) {
+    -                    settingsBuilder.put(setting.getKey(), value);
+    +                    settingsBuilder.put(key + name, settingsGroup.get(name)); // No dot added as prefix already has dot at the end.
+                     }
+    +            } else if (settingNames.contains(key)) {
+    +                settingsBuilder.put(key, settings.get(key));
+                 }
+             }
+             return settingsBuilder.build();
+    diff --git a/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java b/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java
+    index df8c8d372a..8e294127bd 100644
+    --- a/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java
+    +++ b/server/src/test/java/io/crate/integrationtests/AlterTableIntegrationTest.java
+    @@ -414,4 +414,30 @@ public class AlterTableIntegrationTest extends IntegTestCase {
+             execute("alter table tbl partition (p = 1) set (number_of_shards = ?)", new Object[] { numShards }, TimeValue.timeValueSeconds(30));
+             assertBusy(() -> assertThat(execute("select * from tbl")).hasRowCount(4));
+         }
+    +
+    +    @Test
+    +    public void test_reset_setting_on_complete_partitioned_table() {
+    +        execute("CREATE TABLE t1 (a INTEGER, b INTEGER) PARTITIONED BY (a)");
+    +        execute("INSERT INTO t1 VALUES (1, 2), (2, 3)");
+    +        execute("ALTER TABLE t1 SET (\"blocks.write\" = TRUE)");
+    +        execute("SELECT table_name, settings['blocks']['write'] FROM information_schema.tables WHERE table_name = 't1' ORDER BY 1");
+    +        assertThat(response).hasRows(
+    +            "t1| true"
+    +        );
+    +        execute("SELECT partition_ident, settings['blocks']['write'] FROM information_schema.table_partitions WHERE table_name = 't1' ORDER BY 1");
+    +        assertThat(response).hasRows(
+    +            "04132| true",
+    +            "04134| true"
+    +        );
+    +        execute("ALTER TABLE t1 RESET (\"blocks.write\")");
+    +        execute("SELECT table_name, settings['blocks']['write'] FROM information_schema.tables WHERE table_name = 't1' ORDER BY 1");
+    +        assertThat(response).hasRows(
+    +            "t1| false"
+    +        );
+    +        execute("SELECT partition_ident, settings['blocks']['write'] FROM information_schema.table_partitions WHERE table_name = 't1' ORDER BY 1");
+    +        assertThat(response).hasRows(
+    +            "04132| false",
+    +            "04134| false"
+    +        );
+    +    }
+     }
+  notes: >
+    Backported the ALTER TABLE RESET partition setting fix to 5.9, omitted the non-existent 5.10.4 release-note hunk, committed the result, and full validation compiled successfully.
+```
+
+--- END CLI OUTPUT ---
+[01:22:10]   Done in 2018.2s | status=success

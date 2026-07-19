@@ -1,0 +1,251 @@
+[12:05:13] === Row 5: druid  5b093294 -> 3ba7badd  [TYPE-I] ===
+[12:23:26]   Resolving parent of backport commit 3ba7badd...
+[12:23:26]   Backport parent (target ref): 26d5e95073058b9adf3827b676e0df81175bdc6e
+[12:23:26]   Extracting new-version patch for 5b093294...
+[12:23:27]   New-version patch size: 10380 chars
+[12:23:27]   Checking out backport parent 26d5e950...
+[12:23:42]   Invoking OpenCode CLI (14256 chars)...
+[12:23:42]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the target branch context for each changed file and validate the adapted hunks against the specified parent ref before returning the final YAML.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target file contexts
+[ ] Construct adapted unified diff for 31.0.0 parent ref
+[ ] Validate each hunk with validate mode=hunk
+[ ] Return parseable YAML result
+[0m
+[0m⚙ [0mviewcode {"ref":"26d5e95073058b9adf3827b676e0df81175bdc6e","path":"extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/test/MSQTestBase.java","startline":60,"endline":175}
+[0m⚙ [0mviewcode {"ref":"26d5e95073058b9adf3827b676e0df81175bdc6e","path":"extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java","startline":1785,"endline":1820}
+[0m⚙ [0mviewcode {"ref":"26d5e95073058b9adf3827b676e0df81175bdc6e","path":"extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/test/MSQTestBase.java","startline":560,"endline":610}
+[0m⚙ [0mviewcode {"ref":"26d5e95073058b9adf3827b676e0df81175bdc6e","path":"processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java","startline":135,"endline":190}
+[0m⚙ [0mgit_show {"ref":"5b09329479117a54f68d5ce9e4c8b245d76a8f79"}
+[0m⚙ [0mviewcode {"ref":"26d5e95073058b9adf3827b676e0df81175bdc6e","path":"processing/src/test/java/org/apache/druid/frame/write/FrameWriterTest.java","startline":330,"endline":395}
+[0m⚙ [0mviewcode {"ref":"26d5e95073058b9adf3827b676e0df81175bdc6e","path":"processing/src/test/java/org/apache/druid/frame/write/FrameWriterTest.java","startline":635,"endline":690}
+The target ref contains the same corresponding methods and test locations, so this looks like a direct Type-I backport with context-only line adjustments. I’ll confirm symbol locations/history briefly, then assemble and hunk-validate the diff.
+[0m⚙ [0mgit_history {"filepath":"processing/src/test/java/org/apache/druid/frame/write/FrameWriterTest.java","start_line":344,"end_line":379,"start_commit":"26d5e95073058b9adf3827b676e0df81175bdc6e","end_commit":"31.0.0"}
+[0m⚙ [0mgit_history {"filepath":"processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java","start_line":151,"end_line":166,"start_commit":"26d5e95073058b9adf3827b676e0df81175bdc6e","end_commit":"31.0.0"}
+[0m⚙ [0mgit_history {"filepath":"extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/test/MSQTestBase.java","start_line":76,"end_line":589,"start_commit":"26d5e95073058b9adf3827b676e0df81175bdc6e","end_commit":"31.0.0"}
+[0m⚙ [0mlocate_symbol {"ref":"26d5e95073058b9adf3827b676e0df81175bdc6e","symbol":"MSQTestBase"}
+[0m⚙ [0mlocate_symbol {"ref":"26d5e95073058b9adf3827b676e0df81175bdc6e","symbol":"unsortAndMakeRows"}
+[0m⚙ [0mlocate_symbol {"ref":"26d5e95073058b9adf3827b676e0df81175bdc6e","symbol":"reserveAdditional"}
+`locate_symbol` could not run because the repository has an existing `.git/index.lock`, and `git_history` could not resolve `31.0.0` as a local ref. The direct `viewcode` checks succeeded and showed the target code is present at the expected paths, so I’m proceeding with the patch and hunk validation against the explicit ref.
+[0m✱ [0mGlob "processing/src/test/java/org/apache/druid/frame/allocation/AppendableMemoryTest.java"[90m 0 matches[0m
+I’m validating the adapted hunks now. The only substantive production fix is in `AppendableMemory.reserveAdditional`; the other changes update tests and MSQ test logging setup.
+[0m⚙ [0mvalidate {"ref":"26d5e95073058b9adf3827b676e0df81175bdc6e","mode":"hunk","patch":"diff --git a/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java\n--- a/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java\n+++ b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java\n@@ -1803,7 +1803,7 @@ public class MSQWindowTest extends MSQTestBase\n         .setSql(\n             \"select cityName, added, SUM(added) OVER () cc from wikipedia\")\n         .setQueryContext(customContext)\n-        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15922, 200))\n+        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15930, 200))\n         .verifyResults();\n   }\n "}
+[0m⚙ [0mvalidate {"ref":"26d5e95073058b9adf3827b676e0df81175bdc6e","mode":"hunk","patch":"diff --git a/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java b/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java\n--- a/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java\n+++ b/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java\n@@ -158,12 +158,17 @@ public class AppendableMemory implements Closeable\n \n     releaseLastBlockIfEmpty();\n \n+    final int idx = currentBlockNumber();\n+\n+    // The request cannot be satisfied by the available bytes in the allocator\n     if (bytes > allocator.available()) {\n-      return false;\n+      // Check if the last allocated block has enough memory to satisfy the request\n+      if (idx < 0 || bytes + limits.getInt(idx) > blockHolders.get(idx).get().getCapacity()) {\n+        // The request cannot be satisfied by the allocator and the last allocated block. Return false\n+        return false;\n+      }\n     }\n \n-    final int idx = currentBlockNumber();\n-\n     if (idx < 0 || bytes + limits.getInt(idx) > blockHolders.get(idx).get().getCapacity()) {\n       // Allocation needed.\n       // Math.max(allocationSize, bytes) in case \"bytes\" is greater than SOFT_MAXIMUM_ALLOCATION_SIZE.\n "}
+[0m⚙ [0mvalidate {"ref":"26d5e95073058b9adf3827b676e0df81175bdc6e","mode":"hunk","patch":"diff --git a/processing/src/test/java/org/apache/druid/frame/write/FrameWriterTest.java b/processing/src/test/java/org/apache/druid/frame/write/FrameWriterTest.java\n--- a/processing/src/test/java/org/apache/druid/frame/write/FrameWriterTest.java\n+++ b/processing/src/test/java/org/apache/druid/frame/write/FrameWriterTest.java\n@@ -344,7 +344,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest\n     for (final FrameWriterTestData.Dataset<?> dataset1 : FrameWriterTestData.DATASETS) {\n       for (final FrameWriterTestData.Dataset<?> dataset2 : FrameWriterTestData.DATASETS) {\n         final RowSignature signature = makeSignature(Arrays.asList(dataset1, dataset2));\n-        final Sequence<List<Object>> rowSequence = unsortAndMakeRows(Arrays.asList(dataset1, dataset2));\n+        final Sequence<List<Object>> rowSequence = unsortAndMakeRows(Arrays.asList(dataset1, dataset2), 1);\n \n         final List<String> sortColumns = new ArrayList<>();\n         sortColumns.add(signature.getColumnName(0));\n@@ -378,7 +378,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest\n     // Test every possible capacity, up to the amount required to write all items from every list.\n     Assume.assumeFalse(inputFrameType == FrameType.COLUMNAR || outputFrameType == FrameType.COLUMNAR);\n     final RowSignature signature = makeSignature(FrameWriterTestData.DATASETS);\n-    final Sequence<List<Object>> rowSequence = unsortAndMakeRows(FrameWriterTestData.DATASETS);\n+    final Sequence<List<Object>> rowSequence = unsortAndMakeRows(FrameWriterTestData.DATASETS, 3);\n     final int totalRows = rowSequence.toList().size();\n \n     final List<String> sortColumns = new ArrayList<>();\n@@ -648,7 +648,10 @@ public class FrameWriterTest extends InitializedNullHandlingTest\n   /**\n    * Create rows out of shuffled (unsorted) datasets.\n    */\n-  private static Sequence<List<Object>> unsortAndMakeRows(final List<FrameWriterTestData.Dataset<?>> datasets)\n+  private static Sequence<List<Object>> unsortAndMakeRows(\n+      final List<FrameWriterTestData.Dataset<?>> datasets,\n+      final int multiplicationFactor\n+  )\n   {\n     final List<List<Object>> retVal = new ArrayList<>();\n \n@@ -672,7 +675,12 @@ public class FrameWriterTest extends InitializedNullHandlingTest\n       retVal.add(row);\n     }\n \n-    return Sequences.simple(retVal);\n+    List<List<Object>> multipliedRetVal = new ArrayList<>();\n+    for (int i = 0; i < multiplicationFactor; ++i) {\n+      multipliedRetVal.addAll(retVal);\n+    }\n+\n+    return Sequences.simple(multipliedRetVal);\n   }\n \n   /**\n "}
+[0m⚙ [0mvalidate {"ref":"26d5e95073058b9adf3827b676e0df81175bdc6e","mode":"hunk","patch":"diff --git a/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/test/MSQTestBase.java b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/test/MSQTestBase.java\n--- a/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/test/MSQTestBase.java\n+++ b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/test/MSQTestBase.java\n@@ -74,6 +74,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;\n import org.apache.druid.java.util.common.granularity.Granularity;\n import org.apache.druid.java.util.common.io.Closer;\n import org.apache.druid.java.util.common.logger.Logger;\n+import org.apache.druid.java.util.emitter.EmittingLogger;\n import org.apache.druid.java.util.http.client.Request;\n import org.apache.druid.metadata.input.InputSourceModule;\n import org.apache.druid.msq.counters.CounterNames;\n@@ -157,6 +158,7 @@ import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;\n import org.apache.druid.server.coordination.DataSegmentAnnouncer;\n import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;\n import org.apache.druid.server.lookup.cache.LookupLoadingSpec;\n+import org.apache.druid.server.metrics.NoopServiceEmitter;\n import org.apache.druid.server.security.AuthConfig;\n import org.apache.druid.server.security.AuthorizerMapper;\n import org.apache.druid.sql.DirectStatement;\n@@ -585,6 +587,8 @@ public class MSQTestBase extends BaseCalciteQueryTest\n     sqlStatementFactory = CalciteTests.createSqlStatementFactory(engine, plannerFactory);\n \n     authorizerMapper = CalciteTests.TEST_EXTERNAL_AUTHORIZER_MAPPER;\n+\n+    EmittingLogger.registerEmitter(new NoopServiceEmitter());\n   }\n \n   protected CatalogResolver createMockCatalogResolver()\n "}
+The `MSQTestBase`, `AppendableMemory`, and `FrameWriterTest` hunks apply cleanly. I’m retrying the small `MSQWindowTest` hunk with adjusted context formatting and validating the new test file addition separately.
+[0m⚙ [0mvalidate {"ref":"26d5e95073058b9adf3827b676e0df81175bdc6e","mode":"hunk","patch":"--- a/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java\n+++ b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java\n@@ -1803,7 +1803,7 @@ public class MSQWindowTest extends MSQTestBase\n         .setSql(\n             \"select cityName, added, SUM(added) OVER () cc from wikipedia\")\n         .setQueryContext(customContext)\n-        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15922, 200))\n+        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15930, 200))\n         .verifyResults();\n   }\n"}
+[0m⚙ [0mvalidate {"ref":"26d5e95073058b9adf3827b676e0df81175bdc6e","mode":"hunk","patch":"--- /dev/null\n+++ b/processing/src/test/java/org/apache/druid/frame/allocation/AppendableMemoryTest.java\n@@ -0,0 +1,73 @@\n+/*\n+ * Licensed to the Apache Software Foundation (ASF) under one\n+ * or more contributor license agreements.  See the NOTICE file\n+ * distributed with this work for additional information\n+ * regarding copyright ownership.  The ASF licenses this file\n+ * to you under the Apache License, Version 2.0 (the\n+ * \"License\"); you may not use this file except in compliance\n+ * with the License.  You may obtain a copy of the License at\n+ *\n+ *   http://www.apache.org/licenses/LICENSE-2.0\n+ *\n+ * Unless required by applicable law or agreed to in writing,\n+ * software distributed under the License is distributed on an\n+ * \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY\n+ * KIND, either express or implied.  See the License for the\n+ * specific language governing permissions and limitations\n+ * under the License.\n+ */\n+\n+package org.apache.druid.frame.allocation;\n+\n+import org.junit.Assert;\n+import org.junit.Test;\n+\n+public class AppendableMemoryTest\n+{\n+\n+  @Test\n+  public void testReserveAdditionalWithLargeLastBlockAndSmallAllocator()\n+  {\n+    /*\n+    This tests the edge case when the last chunk of memory allocated by the allocator has greater available free space\n+    than what can be allocated by the allocator. In that case, the availableToReserve call should return the free memory from\n+    the last allocated block, and reserveAdditional when called with that value should return true (and not do any additional\n+    allocation). This test case assumes a lot about the implementation of the AppendableMemory, but a lot of the assertions made\n+    in this test are logical, and should hold true. The final assertion is the most important which checks that the free space\n+    in the last block takes precedence over the memory allocator, which should hold true irrespective of the implementation\n+     */\n+\n+    // Allocator that can allocate atmost 100 bytes and AppendableMemory created with that allocator\n+    MemoryAllocator memoryAllocator = new HeapMemoryAllocator(100);\n+    AppendableMemory appendableMemory = AppendableMemory.create(memoryAllocator, 10);\n+\n+    // Reserves a chunk of 10 bytes. The call should return true since the allocator can allocate 100 bytes\n+    Assert.assertTrue(appendableMemory.reserveAdditional(10));\n+\n+    // Last block is empty, the appendable memory is essentially empty\n+    Assert.assertEquals(100, appendableMemory.availableToReserve());\n+\n+    // Advance the cursor so that it is not treated as empty chunk\n+    appendableMemory.advanceCursor(4);\n+\n+    // We should be able to use the remaining 90 bytes from the allocator\n+    Assert.assertEquals(90, appendableMemory.availableToReserve());\n+\n+    // Reserve a chunk of 80 bytes, and advance the cursor so that it is not treated as an empty chunk\n+    Assert.assertTrue(appendableMemory.reserveAdditional(80));\n+    appendableMemory.advanceCursor(4);\n+\n+    // At this point, we have 2 chunks with the following (used:free) / total statistics\n+    // chunk0 - (4:6)/10\n+    // chunk1 - (4:76)/80\n+    // The allocator still has 10 additional bytes to reserve\n+\n+    // Even though the allocator has only 10 bytes, the last chunk has 76 free bytes which can be used. That would take precedence\n+    // since that is a larger number\n+    Assert.assertEquals(76, appendableMemory.availableToReserve());\n+\n+    // This assertion must always be true irrespective of the internal implementation\n+    Assert.assertTrue(appendableMemory.reserveAdditional(appendableMemory.availableToReserve()));\n+  }\n+\n+}\n"}
+[0m⚙ [0mvalidate {"ref":"26d5e95073058b9adf3827b676e0df81175bdc6e","mode":"hunk","patch":"--- a/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java\n+++ b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java\n@@ -1802,7 +1802,7 @@ public class MSQWindowTest extends MSQTestBase\n     testSelectQuery()\n         .setSql(\n             \"select cityName, added, SUM(added) OVER () cc from wikipedia\")\n         .setQueryContext(customContext)\n-        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15922, 200))\n+        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15930, 200))\n         .verifyResults();\n   }\n"}
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target file contexts
+[✓] Construct adapted unified diff for 31.0.0 parent ref
+[✓] Validate each hunk with validate mode=hunk
+[•] Return parseable YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java
+    --- a/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java
+    +++ b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java
+    @@ -1802,7 +1802,7 @@ public class MSQWindowTest extends MSQTestBase
+         testSelectQuery()
+             .setSql(
+                 "select cityName, added, SUM(added) OVER () cc from wikipedia")
+             .setQueryContext(customContext)
+    -        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15922, 200))
+    +        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15930, 200))
+             .verifyResults();
+       }
+    diff --git a/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/test/MSQTestBase.java b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/test/MSQTestBase.java
+    --- a/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/test/MSQTestBase.java
+    +++ b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/test/MSQTestBase.java
+    @@ -74,6 +74,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
+     import org.apache.druid.java.util.common.granularity.Granularity;
+     import org.apache.druid.java.util.common.io.Closer;
+     import org.apache.druid.java.util.common.logger.Logger;
+    +import org.apache.druid.java.util.emitter.EmittingLogger;
+     import org.apache.druid.java.util.http.client.Request;
+     import org.apache.druid.metadata.input.InputSourceModule;
+     import org.apache.druid.msq.counters.CounterNames;
+    @@ -157,6 +158,7 @@ import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
+     import org.apache.druid.server.coordination.DataSegmentAnnouncer;
+     import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
+     import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
+    +import org.apache.druid.server.metrics.NoopServiceEmitter;
+     import org.apache.druid.server.security.AuthConfig;
+     import org.apache.druid.server.security.AuthorizerMapper;
+     import org.apache.druid.sql.DirectStatement;
+    @@ -585,6 +587,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
+         sqlStatementFactory = CalciteTests.createSqlStatementFactory(engine, plannerFactory);
+     
+         authorizerMapper = CalciteTests.TEST_EXTERNAL_AUTHORIZER_MAPPER;
+    +
+    +    EmittingLogger.registerEmitter(new NoopServiceEmitter());
+       }
+     
+       protected CatalogResolver createMockCatalogResolver()
+    diff --git a/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java b/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java
+    --- a/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java
+    +++ b/processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java
+    @@ -158,12 +158,17 @@ public class AppendableMemory implements Closeable
+     
+         releaseLastBlockIfEmpty();
+     
+    +    final int idx = currentBlockNumber();
+    +
+    +    // The request cannot be satisfied by the available bytes in the allocator
+         if (bytes > allocator.available()) {
+    -      return false;
+    +      // Check if the last allocated block has enough memory to satisfy the request
+    +      if (idx < 0 || bytes + limits.getInt(idx) > blockHolders.get(idx).get().getCapacity()) {
+    +        // The request cannot be satisfied by the allocator and the last allocated block. Return false
+    +        return false;
+    +      }
+         }
+     
+    -    final int idx = currentBlockNumber();
+    -
+         if (idx < 0 || bytes + limits.getInt(idx) > blockHolders.get(idx).get().getCapacity()) {
+           // Allocation needed.
+           // Math.max(allocationSize, bytes) in case "bytes" is greater than SOFT_MAXIMUM_ALLOCATION_SIZE.
+    diff --git a/processing/src/test/java/org/apache/druid/frame/allocation/AppendableMemoryTest.java b/processing/src/test/java/org/apache/druid/frame/allocation/AppendableMemoryTest.java
+    new file mode 100644
+    --- /dev/null
+    +++ b/processing/src/test/java/org/apache/druid/frame/allocation/AppendableMemoryTest.java
+    @@ -0,0 +1,73 @@
+    +/*
+    + * Licensed to the Apache Software Foundation (ASF) under one
+    + * or more contributor license agreements.  See the NOTICE file
+    + * distributed with this work for additional information
+    + * regarding copyright ownership.  The ASF licenses this file
+    + * to you under the Apache License, Version 2.0 (the
+    + * "License"); you may not use this file except in compliance
+    + * with the License.  You may obtain a copy of the License at
+    + *
+    + *   http://www.apache.org/licenses/LICENSE-2.0
+    + *
+    + * Unless required by applicable law or agreed to in writing,
+    + * software distributed under the License is distributed on an
+    + * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    + * KIND, either express or implied.  See the License for the
+    + * specific language governing permissions and limitations
+    + * under the License.
+    + */
+    +
+    +package org.apache.druid.frame.allocation;
+    +
+    +import org.junit.Assert;
+    +import org.junit.Test;
+    +
+    +public class AppendableMemoryTest
+    +{
+    +
+    +  @Test
+    +  public void testReserveAdditionalWithLargeLastBlockAndSmallAllocator()
+    +  {
+    +    /*
+    +    This tests the edge case when the last chunk of memory allocated by the allocator has greater available free space
+    +    than what can be allocated by the allocator. In that case, the availableToReserve call should return the free memory from
+    +    the last allocated block, and reserveAdditional when called with that value should return true (and not do any additional
+    +    allocation). This test case assumes a lot about the implementation of the AppendableMemory, but a lot of the assertions made
+    +    in this test are logical, and should hold true. The final assertion is the most important which checks that the free space
+    +    in the last block takes precedence over the memory allocator, which should hold true irrespective of the implementation
+    +     */
+    +
+    +    // Allocator that can allocate atmost 100 bytes and AppendableMemory created with that allocator
+    +    MemoryAllocator memoryAllocator = new HeapMemoryAllocator(100);
+    +    AppendableMemory appendableMemory = AppendableMemory.create(memoryAllocator, 10);
+    +
+    +    // Reserves a chunk of 10 bytes. The call should return true since the allocator can allocate 100 bytes
+    +    Assert.assertTrue(appendableMemory.reserveAdditional(10));
+    +
+    +    // Last block is empty, the appendable memory is essentially empty
+    +    Assert.assertEquals(100, appendableMemory.availableToReserve());
+    +
+    +    // Advance the cursor so that it is not treated as empty chunk
+    +    appendableMemory.advanceCursor(4);
+    +
+    +    // We should be able to use the remaining 90 bytes from the allocator
+    +    Assert.assertEquals(90, appendableMemory.availableToReserve());
+    +
+    +    // Reserve a chunk of 80 bytes, and advance the cursor so that it is not treated as an empty chunk
+    +    Assert.assertTrue(appendableMemory.reserveAdditional(80));
+    +    appendableMemory.advanceCursor(4);
+    +
+    +    // At this point, we have 2 chunks with the following (used:free) / total statistics
+    +    // chunk0 - (4:6)/10
+    +    // chunk1 - (4:76)/80
+    +    // The allocator still has 10 additional bytes to reserve
+    +
+    +    // Even though the allocator has only 10 bytes, the last chunk has 76 free bytes which can be used. That would take precedence
+    +    // since that is a larger number
+    +    Assert.assertEquals(76, appendableMemory.availableToReserve());
+    +
+    +    // This assertion must always be true irrespective of the internal implementation
+    +    Assert.assertTrue(appendableMemory.reserveAdditional(appendableMemory.availableToReserve()));
+    +  }
+    +
+    +}
+    diff --git a/processing/src/test/java/org/apache/druid/frame/write/FrameWriterTest.java b/processing/src/test/java/org/apache/druid/frame/write/FrameWriterTest.java
+    --- a/processing/src/test/java/org/apache/druid/frame/write/FrameWriterTest.java
+    +++ b/processing/src/test/java/org/apache/druid/frame/write/FrameWriterTest.java
+    @@ -344,7 +344,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
+         for (final FrameWriterTestData.Dataset<?> dataset1 : FrameWriterTestData.DATASETS) {
+           for (final FrameWriterTestData.Dataset<?> dataset2 : FrameWriterTestData.DATASETS) {
+             final RowSignature signature = makeSignature(Arrays.asList(dataset1, dataset2));
+    -        final Sequence<List<Object>> rowSequence = unsortAndMakeRows(Arrays.asList(dataset1, dataset2));
+    +        final Sequence<List<Object>> rowSequence = unsortAndMakeRows(Arrays.asList(dataset1, dataset2), 1);
+     
+             final List<String> sortColumns = new ArrayList<>();
+             sortColumns.add(signature.getColumnName(0));
+    @@ -378,7 +378,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
+         // Test every possible capacity, up to the amount required to write all items from every list.
+         Assume.assumeFalse(inputFrameType == FrameType.COLUMNAR || outputFrameType == FrameType.COLUMNAR);
+         final RowSignature signature = makeSignature(FrameWriterTestData.DATASETS);
+    -    final Sequence<List<Object>> rowSequence = unsortAndMakeRows(FrameWriterTestData.DATASETS);
+    +    final Sequence<List<Object>> rowSequence = unsortAndMakeRows(FrameWriterTestData.DATASETS, 3);
+         final int totalRows = rowSequence.toList().size();
+     
+         final List<String> sortColumns = new ArrayList<>();
+    @@ -648,7 +648,10 @@ public class FrameWriterTest extends InitializedNullHandlingTest
+       /**
+        * Create rows out of shuffled (unsorted) datasets.
+        */
+    -  private static Sequence<List<Object>> unsortAndMakeRows(final List<FrameWriterTestData.Dataset<?>> datasets)
+    +  private static Sequence<List<Object>> unsortAndMakeRows(
+    +      final List<FrameWriterTestData.Dataset<?>> datasets,
+    +      final int multiplicationFactor
+    +  )
+       {
+         final List<List<Object>> retVal = new ArrayList<>();
+     
+    @@ -672,7 +675,12 @@ public class FrameWriterTest extends InitializedNullHandlingTest
+           retVal.add(row);
+         }
+     
+    -    return Sequences.simple(retVal);
+    +    List<List<Object>> multipliedRetVal = new ArrayList<>();
+    +    for (int i = 0; i < multiplicationFactor; ++i) {
+    +      multipliedRetVal.addAll(retVal);
+    +    }
+    +
+    +    return Sequences.simple(multipliedRetVal);
+       }
+     
+       /**
+  notes: >
+    Backported the AppendableMemory allocator/last-block reservation fix and associated test updates; all hunks were validated with mode=hunk against 26d5e95073058b9adf3827b676e0df81175bdc6e.
+```
+
+--- END CLI OUTPUT ---
+[12:29:12]   Done in 1438.5s | status=success

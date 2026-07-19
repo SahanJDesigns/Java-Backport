@@ -1,0 +1,10 @@
+[12:52:58] === Row 9: druid  f8015eb0 -> d6858771  [TYPE-I] ===
+[12:52:58]   Resolving parent of backport commit d6858771...
+[12:52:58]   Backport parent (target ref): 9592d5414ab777bbdb4206f6e344f7895cc5285f
+[12:52:58]   Extracting new-version patch for f8015eb0...
+[12:52:58]   New-version patch size: 13154 chars
+[12:52:58]   Checking out backport parent 9592d541...
+[12:52:58]   ERROR: Could not checkout backport parent 9592d5414ab777bbdb4206f6e344f7895cc5285f: error: Your local changes to the following files would be overwritten by checkout:
+	extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java
+Please commit your changes or stash them before you switch branches.
+Aborting

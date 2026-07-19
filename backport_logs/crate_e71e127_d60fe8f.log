@@ -1,0 +1,972 @@
+[03:32:50] === Row 36: crate  e71e1276 -> d60fe8f9  [TYPE-I] ===
+[03:32:50]   Resolving parent of backport commit d60fe8f9...
+[03:32:50]   Backport parent (target ref): 45175742cba8ff565560c63f0841489203368343
+[03:32:50]   Extracting new-version patch for e71e1276...
+[03:32:50]   New-version patch size: 5747 chars
+[03:32:50]   Checking out backport parent 45175742...
+[03:32:50]   Invoking OpenCode CLI (9775 chars)...
+[03:32:50]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll map the master diff onto the checked-out `5.1` parent, then validate hunks before applying and committing.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target branch context for changed files
+[ ] Construct and hunk-validate backport patch
+[ ] Apply patch, run required validation, and commit
+[ ] Return YAML result with final unified diff
+[0m
+[0m⚙ [0mgit_show {"ref":"e71e127665e14038f196eab7fd8ce56cb6aea2c3"}
+[0m✱ [0mGlob "docs/appendices/release-notes/*.rst"[90m 100 matches[0m
+[0m⚙ [0mlocate_symbol {"ref":"45175742cba8ff565560c63f0841489203368343","symbol":"test_kills_jobs_on_statement_timeout"}
+[0m⚙ [0mlocate_symbol {"ref":"45175742cba8ff565560c63f0841489203368343","symbol":"Session"}
+The original change stores the scheduled timeout task and cancels it when the query result completes, plus a regression test. A stale `.git/index.lock` is blocking some git-backed helper tools; I’ll avoid branch switching and inspect the checked-out files directly unless it blocks commit/validation.
+[0m→ [0mRead server/src/main/java/io/crate/session/Session.java[90m [offset=1, limit=760][0m
+[0m✱ [0mGlob "docs/appendices/release-notes/5.1*.rst"[90m 11 matches[0m
+[0m→ [0mRead server/src/test/java/io/crate/session/SessionTest.java[90m [offset=1, limit=520][0m
+[0m✱ [0mGrep "class InMemoryBatchIterator|interface InMemoryBatchIterator"[90m 2 matches[0m
+[0m→ [0mRead docs/appendices/release-notes/5.1.4.rst[90m [offset=1, limit=120][0m
+[0m→ [0mRead docs/appendices/release-notes/5.10.5.rst[90m [offset=1, limit=80][0m
+[0m✱ [0mGrep "InMemoryBatchIterator\.empty"[90m 40 matches[0m
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/session/Session.java","start_line":634,"end_line":658,"start_commit":"45175742cba8ff565560c63f0841489203368343","end_commit":"45175742cba8ff565560c63f0841489203368343"}
+[0m⚙ [0mlocate_symbol {"ref":"45175742cba8ff565560c63f0841489203368343","symbol":"addStatementTimeout"}
+The `5.1` equivalent code is still `Session.addStatementTimeout`, with the same scheduler call. The release-note hunk should target `5.1.4.rst` instead of the master-only `5.10.5` entry for this branch line.
+[0m
+[0m$ [0mTest-Path -LiteralPath ".git\index.lock"
+True
+[0m
+[0m$ [0mgit status --short
+?? tags
+[0m
+[0m$ [0mGet-Process git -ErrorAction SilentlyContinue
+(no output)
+[0m
+Git reports only an unrelated untracked `tags` file, and no running `git` process; I’m removing the stale `.git/index.lock` so validation and commit can proceed.
+[0m$ [0mRemove-Item -LiteralPath ".git\index.lock"
+Remove-Item : Cannot find path '.git\index.lock' because it does not exist.
+At line:1 char:1
++ Remove-Item -LiteralPath ".git\index.lock"
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (.git\index.lock:String) [Remove-Item], ItemNotFoundException
+    + FullyQualifiedErrorId : PathNotFound,Microsoft.PowerShell.Commands.RemoveItemCommand
+[0m
+[0m⚙ [0mvalidate {"ref":"45175742cba8ff565560c63f0841489203368343","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.1.4.rst b/docs/appendices/release-notes/5.1.4.rst\n--- a/docs/appendices/release-notes/5.1.4.rst\n+++ b/docs/appendices/release-notes/5.1.4.rst\n@@ -41,6 +41,11 @@ See the :ref:`version_5.1.0` release notes for a full list of changes in the\n Fixes\n =====\n \n+- Improved the handling of ``statement_timeout`` to reduce memory consumption.\n+  Before it would consume extra memory per executed query for the full\n+  ``statement_duration`` even if the query finished early. Now the memory is\n+  released once a query finishes.\n+\n - Added validation to reject inner column names containing special whitespace\n   characters to avoid invalid schema definitions.\n \n"}
+The release-note hunk applies cleanly against `5.1.4.rst`. I’ll now validate the Java production and regression-test hunks against the target ref.
+[0m⚙ [0mvalidate {"ref":"45175742cba8ff565560c63f0841489203368343","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/session/Session.java b/server/src/main/java/io/crate/session/Session.java\n--- a/server/src/main/java/io/crate/session/Session.java\n+++ b/server/src/main/java/io/crate/session/Session.java\n@@ -31,6 +31,7 @@ import java.util.List;\n import java.util.Map;\n import java.util.UUID;\n import java.util.concurrent.CompletableFuture;\n import java.util.concurrent.ScheduledExecutorService;\n+import java.util.concurrent.ScheduledFuture;\n import java.util.concurrent.ThreadLocalRandom;\n import java.util.concurrent.TimeUnit;\n \n@@ -654,7 +655,8 @@ public class Session implements AutoCloseable {\n             executor.client().execute(KillJobsNodeAction.INSTANCE, request);\n         };\n         ScheduledExecutorService scheduler = executor.scheduler();\n-        scheduler.schedule(kill, remainingTimeoutMs, TimeUnit.MILLISECONDS);\n+        ScheduledFuture<?> schedule = scheduler.schedule(kill, remainingTimeoutMs, TimeUnit.MILLISECONDS);\n+        result.whenComplete((ignoredResult, ignoredError) -> schedule.cancel(false));\n     }\n \n     private CompletableFuture<?> triggerDeferredExecutions() {\n"}
+[0m⚙ [0mvalidate {"ref":"45175742cba8ff565560c63f0841489203368343","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/session/Session.java b/server/src/main/java/io/crate/session/Session.java\n--- a/server/src/main/java/io/crate/session/Session.java\n+++ b/server/src/main/java/io/crate/session/Session.java\n@@ -31,6 +31,7 @@ import java.util.List;\n import java.util.Map;\n import java.util.UUID;\n import java.util.concurrent.CompletableFuture;\n import java.util.concurrent.ScheduledExecutorService;\n+import java.util.concurrent.ScheduledFuture;\n import java.util.concurrent.ThreadLocalRandom;\n import java.util.concurrent.TimeUnit;\n \n"}
+[0m⚙ [0mvalidate {"ref":"45175742cba8ff565560c63f0841489203368343","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/session/Session.java b/server/src/main/java/io/crate/session/Session.java\n--- a/server/src/main/java/io/crate/session/Session.java\n+++ b/server/src/main/java/io/crate/session/Session.java\n@@ -654,7 +654,8 @@ public class Session implements AutoCloseable {\n             executor.client().execute(KillJobsNodeAction.INSTANCE, request);\n         };\n         ScheduledExecutorService scheduler = executor.scheduler();\n-        scheduler.schedule(kill, remainingTimeoutMs, TimeUnit.MILLISECONDS);\n+        ScheduledFuture<?> schedule = scheduler.schedule(kill, remainingTimeoutMs, TimeUnit.MILLISECONDS);\n+        result.whenComplete((ignoredResult, ignoredError) -> schedule.cancel(false));\n     }\n \n     private CompletableFuture<?> triggerDeferredExecutions() {\n"}
+[0m⚙ [0mvalidate {"ref":"45175742cba8ff565560c63f0841489203368343","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/session/SessionTest.java b/server/src/test/java/io/crate/session/SessionTest.java\n--- a/server/src/test/java/io/crate/session/SessionTest.java\n+++ b/server/src/test/java/io/crate/session/SessionTest.java\n@@ -38,10 +38,12 @@ import static org.mockito.Mockito.when;\n \n import java.util.Collections;\n import java.util.List;\n+import java.util.concurrent.BlockingQueue;\n import java.util.concurrent.CompletableFuture;\n import java.util.concurrent.ScheduledExecutorService;\n import java.util.concurrent.ScheduledFuture;\n+import java.util.concurrent.ScheduledThreadPoolExecutor;\n import java.util.concurrent.TimeUnit;\n \n import org.elasticsearch.client.ElasticsearchClient;\n@@ -55,6 +57,7 @@ import io.crate.analyze.AnalyzedStatement;\n import io.crate.analyze.where.EqualityExtractorTest;\n import io.crate.common.collections.BlockingEvictingQueue;\n import io.crate.common.unit.TimeValue;\n+import io.crate.data.InMemoryBatchIterator;\n import io.crate.data.Row;\n import io.crate.data.RowConsumer;\n import io.crate.exceptions.JobKilledException;\n"}
+[0m⚙ [0mvalidate {"ref":"45175742cba8ff565560c63f0841489203368343","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/session/SessionTest.java b/server/src/test/java/io/crate/session/SessionTest.java\n--- a/server/src/test/java/io/crate/session/SessionTest.java\n+++ b/server/src/test/java/io/crate/session/SessionTest.java\n@@ -38,10 +38,12 @@ import static org.mockito.Mockito.when;\n \n import java.util.Collections;\n import java.util.List;\n+import java.util.concurrent.BlockingQueue;\n import java.util.concurrent.CompletableFuture;\n import java.util.concurrent.ScheduledExecutorService;\n import java.util.concurrent.ScheduledFuture;\n+import java.util.concurrent.ScheduledThreadPoolExecutor;\n import java.util.concurrent.TimeUnit;\n \n import org.elasticsearch.client.ElasticsearchClient;\n"}
+[0m⚙ [0mvalidate {"ref":"45175742cba8ff565560c63f0841489203368343","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/session/SessionTest.java b/server/src/test/java/io/crate/session/SessionTest.java\n--- a/server/src/test/java/io/crate/session/SessionTest.java\n+++ b/server/src/test/java/io/crate/session/SessionTest.java\n@@ -55,6 +57,7 @@ import io.crate.analyze.AnalyzedStatement;\n import io.crate.analyze.where.EqualityExtractorTest;\n import io.crate.common.collections.BlockingEvictingQueue;\n import io.crate.common.unit.TimeValue;\n+import io.crate.data.InMemoryBatchIterator;\n import io.crate.data.Row;\n import io.crate.data.RowConsumer;\n import io.crate.exceptions.JobKilledException;\n"}
+[0m⚙ [0mvalidate {"ref":"45175742cba8ff565560c63f0841489203368343","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/session/SessionTest.java b/server/src/test/java/io/crate/session/SessionTest.java\n--- a/server/src/test/java/io/crate/session/SessionTest.java\n+++ b/server/src/test/java/io/crate/session/SessionTest.java\n@@ -39,9 +39,11 @@ import static org.mockito.Mockito.when;\n import java.util.Collections;\n import java.util.List;\n+import java.util.concurrent.BlockingQueue;\n import java.util.concurrent.CompletableFuture;\n import java.util.concurrent.ScheduledExecutorService;\n import java.util.concurrent.ScheduledFuture;\n+import java.util.concurrent.ScheduledThreadPoolExecutor;\n import java.util.concurrent.TimeUnit;\n \n import org.elasticsearch.client.ElasticsearchClient;\n"}
+[0m⚙ [0mvalidate {"ref":"45175742cba8ff565560c63f0841489203368343","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/session/SessionTest.java b/server/src/test/java/io/crate/session/SessionTest.java\nindex 0000000000..0000000000 100644\n--- a/server/src/test/java/io/crate/session/SessionTest.java\n+++ b/server/src/test/java/io/crate/session/SessionTest.java\n@@ -39,9 +39,11 @@ import static org.mockito.Mockito.when;\n import java.util.Collections;\n import java.util.List;\n+import java.util.concurrent.BlockingQueue;\n import java.util.concurrent.CompletableFuture;\n import java.util.concurrent.ScheduledExecutorService;\n import java.util.concurrent.ScheduledFuture;\n+import java.util.concurrent.ScheduledThreadPoolExecutor;\n import java.util.concurrent.TimeUnit;\n \n import org.elasticsearch.client.ElasticsearchClient;\n"}
+One test import hunk is being rejected by the validator as malformed despite matching context; I’m narrowing it to a smaller hunk format while keeping the same intended imports.
+[0m⚙ [0mvalidate {"ref":"45175742cba8ff565560c63f0841489203368343","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/session/SessionTest.java b/server/src/test/java/io/crate/session/SessionTest.java\n--- a/server/src/test/java/io/crate/session/SessionTest.java\n+++ b/server/src/test/java/io/crate/session/SessionTest.java\n@@ -39,7 +39,9 @@\n import java.util.Collections;\n import java.util.List;\n+import java.util.concurrent.BlockingQueue;\n import java.util.concurrent.CompletableFuture;\n import java.util.concurrent.ScheduledExecutorService;\n import java.util.concurrent.ScheduledFuture;\n+import java.util.concurrent.ScheduledThreadPoolExecutor;\n import java.util.concurrent.TimeUnit;\n"}
+[0m⚙ [0mvalidate {"ref":"45175742cba8ff565560c63f0841489203368343","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/session/SessionTest.java b/server/src/test/java/io/crate/session/SessionTest.java\n--- a/server/src/test/java/io/crate/session/SessionTest.java\n+++ b/server/src/test/java/io/crate/session/SessionTest.java\n@@ -39,6 +39,8 @@\n import java.util.Collections;\n import java.util.List;\n+import java.util.concurrent.BlockingQueue;\n import java.util.concurrent.CompletableFuture;\n import java.util.concurrent.ScheduledExecutorService;\n import java.util.concurrent.ScheduledFuture;\n+import java.util.concurrent.ScheduledThreadPoolExecutor;\n import java.util.concurrent.TimeUnit;\n"}
+[0m⚙ [0mvalidate {"ref":"45175742cba8ff565560c63f0841489203368343","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/session/SessionTest.java b/server/src/test/java/io/crate/session/SessionTest.java\n--- a/server/src/test/java/io/crate/session/SessionTest.java\n+++ b/server/src/test/java/io/crate/session/SessionTest.java\n@@ -393,6 +396,55 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {\n             .execute(eq(KillJobsNodeAction.INSTANCE), any(KillJobsNodeRequest.class));\n     }\n \n+    @Test\n+    public void test_statement_timeout_schedule_is_removed_for_finished_jobs() throws Exception {\n+        Planner planner = mock(Planner.class, Answers.RETURNS_MOCKS);\n+        SQLExecutor sqlExecutor = SQLExecutor.builder(clusterService)\n+            .setPlanner(planner)\n+            .build();\n+        when(planner.plan(any(AnalyzedStatement.class), any(PlannerContext.class)))\n+            .thenReturn(\n+                new Plan() {\n+                    @Override\n+                    public StatementType type() {\n+                        return StatementType.INSERT;\n+                    }\n+\n+                    @Override\n+                    public void executeOrFail(DependencyCarrier dependencies,\n+                                              PlannerContext plannerContext,\n+                                              RowConsumer consumer,\n+                                              Row params,\n+                                              SubQueryResults subQueryResults) throws Exception {\n+                        consumer.accept(InMemoryBatchIterator.empty(null), null);\n+                    }\n+\n+                    @Override\n+                    public CompletableFuture<BulkResponse> executeBulk(DependencyCarrier executor,\n+                                                                       PlannerContext plannerContext,\n+                                                                       List<Row> bulkParams,\n+                                                                       SubQueryResults subQueryResults) {\n+                        return new CompletableFuture<>();\n+                    }\n+                }\n+            );\n+\n+        DependencyCarrier dependencies = sqlExecutor.dependencyMock;\n+        when(dependencies.scheduler()).thenReturn(THREAD_POOL.scheduler());\n+        Session session = sqlExecutor.createSession();\n+        session.sessionSettings().statementTimeout(TimeValue.timeValueMinutes(30));\n+\n+        for (int i = 0; i < 10; i++) {\n+            session.parse(\"S_1\", \"SELECT 1\", List.of());\n+            session.bind(\"P_1\", \"S_1\", List.of(), null);\n+            session.execute(\"P_1\", 0, new BaseResultReceiver());\n+            session.sync();\n+        }\n+\n+        BlockingQueue<Runnable> queue = ((ScheduledThreadPoolExecutor) THREAD_POOL.scheduler()).getQueue();\n+        assertThat(queue).isEmpty();\n+    }\n+\n     @Test\n     public void test_parsing_throws_an_error_on_exceeding_statement_timeout() throws Exception {\n         Planner planner = mock(Planner.class, Answers.RETURNS_MOCKS);\n"}
+All logical hunks have now validated independently. I’m applying the minimal backport patch: add `ScheduledFuture` cancellation on result completion, add the regression test, and place the release note in the `5.1.4` notes.
+[0m% [0mPatch 3 files
+[0m
+[0m$ [0mgit diff -- docs/appendices/release-notes/5.1.4.rst server/src/main/java/io/crate/session/Session.java server/src/test/java/io/crate/session/SessionTest.java
+warning: in the working copy of 'docs/appendices/release-notes/5.1.4.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/session/Session.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/session/SessionTest.java', LF will be replaced by CRLF the next time Git touches it
+diff --git a/docs/appendices/release-notes/5.1.4.rst b/docs/appendices/release-notes/5.1.4.rst
+index a866d71d6f..2d1a3cf6b7 100644
+--- a/docs/appendices/release-notes/5.1.4.rst
++++ b/docs/appendices/release-notes/5.1.4.rst
+@@ -41,6 +41,11 @@ See the :ref:`version_5.1.0` release notes for a full list of changes in the
+ Fixes
+ =====
+ 
++- Improved the handling of ``statement_timeout`` to reduce memory consumption.
++  Before it would consume extra memory per executed query for the full
++  ``statement_duration`` even if the query finished early. Now the memory is
++  released once a query finishes.
++
+ - Added validation to reject inner column names containing special whitespace
+   characters to avoid invalid schema definitions.
+ 
+diff --git a/server/src/main/java/io/crate/session/Session.java b/server/src/main/java/io/crate/session/Session.java
+index 2b6a5dfe87..232d245b63 100644
+--- a/server/src/main/java/io/crate/session/Session.java
++++ b/server/src/main/java/io/crate/session/Session.java
+@@ -32,6 +32,7 @@ import java.util.Map;
+ import java.util.UUID;
+ import java.util.concurrent.CompletableFuture;
+ import java.util.concurrent.ScheduledExecutorService;
++import java.util.concurrent.ScheduledFuture;
+ import java.util.concurrent.ThreadLocalRandom;
+ import java.util.concurrent.TimeUnit;
+ 
+@@ -654,7 +655,8 @@ public class Session implements AutoCloseable {
+             executor.client().execute(KillJobsNodeAction.INSTANCE, request);
+         };
+         ScheduledExecutorService scheduler = executor.scheduler();
+-        scheduler.schedule(kill, remainingTimeoutMs, TimeUnit.MILLISECONDS);
++        ScheduledFuture<?> schedule = scheduler.schedule(kill, remainingTimeoutMs, TimeUnit.MILLISECONDS);
++        result.whenComplete((ignoredResult, ignoredError) -> schedule.cancel(false));
+     }
+ 
+     private CompletableFuture<?> triggerDeferredExecutions() {
+diff --git a/server/src/test/java/io/crate/session/SessionTest.java b/server/src/test/java/io/crate/session/SessionTest.java
+index df372cf85b..ca570501b3 100644
+--- a/server/src/test/java/io/crate/session/SessionTest.java
++++ b/server/src/test/java/io/crate/session/SessionTest.java
+@@ -38,9 +38,11 @@ import static org.mockito.Mockito.when;
+ 
+ import java.util.Collections;
+ import java.util.List;
++import java.util.concurrent.BlockingQueue;
+ import java.util.concurrent.CompletableFuture;
+ import java.util.concurrent.ScheduledExecutorService;
+ import java.util.concurrent.ScheduledFuture;
++import java.util.concurrent.ScheduledThreadPoolExecutor;
+ import java.util.concurrent.TimeUnit;
+ 
+ import org.elasticsearch.client.ElasticsearchClient;
+@@ -55,6 +57,7 @@ import io.crate.analyze.AnalyzedStatement;
+ import io.crate.analyze.where.EqualityExtractorTest;
+ import io.crate.common.collections.BlockingEvictingQueue;
+ import io.crate.common.unit.TimeValue;
++import io.crate.data.InMemoryBatchIterator;
+ import io.crate.data.Row;
+ import io.crate.data.RowConsumer;
+ import io.crate.exceptions.JobKilledException;
+@@ -393,6 +396,55 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
+             .execute(eq(KillJobsNodeAction.INSTANCE), any(KillJobsNodeRequest.class));
+     }
+ 
++    @Test
++    public void test_statement_timeout_schedule_is_removed_for_finished_jobs() throws Exception {
++        Planner planner = mock(Planner.class, Answers.RETURNS_MOCKS);
++        SQLExecutor sqlExecutor = SQLExecutor.builder(clusterService)
++            .setPlanner(planner)
++            .build();
++        when(planner.plan(any(AnalyzedStatement.class), any(PlannerContext.class)))
++            .thenReturn(
++                new Plan() {
++                    @Override
++                    public StatementType type() {
++                        return StatementType.INSERT;
++                    }
++
++                    @Override
++                    public void executeOrFail(DependencyCarrier dependencies,
++                                              PlannerContext plannerContext,
++                                              RowConsumer consumer,
++                                              Row params,
++                                              SubQueryResults subQueryResults) throws Exception {
++                        consumer.accept(InMemoryBatchIterator.empty(null), null);
++                    }
++
++                    @Override
++                    public CompletableFuture<BulkResponse> executeBulk(DependencyCarrier executor,
++                                                                       PlannerContext plannerContext,
++                                                                       List<Row> bulkParams,
++                                                                       SubQueryResults subQueryResults) {
++                        return new CompletableFuture<>();
++                    }
++                }
++            );
++
++        DependencyCarrier dependencies = sqlExecutor.dependencyMock;
++        when(dependencies.scheduler()).thenReturn(THREAD_POOL.scheduler());
++        Session session = sqlExecutor.createSession();
++        session.sessionSettings().statementTimeout(TimeValue.timeValueMinutes(30));
++
++        for (int i = 0; i < 10; i++) {
++            session.parse("S_1", "SELECT 1", List.of());
++            session.bind("P_1", "S_1", List.of(), null);
++            session.execute("P_1", 0, new BaseResultReceiver());
++            session.sync();
++        }
++
++        BlockingQueue<Runnable> queue = ((ScheduledThreadPoolExecutor) THREAD_POOL.scheduler()).getQueue();
++        assertThat(queue).isEmpty();
++    }
++
+     @Test
+     public void test_parsing_throws_an_error_on_exceeding_statement_timeout() throws Exception {
+         Planner planner = mock(Planner.class, Answers.RETURNS_MOCKS);
+[0m
+[0m$ [0mgit status --short
+M docs/appendices/release-notes/5.1.4.rst
+ M server/src/main/java/io/crate/session/Session.java
+ M server/src/test/java/io/crate/session/SessionTest.java
+?? tags
+[0m
+The applied diff matches the intended backport, with lambda parameter names adapted for the older branch instead of Java unnamed parameters. I’m running the focused `SessionTest` regression now before committing.
+[0m$ [0m.\gradlew.bat :server:test --tests io.crate.session.SessionTest.test_statement_timeout_schedule_is_removed_for_finished_jobs
+.\gradlew.bat : The term '.\gradlew.bat' is not recognized as the name of a cmdlet, function, script file, or operable 
+program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:1
++ .\gradlew.bat :server:test --tests io.crate.session.SessionTest.test_ ...
++ ~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (.\gradlew.bat:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+[0m
+The focused test command could not start because `gradlew.bat` is not present at the workspace root. I’ll inspect the available build wrapper and use it if present.
+[0m✱ [0mGlob "gradlew*"[90m 0 matches[0m
+[0m
+[0m$ [0mgradle :server:test --tests io.crate.session.SessionTest.test_statement_timeout_schedule_is_removed_for_finished_jobs
+gradle : The term 'gradle' is not recognized as the name of a cmdlet, function, script file, or operable program. 
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:1
++ gradle :server:test --tests io.crate.session.SessionTest.test_stateme ...
++ ~~~~~~
+    + CategoryInfo          : ObjectNotFound: (gradle:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+[0m
+No local Gradle executable is available, so local test execution is blocked. I’ll still use the required `validate mode=full` after committing, which applies and verifies the complete patch through the provided validation pipeline.
+[0m$ [0mgit log --oneline -10
+45175742cb Fix handling of generated columns in MATCH for geo shapes
+54cd07cd44 Fix race causing context leak on node disconnects
+3561c2379c If the translog fails to sync, log the error at WARN rather than DEBUG
+11b732bb8b Handle empty columns in jdbc fdw to support `select count(*) ...`
+373d36f58a Bump to 5.10.5-SNAPSHOT
+c8f20ead2c Release 5.10.4
+db450ddd60 Reflect release 5.9.13
+145f0a3c38 Use table statistics to improve ram estimation for updates
+9197f064a3 If insert is aborted on primary, skip remaining items on replica
+8c3e09171f Verify analyzer specified in MATCH query is same as the analyzer used to index
+[0m
+[0m$ [0mgit diff -- docs/appendices/release-notes/5.1.4.rst server/src/main/java/io/crate/session/Session.java server/src/test/java/io/crate/session/SessionTest.java
+warning: in the working copy of 'docs/appendices/release-notes/5.1.4.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/session/Session.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/session/SessionTest.java', LF will be replaced by CRLF the next time Git touches it
+diff --git a/docs/appendices/release-notes/5.1.4.rst b/docs/appendices/release-notes/5.1.4.rst
+index a866d71d6f..2d1a3cf6b7 100644
+--- a/docs/appendices/release-notes/5.1.4.rst
++++ b/docs/appendices/release-notes/5.1.4.rst
+@@ -41,6 +41,11 @@ See the :ref:`version_5.1.0` release notes for a full list of changes in the
+ Fixes
+ =====
+ 
++- Improved the handling of ``statement_timeout`` to reduce memory consumption.
++  Before it would consume extra memory per executed query for the full
++  ``statement_duration`` even if the query finished early. Now the memory is
++  released once a query finishes.
++
+ - Added validation to reject inner column names containing special whitespace
+   characters to avoid invalid schema definitions.
+ 
+diff --git a/server/src/main/java/io/crate/session/Session.java b/server/src/main/java/io/crate/session/Session.java
+index 2b6a5dfe87..232d245b63 100644
+--- a/server/src/main/java/io/crate/session/Session.java
++++ b/server/src/main/java/io/crate/session/Session.java
+@@ -32,6 +32,7 @@ import java.util.Map;
+ import java.util.UUID;
+ import java.util.concurrent.CompletableFuture;
+ import java.util.concurrent.ScheduledExecutorService;
++import java.util.concurrent.ScheduledFuture;
+ import java.util.concurrent.ThreadLocalRandom;
+ import java.util.concurrent.TimeUnit;
+ 
+@@ -654,7 +655,8 @@ public class Session implements AutoCloseable {
+             executor.client().execute(KillJobsNodeAction.INSTANCE, request);
+         };
+         ScheduledExecutorService scheduler = executor.scheduler();
+-        scheduler.schedule(kill, remainingTimeoutMs, TimeUnit.MILLISECONDS);
++        ScheduledFuture<?> schedule = scheduler.schedule(kill, remainingTimeoutMs, TimeUnit.MILLISECONDS);
++        result.whenComplete((ignoredResult, ignoredError) -> schedule.cancel(false));
+     }
+ 
+     private CompletableFuture<?> triggerDeferredExecutions() {
+diff --git a/server/src/test/java/io/crate/session/SessionTest.java b/server/src/test/java/io/crate/session/SessionTest.java
+index df372cf85b..ca570501b3 100644
+--- a/server/src/test/java/io/crate/session/SessionTest.java
++++ b/server/src/test/java/io/crate/session/SessionTest.java
+@@ -38,9 +38,11 @@ import static org.mockito.Mockito.when;
+ 
+ import java.util.Collections;
+ import java.util.List;
++import java.util.concurrent.BlockingQueue;
+ import java.util.concurrent.CompletableFuture;
+ import java.util.concurrent.ScheduledExecutorService;
+ import java.util.concurrent.ScheduledFuture;
++import java.util.concurrent.ScheduledThreadPoolExecutor;
+ import java.util.concurrent.TimeUnit;
+ 
+ import org.elasticsearch.client.ElasticsearchClient;
+@@ -55,6 +57,7 @@ import io.crate.analyze.AnalyzedStatement;
+ import io.crate.analyze.where.EqualityExtractorTest;
+ import io.crate.common.collections.BlockingEvictingQueue;
+ import io.crate.common.unit.TimeValue;
++import io.crate.data.InMemoryBatchIterator;
+ import io.crate.data.Row;
+ import io.crate.data.RowConsumer;
+ import io.crate.exceptions.JobKilledException;
+@@ -393,6 +396,55 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
+             .execute(eq(KillJobsNodeAction.INSTANCE), any(KillJobsNodeRequest.class));
+     }
+ 
++    @Test
++    public void test_statement_timeout_schedule_is_removed_for_finished_jobs() throws Exception {
++        Planner planner = mock(Planner.class, Answers.RETURNS_MOCKS);
++        SQLExecutor sqlExecutor = SQLExecutor.builder(clusterService)
++            .setPlanner(planner)
++            .build();
++        when(planner.plan(any(AnalyzedStatement.class), any(PlannerContext.class)))
++            .thenReturn(
++                new Plan() {
++                    @Override
++                    public StatementType type() {
++                        return StatementType.INSERT;
++                    }
++
++                    @Override
++                    public void executeOrFail(DependencyCarrier dependencies,
++                                              PlannerContext plannerContext,
++                                              RowConsumer consumer,
++                                              Row params,
++                                              SubQueryResults subQueryResults) throws Exception {
++                        consumer.accept(InMemoryBatchIterator.empty(null), null);
++                    }
++
++                    @Override
++                    public CompletableFuture<BulkResponse> executeBulk(DependencyCarrier executor,
++                                                                       PlannerContext plannerContext,
++                                                                       List<Row> bulkParams,
++                                                                       SubQueryResults subQueryResults) {
++                        return new CompletableFuture<>();
++                    }
++                }
++            );
++
++        DependencyCarrier dependencies = sqlExecutor.dependencyMock;
++        when(dependencies.scheduler()).thenReturn(THREAD_POOL.scheduler());
++        Session session = sqlExecutor.createSession();
++        session.sessionSettings().statementTimeout(TimeValue.timeValueMinutes(30));
++
++        for (int i = 0; i < 10; i++) {
++            session.parse("S_1", "SELECT 1", List.of());
++            session.bind("P_1", "S_1", List.of(), null);
++            session.execute("P_1", 0, new BaseResultReceiver());
++            session.sync();
++        }
++
++        BlockingQueue<Runnable> queue = ((ScheduledThreadPoolExecutor) THREAD_POOL.scheduler()).getQueue();
++        assertThat(queue).isEmpty();
++    }
++
+     @Test
+     public void test_parsing_throws_an_error_on_exceeding_statement_timeout() throws Exception {
+         Planner planner = mock(Planner.class, Answers.RETURNS_MOCKS);
+[0m
+[0m$ [0mgit status --short
+M docs/appendices/release-notes/5.1.4.rst
+ M server/src/main/java/io/crate/session/Session.java
+ M server/src/test/java/io/crate/session/SessionTest.java
+?? tags
+[0m
+The target ref’s history and files show this checkout is on the `5.10.5` release-note line, and the original release-note file exists with exact context. I’m correcting the documentation hunk to keep the patch TYPE-I against the actual target ref rather than moving it to `5.1.4`.
+[0m% [0mPatch 2 files
+[0m
+[0m$ [0mgit diff --stat; if ($?) { git diff -- docs/appendices/release-notes/5.1.4.rst docs/appendices/release-notes/5.10.5.rst server/src/main/java/io/crate/session/Session.java server/src/test/java/io/crate/session/SessionTest.java }
+warning: in the working copy of 'docs/appendices/release-notes/5.1.4.rst', LF will be replaced by CRLF the next time Git touches it
+ docs/appendices/release-notes/5.10.5.rst           |  5 +++
+ server/src/main/java/io/crate/session/Session.java |  4 +-
+ .../test/java/io/crate/session/SessionTest.java    | 52 ++++++++++++++++++++++
+ 3 files changed, 60 insertions(+), 1 deletion(-)
+warning: in the working copy of 'docs/appendices/release-notes/5.10.5.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/session/Session.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/session/SessionTest.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/appendices/release-notes/5.1.4.rst', LF will be replaced by CRLF the next time Git touches it
+diff --git a/docs/appendices/release-notes/5.10.5.rst b/docs/appendices/release-notes/5.10.5.rst
+index 83626685f7..d334ed9241 100644
+--- a/docs/appendices/release-notes/5.10.5.rst
++++ b/docs/appendices/release-notes/5.10.5.rst
+@@ -44,6 +44,11 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the
+ Fixes
+ =====
+ 
++- Improved the handling of ``statement_timeout`` to reduce memory consumption.
++  Before it would consume extra memory per executed query for the full
++  ``statement_duration`` even if the query finished early. Now the memory is
++  released once a query finishes.
++
+ - Fixed an issue that prevented ``MATCH (geo_shape_column, ...)`` from matching
+   any records if ``geo_shape_column`` is a generated column.
+ 
+diff --git a/server/src/main/java/io/crate/session/Session.java b/server/src/main/java/io/crate/session/Session.java
+index 2b6a5dfe87..232d245b63 100644
+--- a/server/src/main/java/io/crate/session/Session.java
++++ b/server/src/main/java/io/crate/session/Session.java
+@@ -32,6 +32,7 @@ import java.util.Map;
+ import java.util.UUID;
+ import java.util.concurrent.CompletableFuture;
+ import java.util.concurrent.ScheduledExecutorService;
++import java.util.concurrent.ScheduledFuture;
+ import java.util.concurrent.ThreadLocalRandom;
+ import java.util.concurrent.TimeUnit;
+ 
+@@ -654,7 +655,8 @@ public class Session implements AutoCloseable {
+             executor.client().execute(KillJobsNodeAction.INSTANCE, request);
+         };
+         ScheduledExecutorService scheduler = executor.scheduler();
+-        scheduler.schedule(kill, remainingTimeoutMs, TimeUnit.MILLISECONDS);
++        ScheduledFuture<?> schedule = scheduler.schedule(kill, remainingTimeoutMs, TimeUnit.MILLISECONDS);
++        result.whenComplete((ignoredResult, ignoredError) -> schedule.cancel(false));
+     }
+ 
+     private CompletableFuture<?> triggerDeferredExecutions() {
+diff --git a/server/src/test/java/io/crate/session/SessionTest.java b/server/src/test/java/io/crate/session/SessionTest.java
+index df372cf85b..ca570501b3 100644
+--- a/server/src/test/java/io/crate/session/SessionTest.java
++++ b/server/src/test/java/io/crate/session/SessionTest.java
+@@ -38,9 +38,11 @@ import static org.mockito.Mockito.when;
+ 
+ import java.util.Collections;
+ import java.util.List;
++import java.util.concurrent.BlockingQueue;
+ import java.util.concurrent.CompletableFuture;
+ import java.util.concurrent.ScheduledExecutorService;
+ import java.util.concurrent.ScheduledFuture;
++import java.util.concurrent.ScheduledThreadPoolExecutor;
+ import java.util.concurrent.TimeUnit;
+ 
+ import org.elasticsearch.client.ElasticsearchClient;
+@@ -55,6 +57,7 @@ import io.crate.analyze.AnalyzedStatement;
+ import io.crate.analyze.where.EqualityExtractorTest;
+ import io.crate.common.collections.BlockingEvictingQueue;
+ import io.crate.common.unit.TimeValue;
++import io.crate.data.InMemoryBatchIterator;
+ import io.crate.data.Row;
+ import io.crate.data.RowConsumer;
+ import io.crate.exceptions.JobKilledException;
+@@ -393,6 +396,55 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
+             .execute(eq(KillJobsNodeAction.INSTANCE), any(KillJobsNodeRequest.class));
+     }
+ 
++    @Test
++    public void test_statement_timeout_schedule_is_removed_for_finished_jobs() throws Exception {
++        Planner planner = mock(Planner.class, Answers.RETURNS_MOCKS);
++        SQLExecutor sqlExecutor = SQLExecutor.builder(clusterService)
++            .setPlanner(planner)
++            .build();
++        when(planner.plan(any(AnalyzedStatement.class), any(PlannerContext.class)))
++            .thenReturn(
++                new Plan() {
++                    @Override
++                    public StatementType type() {
++                        return StatementType.INSERT;
++                    }
++
++                    @Override
++                    public void executeOrFail(DependencyCarrier dependencies,
++                                              PlannerContext plannerContext,
++                                              RowConsumer consumer,
++                                              Row params,
++                                              SubQueryResults subQueryResults) throws Exception {
++                        consumer.accept(InMemoryBatchIterator.empty(null), null);
++                    }
++
++                    @Override
++                    public CompletableFuture<BulkResponse> executeBulk(DependencyCarrier executor,
++                                                                       PlannerContext plannerContext,
++                                                                       List<Row> bulkParams,
++                                                                       SubQueryResults subQueryResults) {
++                        return new CompletableFuture<>();
++                    }
++                }
++            );
++
++        DependencyCarrier dependencies = sqlExecutor.dependencyMock;
++        when(dependencies.scheduler()).thenReturn(THREAD_POOL.scheduler());
++        Session session = sqlExecutor.createSession();
++        session.sessionSettings().statementTimeout(TimeValue.timeValueMinutes(30));
++
++        for (int i = 0; i < 10; i++) {
++            session.parse("S_1", "SELECT 1", List.of());
++            session.bind("P_1", "S_1", List.of(), null);
++            session.execute("P_1", 0, new BaseResultReceiver());
++            session.sync();
++        }
++
++        BlockingQueue<Runnable> queue = ((ScheduledThreadPoolExecutor) THREAD_POOL.scheduler()).getQueue();
++        assertThat(queue).isEmpty();
++    }
++
+     @Test
+     public void test_parsing_throws_an_error_on_exceeding_statement_timeout() throws Exception {
+         Planner planner = mock(Planner.class, Answers.RETURNS_MOCKS);
+warning: in the working copy of 'docs/appendices/release-notes/5.10.5.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/session/Session.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/session/SessionTest.java', LF will be replaced by CRLF the next time Git touches it
+[0m
+The doc hunk is corrected back to `5.10.5.rst`, matching the original TYPE-I diff and current target context. The working diff now contains only the three intended files.
+[0m⚙ [0mvalidate {"ref":"45175742cba8ff565560c63f0841489203368343","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.10.5.rst b/docs/appendices/release-notes/5.10.5.rst\n--- a/docs/appendices/release-notes/5.10.5.rst\n+++ b/docs/appendices/release-notes/5.10.5.rst\n@@ -44,6 +44,11 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the\n Fixes\n =====\n \n+- Improved the handling of ``statement_timeout`` to reduce memory consumption.\n+  Before it would consume extra memory per executed query for the full\n+  ``statement_duration`` even if the query finished early. Now the memory is\n+  released once a query finishes.\n+\n - Fixed an issue that prevented ``MATCH (geo_shape_column, ...)`` from matching\n   any records if ``geo_shape_column`` is a generated column.\n \n"}
+[0m⚙ [0mvalidate {"ref":"45175742cba8ff565560c63f0841489203368343","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.10.5.rst b/docs/appendices/release-notes/5.10.5.rst\n--- a/docs/appendices/release-notes/5.10.5.rst\n+++ b/docs/appendices/release-notes/5.10.5.rst\n@@ -44,9 +44,14 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the\n Fixes\n =====\n \n+- Improved the handling of ``statement_timeout`` to reduce memory consumption.\n+  Before it would consume extra memory per executed query for the full\n+  ``statement_duration`` even if the query finished early. Now the memory is\n+  released once a query finishes.\n+\n - Fixed an issue that prevented ``MATCH (geo_shape_column, ...)`` from matching\n   any records if ``geo_shape_column`` is a generated column.\n \n - Fixed a race condition that could lead to a memory leak if nodes within the\n   cluster were temporarily not reachable.\n"}
+[0m⚙ [0mvalidate {"ref":"45175742cba8ff565560c63f0841489203368343","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.10.5.rst b/docs/appendices/release-notes/5.10.5.rst\n--- a/docs/appendices/release-notes/5.10.5.rst\n+++ b/docs/appendices/release-notes/5.10.5.rst\n@@ -44,8 +44,13 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the\n Fixes\n =====\n \n+- Improved the handling of ``statement_timeout`` to reduce memory consumption.\n+  Before it would consume extra memory per executed query for the full\n+  ``statement_duration`` even if the query finished early. Now the memory is\n+  released once a query finishes.\n+\n - Fixed an issue that prevented ``MATCH (geo_shape_column, ...)`` from matching\n   any records if ``geo_shape_column`` is a generated column.\n \n - Fixed a race condition that could lead to a memory leak if nodes within the\n   cluster were temporarily not reachable.\n"}
+[0m⚙ [0mvalidate {"ref":"45175742cba8ff565560c63f0841489203368343","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.10.5.rst b/docs/appendices/release-notes/5.10.5.rst\n--- a/docs/appendices/release-notes/5.10.5.rst\n+++ b/docs/appendices/release-notes/5.10.5.rst\n@@ -44,12 +44,17 @@\n Fixes\n =====\n \n+- Improved the handling of ``statement_timeout`` to reduce memory consumption.\n+  Before it would consume extra memory per executed query for the full\n+  ``statement_duration`` even if the query finished early. Now the memory is\n+  released once a query finishes.\n+\n - Fixed an issue that prevented ``MATCH (geo_shape_column, ...)`` from matching\n   any records if ``geo_shape_column`` is a generated column.\n \n - Fixed a race condition that could lead to a memory leak if nodes within the\n   cluster were temporarily not reachable.\n \n - Fixed an issue that led to an ``no viable alternative at input 'SELECT FROM'``\n   error when using ``SELECT count(*) FROM remote_tbl`` where ``remote_tbl`` where ``remote_tbl`` is a\n"}
+[0m→ [0mRead docs/appendices/release-notes/5.10.5.rst[90m [offset=41, limit=20][0m
+[0m⚙ [0mvalidate {"ref":"45175742cba8ff565560c63f0841489203368343","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.10.5.rst b/docs/appendices/release-notes/5.10.5.rst\n--- a/docs/appendices/release-notes/5.10.5.rst\n+++ b/docs/appendices/release-notes/5.10.5.rst\n@@ -41,13 +41,18 @@\n See the :ref:`version_5.10.0` release notes for a full list of changes in the\n 5.10 series.\n \n Fixes\n =====\n \n+- Improved the handling of ``statement_timeout`` to reduce memory consumption.\n+  Before it would consume extra memory per executed query for the full\n+  ``statement_duration`` even if the query finished early. Now the memory is\n+  released once a query finishes.\n+\n - Fixed an issue that prevented ``MATCH (geo_shape_column, ...)`` from matching\n   any records if ``geo_shape_column`` is a generated column.\n \n - Fixed a race condition that could lead to a memory leak if nodes within the\n   cluster were temporarily not reachable.\n \n - Fixed an issue that led to an ``no viable alternative at input 'SELECT FROM'``\n"}
+[0m⚙ [0mvalidate {"ref":"45175742cba8ff565560c63f0841489203368343","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.10.5.rst b/docs/appendices/release-notes/5.10.5.rst\n--- a/docs/appendices/release-notes/5.10.5.rst\n+++ b/docs/appendices/release-notes/5.10.5.rst\n@@ -41,15 +41,20 @@\n See the :ref:`version_5.10.0` release notes for a full list of changes in the\n 5.10 series.\n \n Fixes\n =====\n \n+- Improved the handling of ``statement_timeout`` to reduce memory consumption.\n+  Before it would consume extra memory per executed query for the full\n+  ``statement_duration`` even if the query finished early. Now the memory is\n+  released once a query finishes.\n+\n - Fixed an issue that prevented ``MATCH (geo_shape_column, ...)`` from matching\n   any records if ``geo_shape_column`` is a generated column.\n \n - Fixed a race condition that could lead to a memory leak if nodes within the\n   cluster were temporarily not reachable.\n \n - Fixed an issue that led to an ``no viable alternative at input 'SELECT FROM'``\n   error when using ``SELECT count(*) FROM remote_tbl`` where ``remote_tbl`` is a\n   foreign table using the JDBC foreign data wrapper.\n"}
+[0m⚙ [0mvalidate {"ref":"45175742cba8ff565560c63f0841489203368343","mode":"hunk","revise_context":true,"patch":"diff --git a/docs/appendices/release-notes/5.10.5.rst b/docs/appendices/release-notes/5.10.5.rst\n--- a/docs/appendices/release-notes/5.10.5.rst\n+++ b/docs/appendices/release-notes/5.10.5.rst\n@@ -44,6 +44,11 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the\n Fixes\n =====\n \n+- Improved the handling of ``statement_timeout`` to reduce memory consumption.\n+  Before it would consume extra memory per executed query for the full\n+  ``statement_duration`` even if the query finished early. Now the memory is\n+  released once a query finishes.\n+\n - Fixed an issue that prevented ``MATCH (geo_shape_column, ...)`` from matching\n   any records if ``geo_shape_column`` is a generated column.\n \n"}
+[0m⚙ [0mvalidate {"ref":"45175742cba8ff565560c63f0841489203368343","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.10.5.rst b/docs/appendices/release-notes/5.10.5.rst\nindex 83626685f7..d334ed9241 100644\n--- a/docs/appendices/release-notes/5.10.5.rst\n+++ b/docs/appendices/release-notes/5.10.5.rst\n@@ -44,6 +44,11 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the\n Fixes\n =====\n \n+- Improved the handling of ``statement_timeout`` to reduce memory consumption.\n+  Before it would consume extra memory per executed query for the full\n+  ``statement_duration`` even if the query finished early. Now the memory is\n+  released once a query finishes.\n+\n - Fixed an issue that prevented ``MATCH (geo_shape_column, ...)`` from matching\n   any records if ``geo_shape_column`` is a generated column.\n \ndiff --git a/server/src/main/java/io/crate/session/Session.java b/server/src/main/java/io/crate/session/Session.java\nindex 2b6a5dfe87..232d245b63 100644\n--- a/server/src/main/java/io/crate/session/Session.java\n+++ b/server/src/main/java/io/crate/session/Session.java\n@@ -32,6 +32,7 @@ import java.util.Map;\n import java.util.UUID;\n import java.util.concurrent.CompletableFuture;\n import java.util.concurrent.ScheduledExecutorService;\n+import java.util.concurrent.ScheduledFuture;\n import java.util.concurrent.ThreadLocalRandom;\n import java.util.concurrent.TimeUnit;\n \n@@ -654,7 +655,8 @@ public class Session implements AutoCloseable {\n             executor.client().execute(KillJobsNodeAction.INSTANCE, request);\n         };\n         ScheduledExecutorService scheduler = executor.scheduler();\n-        scheduler.schedule(kill, remainingTimeoutMs, TimeUnit.MILLISECONDS);\n+        ScheduledFuture<?> schedule = scheduler.schedule(kill, remainingTimeoutMs, TimeUnit.MILLISECONDS);\n+        result.whenComplete((ignoredResult, ignoredError) -> schedule.cancel(false));\n     }\n \n     private CompletableFuture<?> triggerDeferredExecutions() {\ndiff --git a/server/src/test/java/io/crate/session/SessionTest.java b/server/src/test/java/io/crate/session/SessionTest.java\nindex df372cf85b..ca570501b3 100644\n--- a/server/src/test/java/io/crate/session/SessionTest.java\n+++ b/server/src/test/java/io/crate/session/SessionTest.java\n@@ -38,9 +38,11 @@ import static org.mockito.Mockito.when;\n \n import java.util.Collections;\n import java.util.List;\n+import java.util.concurrent.BlockingQueue;\n import java.util.concurrent.CompletableFuture;\n import java.util.concurrent.ScheduledExecutorService;\n import java.util.concurrent.ScheduledFuture;\n+import java.util.concurrent.ScheduledThreadPoolExecutor;\n import java.util.concurrent.TimeUnit;\n \n import org.elasticsearch.client.ElasticsearchClient;\n@@ -55,6 +57,7 @@ import io.crate.analyze.AnalyzedStatement;\n import io.crate.analyze.where.EqualityExtractorTest;\n import io.crate.common.collections.BlockingEvictingQueue;\n import io.crate.common.unit.TimeValue;\n+import io.crate.data.InMemoryBatchIterator;\n import io.crate.data.Row;\n import io.crate.data.RowConsumer;\n import io.crate.exceptions.JobKilledException;\n@@ -393,6 +396,55 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {\n             .execute(eq(KillJobsNodeAction.INSTANCE), any(KillJobsNodeRequest.class));\n     }\n \n+    @Test\n+    public void test_statement_timeout_schedule_is_removed_for_finished_jobs() throws Exception {\n+        Planner planner = mock(Planner.class, Answers.RETURNS_MOCKS);\n+        SQLExecutor sqlExecutor = SQLExecutor.builder(clusterService)\n+            .setPlanner(planner)\n+            .build();\n+        when(planner.plan(any(AnalyzedStatement.class), any(PlannerContext.class)))\n+            .thenReturn(\n+                new Plan() {\n+                    @Override\n+                    public StatementType type() {\n+                        return StatementType.INSERT;\n+                    }\n+\n+                    @Override\n+                    public void executeOrFail(DependencyCarrier dependencies,\n+                                              PlannerContext plannerContext,\n+                                              RowConsumer consumer,\n+                                              Row params,\n+                                              SubQueryResults subQueryResults) throws Exception {\n+                        consumer.accept(InMemoryBatchIterator.empty(null), null);\n+                    }\n+\n+                    @Override\n+                    public CompletableFuture<BulkResponse> executeBulk(DependencyCarrier executor,\n+                                                                       PlannerContext plannerContext,\n+                                                                       List<Row> bulkParams,\n+                                                                       SubQueryResults subQueryResults) {\n+                        return new CompletableFuture<>();\n+                    }\n+                }\n+            );\n+\n+        DependencyCarrier dependencies = sqlExecutor.dependencyMock;\n+        when(dependencies.scheduler()).thenReturn(THREAD_POOL.scheduler());\n+        Session session = sqlExecutor.createSession();\n+        session.sessionSettings().statementTimeout(TimeValue.timeValueMinutes(30));\n+\n+        for (int i = 0; i < 10; i++) {\n+            session.parse(\"S_1\", \"SELECT 1\", List.of());\n+            session.bind(\"P_1\", \"S_1\", List.of(), null);\n+            session.execute(\"P_1\", 0, new BaseResultReceiver());\n+            session.sync();\n+        }\n+\n+        BlockingQueue<Runnable> queue = ((ScheduledThreadPoolExecutor) THREAD_POOL.scheduler()).getQueue();\n+        assertThat(queue).isEmpty();\n+    }\n+\n     @Test\n     public void test_parsing_throws_an_error_on_exceeding_statement_timeout() throws Exception {\n         Planner planner = mock(Planner.class, Answers.RETURNS_MOCKS);\n"}
+[0m
+[0m$ [0mgit diff -U5 -- docs/appendices/release-notes/5.10.5.rst server/src/main/java/io/crate/session/Session.java server/src/test/java/io/crate/session/SessionTest.java
+warning: in the working copy of 'docs/appendices/release-notes/5.10.5.rst', LF will be replaced by CRLF the next time Git touches it
+diff --git a/docs/appendices/release-notes/5.10.5.rst b/docs/appendices/release-notes/5.10.5.rst
+index 83626685f7..d334ed9241 100644
+--- a/docs/appendices/release-notes/5.10.5.rst
++++ b/docs/appendices/release-notes/5.10.5.rst
+@@ -42,10 +42,15 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the
+ 5.10 series.
+ 
+ Fixes
+ =====
+ 
++- Improved the handling of ``statement_timeout`` to reduce memory consumption.
++  Before it would consume extra memory per executed query for the full
++  ``statement_duration`` even if the query finished early. Now the memory is
++  released once a query finishes.
++
+ - Fixed an issue that prevented ``MATCH (geo_shape_column, ...)`` from matching
+   any records if ``geo_shape_column`` is a generated column.
+ 
+ - Fixed a race condition that could lead to a memory leak if nodes within the
+   cluster were temporarily not reachable.
+diff --git a/server/src/main/java/io/crate/session/Session.java b/server/src/main/java/io/crate/session/Session.java
+index 2b6a5dfe87..232d245b63 100644
+--- a/server/src/main/java/io/crate/session/Session.java
++++ b/server/src/main/java/io/crate/session/Session.java
+@@ -30,10 +30,11 @@ import java.util.LinkedHashMap;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.UUID;
+ import java.util.concurrent.CompletableFuture;
+ import java.util.concurrent.ScheduledExecutorService;
++import java.util.concurrent.ScheduledFuture;
+ import java.util.concurrent.ThreadLocalRandom;
+ import java.util.concurrent.TimeUnit;
+ 
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+@@ -652,11 +653,12 @@ public class Session implements AutoCloseable {
+                 "statement_timeout (" + timeout.toString() + ")"
+             );
+             executor.client().execute(KillJobsNodeAction.INSTANCE, request);
+         };
+         ScheduledExecutorService scheduler = executor.scheduler();
+-        scheduler.schedule(kill, remainingTimeoutMs, TimeUnit.MILLISECONDS);
++        ScheduledFuture<?> schedule = scheduler.schedule(kill, remainingTimeoutMs, TimeUnit.MILLISECONDS);
++        result.whenComplete((ignoredResult, ignoredError) -> schedule.cancel(false));
+     }
+ 
+     private CompletableFuture<?> triggerDeferredExecutions() {
+         switch (deferredExecutionsByStmt.size()) {
+             case 0:
+diff --git a/server/src/test/java/io/crate/session/SessionTest.java b/server/src/test/java/io/crate/session/SessionTest.java
+index df372cf85b..ca570501b3 100644
+--- a/server/src/test/java/io/crate/session/SessionTest.java
++++ b/server/src/test/java/io/crate/session/SessionTest.java
+@@ -36,13 +36,15 @@ import static org.mockito.Mockito.times;
+ import static org.mockito.Mockito.verify;
+ import static org.mockito.Mockito.when;
+ 
+ import java.util.Collections;
+ import java.util.List;
++import java.util.concurrent.BlockingQueue;
+ import java.util.concurrent.CompletableFuture;
+ import java.util.concurrent.ScheduledExecutorService;
+ import java.util.concurrent.ScheduledFuture;
++import java.util.concurrent.ScheduledThreadPoolExecutor;
+ import java.util.concurrent.TimeUnit;
+ 
+ import org.elasticsearch.client.ElasticsearchClient;
+ import org.elasticsearch.threadpool.ThreadPool;
+ import org.junit.Test;
+@@ -53,10 +55,11 @@ import org.mockito.stubbing.Answer;
+ 
+ import io.crate.analyze.AnalyzedStatement;
+ import io.crate.analyze.where.EqualityExtractorTest;
+ import io.crate.common.collections.BlockingEvictingQueue;
+ import io.crate.common.unit.TimeValue;
++import io.crate.data.InMemoryBatchIterator;
+ import io.crate.data.Row;
+ import io.crate.data.RowConsumer;
+ import io.crate.exceptions.JobKilledException;
+ import io.crate.execution.dml.BulkResponse;
+ import io.crate.execution.engine.collect.stats.QueueSink;
+@@ -391,10 +394,59 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
+ 
+         verify(client, times(1))
+             .execute(eq(KillJobsNodeAction.INSTANCE), any(KillJobsNodeRequest.class));
+     }
+ 
++    @Test
++    public void test_statement_timeout_schedule_is_removed_for_finished_jobs() throws Exception {
++        Planner planner = mock(Planner.class, Answers.RETURNS_MOCKS);
++        SQLExecutor sqlExecutor = SQLExecutor.builder(clusterService)
++            .setPlanner(planner)
++            .build();
++        when(planner.plan(any(AnalyzedStatement.class), any(PlannerContext.class)))
++            .thenReturn(
++                new Plan() {
++                    @Override
++                    public StatementType type() {
++                        return StatementType.INSERT;
++                    }
++
++                    @Override
++                    public void executeOrFail(DependencyCarrier dependencies,
++                                              PlannerContext plannerContext,
++                                              RowConsumer consumer,
++                                              Row params,
++                                              SubQueryResults subQueryResults) throws Exception {
++                        consumer.accept(InMemoryBatchIterator.empty(null), null);
++                    }
++
++                    @Override
++                    public CompletableFuture<BulkResponse> executeBulk(DependencyCarrier executor,
++                                                                       PlannerContext plannerContext,
++                                                                       List<Row> bulkParams,
++                                                                       SubQueryResults subQueryResults) {
++                        return new CompletableFuture<>();
++                    }
++                }
++            );
++
++        DependencyCarrier dependencies = sqlExecutor.dependencyMock;
++        when(dependencies.scheduler()).thenReturn(THREAD_POOL.scheduler());
++        Session session = sqlExecutor.createSession();
++        session.sessionSettings().statementTimeout(TimeValue.timeValueMinutes(30));
++
++        for (int i = 0; i < 10; i++) {
++            session.parse("S_1", "SELECT 1", List.of());
++            session.bind("P_1", "S_1", List.of(), null);
++            session.execute("P_1", 0, new BaseResultReceiver());
++            session.sync();
++        }
++
++        BlockingQueue<Runnable> queue = ((ScheduledThreadPoolExecutor) THREAD_POOL.scheduler()).getQueue();
++        assertThat(queue).isEmpty();
++    }
++
+     @Test
+     public void test_parsing_throws_an_error_on_exceeding_statement_timeout() throws Exception {
+         Planner planner = mock(Planner.class, Answers.RETURNS_MOCKS);
+         SQLExecutor sqlExecutor = SQLExecutor.builder(clusterService)
+             .setPlanner(planner)
+warning: in the working copy of 'server/src/main/java/io/crate/session/Session.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/session/SessionTest.java', LF will be replaced by CRLF the next time Git touches it
+[0m
+[0m⚙ [0mvalidate {"ref":"45175742cba8ff565560c63f0841489203368343","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.10.5.rst b/docs/appendices/release-notes/5.10.5.rst\nindex 83626685f7..d334ed9241 100644\n--- a/docs/appendices/release-notes/5.10.5.rst\n+++ b/docs/appendices/release-notes/5.10.5.rst\n@@ -42,10 +42,15 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the\n 5.10 series.\n \n Fixes\n =====\n \n+- Improved the handling of ``statement_timeout`` to reduce memory consumption.\n+  Before it would consume extra memory per executed query for the full\n+  ``statement_duration`` even if the query finished early. Now the memory is\n+  released once a query finishes.\n+\n - Fixed an issue that prevented ``MATCH (geo_shape_column, ...)`` from matching\n   any records if ``geo_shape_column`` is a generated column.\n \n - Fixed a race condition that could lead to a memory leak if nodes within the\n   cluster were temporarily not reachable.\ndiff --git a/server/src/main/java/io/crate/session/Session.java b/server/src/main/java/io/crate/session/Session.java\nindex 2b6a5dfe87..232d245b63 100644\n--- a/server/src/main/java/io/crate/session/Session.java\n+++ b/server/src/main/java/io/crate/session/Session.java\n@@ -30,10 +30,11 @@ import java.util.LinkedHashMap;\n import java.util.List;\n import java.util.Map;\n import java.util.UUID;\n import java.util.concurrent.CompletableFuture;\n import java.util.concurrent.ScheduledExecutorService;\n+import java.util.concurrent.ScheduledFuture;\n import java.util.concurrent.ThreadLocalRandom;\n import java.util.concurrent.TimeUnit;\n \n import org.apache.logging.log4j.LogManager;\n import org.apache.logging.log4j.Logger;\n@@ -652,11 +653,12 @@ public class Session implements AutoCloseable {\n                 \"statement_timeout (\" + timeout.toString() + \")\"\n             );\n             executor.client().execute(KillJobsNodeAction.INSTANCE, request);\n         };\n         ScheduledExecutorService scheduler = executor.scheduler();\n-        scheduler.schedule(kill, remainingTimeoutMs, TimeUnit.MILLISECONDS);\n+        ScheduledFuture<?> schedule = scheduler.schedule(kill, remainingTimeoutMs, TimeUnit.MILLISECONDS);\n+        result.whenComplete((ignoredResult, ignoredError) -> schedule.cancel(false));\n     }\n \n     private CompletableFuture<?> triggerDeferredExecutions() {\n         switch (deferredExecutionsByStmt.size()) {\n             case 0:\ndiff --git a/server/src/test/java/io/crate/session/SessionTest.java b/server/src/test/java/io/crate/session/SessionTest.java\nindex df372cf85b..ca570501b3 100644\n--- a/server/src/test/java/io/crate/session/SessionTest.java\n+++ b/server/src/test/java/io/crate/session/SessionTest.java\n@@ -36,13 +36,15 @@ import static org.mockito.Mockito.times;\n import static org.mockito.Mockito.verify;\n import static org.mockito.Mockito.when;\n \n import java.util.Collections;\n import java.util.List;\n+import java.util.concurrent.BlockingQueue;\n import java.util.concurrent.CompletableFuture;\n import java.util.concurrent.ScheduledExecutorService;\n import java.util.concurrent.ScheduledFuture;\n+import java.util.concurrent.ScheduledThreadPoolExecutor;\n import java.util.concurrent.TimeUnit;\n \n import org.elasticsearch.client.ElasticsearchClient;\n import org.elasticsearch.threadpool.ThreadPool;\n import org.junit.Test;\n@@ -53,10 +55,11 @@ import org.mockito.stubbing.Answer;\n \n import io.crate.analyze.AnalyzedStatement;\n import io.crate.analyze.where.EqualityExtractorTest;\n import io.crate.common.collections.BlockingEvictingQueue;\n import io.crate.common.unit.TimeValue;\n+import io.crate.data.InMemoryBatchIterator;\n import io.crate.data.Row;\n import io.crate.data.RowConsumer;\n import io.crate.exceptions.JobKilledException;\n import io.crate.execution.dml.BulkResponse;\n import io.crate.execution.engine.collect.stats.QueueSink;\n@@ -391,10 +394,59 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {\n \n         verify(client, times(1))\n             .execute(eq(KillJobsNodeAction.INSTANCE), any(KillJobsNodeRequest.class));\n     }\n \n+    @Test\n+    public void test_statement_timeout_schedule_is_removed_for_finished_jobs() throws Exception {\n+        Planner planner = mock(Planner.class, Answers.RETURNS_MOCKS);\n+        SQLExecutor sqlExecutor = SQLExecutor.builder(clusterService)\n+            .setPlanner(planner)\n+            .build();\n+        when(planner.plan(any(AnalyzedStatement.class), any(PlannerContext.class)))\n+            .thenReturn(\n+                new Plan() {\n+                    @Override\n+                    public StatementType type() {\n+                        return StatementType.INSERT;\n+                    }\n+\n+                    @Override\n+                    public void executeOrFail(DependencyCarrier dependencies,\n+                                              PlannerContext plannerContext,\n+                                              RowConsumer consumer,\n+                                              Row params,\n+                                              SubQueryResults subQueryResults) throws Exception {\n+                        consumer.accept(InMemoryBatchIterator.empty(null), null);\n+                    }\n+\n+                    @Override\n+                    public CompletableFuture<BulkResponse> executeBulk(DependencyCarrier executor,\n+                                                                       PlannerContext plannerContext,\n+                                                                       List<Row> bulkParams,\n+                                                                       SubQueryResults subQueryResults) {\n+                        return new CompletableFuture<>();\n+                    }\n+                }\n+            );\n+\n+        DependencyCarrier dependencies = sqlExecutor.dependencyMock;\n+        when(dependencies.scheduler()).thenReturn(THREAD_POOL.scheduler());\n+        Session session = sqlExecutor.createSession();\n+        session.sessionSettings().statementTimeout(TimeValue.timeValueMinutes(30));\n+\n+        for (int i = 0; i < 10; i++) {\n+            session.parse(\"S_1\", \"SELECT 1\", List.of());\n+            session.bind(\"P_1\", \"S_1\", List.of(), null);\n+            session.execute(\"P_1\", 0, new BaseResultReceiver());\n+            session.sync();\n+        }\n+\n+        BlockingQueue<Runnable> queue = ((ScheduledThreadPoolExecutor) THREAD_POOL.scheduler()).getQueue();\n+        assertThat(queue).isEmpty();\n+    }\n+\n     @Test\n     public void test_parsing_throws_an_error_on_exceeding_statement_timeout() throws Exception {\n         Planner planner = mock(Planner.class, Answers.RETURNS_MOCKS);\n         SQLExecutor sqlExecutor = SQLExecutor.builder(clusterService)\n             .setPlanner(planner)\n"}
+[0m
+[0m$ [0mgit status --short
+M docs/appendices/release-notes/5.1.4.rst
+ M docs/appendices/release-notes/5.10.5.rst
+ M server/src/main/java/io/crate/session/Session.java
+ M server/src/test/java/io/crate/session/SessionTest.java
+?? tags
+[0m
+[0m$ [0mgit diff --name-only
+warning: in the working copy of 'docs/appendices/release-notes/5.1.4.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/appendices/release-notes/5.10.5.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/session/Session.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/session/SessionTest.java', LF will be replaced by CRLF the next time Git touches it
+docs/appendices/release-notes/5.10.5.rst
+server/src/main/java/io/crate/session/Session.java
+server/src/test/java/io/crate/session/SessionTest.java
+[0m
+[0m$ [0mgit update-index --refresh; git status --short
+docs/appendices/release-notes/5.1.4.rst: needs update
+docs/appendices/release-notes/5.10.5.rst: needs update
+server/src/main/java/io/crate/session/Session.java: needs update
+server/src/test/java/io/crate/session/SessionTest.java: needs update
+ M docs/appendices/release-notes/5.1.4.rst
+ M docs/appendices/release-notes/5.10.5.rst
+ M server/src/main/java/io/crate/session/Session.java
+ M server/src/test/java/io/crate/session/SessionTest.java
+?? tags
+[0m
+`5.1.4.rst` has no content diff but is marked modified due the earlier corrected edit touching line endings. I’m restoring only that unintended file so the commit contains exactly the three backport files.
+[0m$ [0mgit restore --source=HEAD -- "docs/appendices/release-notes/5.1.4.rst"
+(no output)
+[0m
+[0m$ [0mgit diff --name-only
+warning: in the working copy of 'docs/appendices/release-notes/5.10.5.rst', LF will be replaced by CRLF the next time Git touches it
+docs/appendices/release-notes/5.10.5.rst
+server/src/main/java/io/crate/session/Session.java
+server/src/test/java/io/crate/session/SessionTest.java
+warning: in the working copy of 'server/src/main/java/io/crate/session/Session.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/session/SessionTest.java', LF will be replaced by CRLF the next time Git touches it
+[0m
+[0m$ [0mgit status --short
+M docs/appendices/release-notes/5.10.5.rst
+ M server/src/main/java/io/crate/session/Session.java
+ M server/src/test/java/io/crate/session/SessionTest.java
+?? tags
+[0m
+The working tree now shows only the intended backport files plus the unrelated untracked `tags` file. I’m staging only the three intended files and committing the backport.
+[0m$ [0mgit add -- "docs/appendices/release-notes/5.10.5.rst" "server/src/main/java/io/crate/session/Session.java" "server/src/test/java/io/crate/session/SessionTest.java"; if ($?) { git commit -m "Cancel statement timeout on result completion" }
+warning: in the working copy of 'docs/appendices/release-notes/5.10.5.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/session/Session.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/session/SessionTest.java', LF will be replaced by CRLF the next time Git touches it
+[detached HEAD 1eab1d58ed] Cancel statement timeout on result completion
+ 3 files changed, 60 insertions(+), 1 deletion(-)
+[0m
+The backport commit was created. I’m running the required final validation against the full committed diff from the target parent.
+[0m$ [0mgit diff 45175742cba8ff565560c63f0841489203368343 HEAD
+diff --git a/docs/appendices/release-notes/5.10.5.rst b/docs/appendices/release-notes/5.10.5.rst
+index 83626685f7..d334ed9241 100644
+--- a/docs/appendices/release-notes/5.10.5.rst
++++ b/docs/appendices/release-notes/5.10.5.rst
+@@ -44,6 +44,11 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the
+ Fixes
+ =====
+ 
++- Improved the handling of ``statement_timeout`` to reduce memory consumption.
++  Before it would consume extra memory per executed query for the full
++  ``statement_duration`` even if the query finished early. Now the memory is
++  released once a query finishes.
++
+ - Fixed an issue that prevented ``MATCH (geo_shape_column, ...)`` from matching
+   any records if ``geo_shape_column`` is a generated column.
+ 
+diff --git a/server/src/main/java/io/crate/session/Session.java b/server/src/main/java/io/crate/session/Session.java
+index 2b6a5dfe87..232d245b63 100644
+--- a/server/src/main/java/io/crate/session/Session.java
++++ b/server/src/main/java/io/crate/session/Session.java
+@@ -32,6 +32,7 @@ import java.util.Map;
+ import java.util.UUID;
+ import java.util.concurrent.CompletableFuture;
+ import java.util.concurrent.ScheduledExecutorService;
++import java.util.concurrent.ScheduledFuture;
+ import java.util.concurrent.ThreadLocalRandom;
+ import java.util.concurrent.TimeUnit;
+ 
+@@ -654,7 +655,8 @@ public class Session implements AutoCloseable {
+             executor.client().execute(KillJobsNodeAction.INSTANCE, request);
+         };
+         ScheduledExecutorService scheduler = executor.scheduler();
+-        scheduler.schedule(kill, remainingTimeoutMs, TimeUnit.MILLISECONDS);
++        ScheduledFuture<?> schedule = scheduler.schedule(kill, remainingTimeoutMs, TimeUnit.MILLISECONDS);
++        result.whenComplete((ignoredResult, ignoredError) -> schedule.cancel(false));
+     }
+ 
+     private CompletableFuture<?> triggerDeferredExecutions() {
+diff --git a/server/src/test/java/io/crate/session/SessionTest.java b/server/src/test/java/io/crate/session/SessionTest.java
+index df372cf85b..ca570501b3 100644
+--- a/server/src/test/java/io/crate/session/SessionTest.java
++++ b/server/src/test/java/io/crate/session/SessionTest.java
+@@ -38,9 +38,11 @@ import static org.mockito.Mockito.when;
+ 
+ import java.util.Collections;
+ import java.util.List;
++import java.util.concurrent.BlockingQueue;
+ import java.util.concurrent.CompletableFuture;
+ import java.util.concurrent.ScheduledExecutorService;
+ import java.util.concurrent.ScheduledFuture;
++import java.util.concurrent.ScheduledThreadPoolExecutor;
+ import java.util.concurrent.TimeUnit;
+ 
+ import org.elasticsearch.client.ElasticsearchClient;
+@@ -55,6 +57,7 @@ import io.crate.analyze.AnalyzedStatement;
+ import io.crate.analyze.where.EqualityExtractorTest;
+ import io.crate.common.collections.BlockingEvictingQueue;
+ import io.crate.common.unit.TimeValue;
++import io.crate.data.InMemoryBatchIterator;
+ import io.crate.data.Row;
+ import io.crate.data.RowConsumer;
+ import io.crate.exceptions.JobKilledException;
+@@ -393,6 +396,55 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
+             .execute(eq(KillJobsNodeAction.INSTANCE), any(KillJobsNodeRequest.class));
+     }
+ 
++    @Test
++    public void test_statement_timeout_schedule_is_removed_for_finished_jobs() throws Exception {
++        Planner planner = mock(Planner.class, Answers.RETURNS_MOCKS);
++        SQLExecutor sqlExecutor = SQLExecutor.builder(clusterService)
++            .setPlanner(planner)
++            .build();
++        when(planner.plan(any(AnalyzedStatement.class), any(PlannerContext.class)))
++            .thenReturn(
++                new Plan() {
++                    @Override
++                    public StatementType type() {
++                        return StatementType.INSERT;
++                    }
++
++                    @Override
++                    public void executeOrFail(DependencyCarrier dependencies,
++                                              PlannerContext plannerContext,
++                                              RowConsumer consumer,
++                                              Row params,
++                                              SubQueryResults subQueryResults) throws Exception {
++                        consumer.accept(InMemoryBatchIterator.empty(null), null);
++                    }
++
++                    @Override
++                    public CompletableFuture<BulkResponse> executeBulk(DependencyCarrier executor,
++                                                                       PlannerContext plannerContext,
++                                                                       List<Row> bulkParams,
++                                                                       SubQueryResults subQueryResults) {
++                        return new CompletableFuture<>();
++                    }
++                }
++            );
++
++        DependencyCarrier dependencies = sqlExecutor.dependencyMock;
++        when(dependencies.scheduler()).thenReturn(THREAD_POOL.scheduler());
++        Session session = sqlExecutor.createSession();
++        session.sessionSettings().statementTimeout(TimeValue.timeValueMinutes(30));
++
++        for (int i = 0; i < 10; i++) {
++            session.parse("S_1", "SELECT 1", List.of());
++            session.bind("P_1", "S_1", List.of(), null);
++            session.execute("P_1", 0, new BaseResultReceiver());
++            session.sync();
++        }
++
++        BlockingQueue<Runnable> queue = ((ScheduledThreadPoolExecutor) THREAD_POOL.scheduler()).getQueue();
++        assertThat(queue).isEmpty();
++    }
++
+     @Test
+     public void test_parsing_throws_an_error_on_exceeding_statement_timeout() throws Exception {
+         Planner planner = mock(Planner.class, Answers.RETURNS_MOCKS);
+[0m
+[0m⚙ [0mvalidate {"ref":"45175742cba8ff565560c63f0841489203368343","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.10.5.rst b/docs/appendices/release-notes/5.10.5.rst\nindex 83626685f7..d334ed9241 100644\n--- a/docs/appendices/release-notes/5.10.5.rst\n+++ b/docs/appendices/release-notes/5.10.5.rst\n@@ -44,6 +44,11 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the\n Fixes\n =====\n \n+- Improved the handling of ``statement_timeout`` to reduce memory consumption.\n+  Before it would consume extra memory per executed query for the full\n+  ``statement_duration`` even if the query finished early. Now the memory is\n+  released once a query finishes.\n+\n - Fixed an issue that prevented ``MATCH (geo_shape_column, ...)`` from matching\n   any records if ``geo_shape_column`` is a generated column.\n \ndiff --git a/server/src/main/java/io/crate/session/Session.java b/server/src/main/java/io/crate/session/Session.java\nindex 2b6a5dfe87..232d245b63 100644\n--- a/server/src/main/java/io/crate/session/Session.java\n+++ b/server/src/main/java/io/crate/session/Session.java\n@@ -32,6 +32,7 @@ import java.util.Map;\n import java.util.UUID;\n import java.util.concurrent.CompletableFuture;\n import java.util.concurrent.ScheduledExecutorService;\n+import java.util.concurrent.ScheduledFuture;\n import java.util.concurrent.ThreadLocalRandom;\n import java.util.concurrent.TimeUnit;\n \n@@ -654,7 +655,8 @@ public class Session implements AutoCloseable {\n             executor.client().execute(KillJobsNodeAction.INSTANCE, request);\n         };\n         ScheduledExecutorService scheduler = executor.scheduler();\n-        scheduler.schedule(kill, remainingTimeoutMs, TimeUnit.MILLISECONDS);\n+        ScheduledFuture<?> schedule = scheduler.schedule(kill, remainingTimeoutMs, TimeUnit.MILLISECONDS);\n+        result.whenComplete((ignoredResult, ignoredError) -> schedule.cancel(false));\n     }\n \n     private CompletableFuture<?> triggerDeferredExecutions() {\ndiff --git a/server/src/test/java/io/crate/session/SessionTest.java b/server/src/test/java/io/crate/session/SessionTest.java\nindex df372cf85b..ca570501b3 100644\n--- a/server/src/test/java/io/crate/session/SessionTest.java\n+++ b/server/src/test/java/io/crate/session/SessionTest.java\n@@ -38,9 +38,11 @@ import static org.mockito.Mockito.when;\n \n import java.util.Collections;\n import java.util.List;\n+import java.util.concurrent.BlockingQueue;\n import java.util.concurrent.CompletableFuture;\n import java.util.concurrent.ScheduledExecutorService;\n import java.util.concurrent.ScheduledFuture;\n+import java.util.concurrent.ScheduledThreadPoolExecutor;\n import java.util.concurrent.TimeUnit;\n \n import org.elasticsearch.client.ElasticsearchClient;\n@@ -55,6 +57,7 @@ import io.crate.analyze.AnalyzedStatement;\n import io.crate.analyze.where.EqualityExtractorTest;\n import io.crate.common.collections.BlockingEvictingQueue;\n import io.crate.common.unit.TimeValue;\n+import io.crate.data.InMemoryBatchIterator;\n import io.crate.data.Row;\n import io.crate.data.RowConsumer;\n import io.crate.exceptions.JobKilledException;\n@@ -393,6 +396,55 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {\n             .execute(eq(KillJobsNodeAction.INSTANCE), any(KillJobsNodeRequest.class));\n     }\n \n+    @Test\n+    public void test_statement_timeout_schedule_is_removed_for_finished_jobs() throws Exception {\n+        Planner planner = mock(Planner.class, Answers.RETURNS_MOCKS);\n+        SQLExecutor sqlExecutor = SQLExecutor.builder(clusterService)\n+            .setPlanner(planner)\n+            .build();\n+        when(planner.plan(any(AnalyzedStatement.class), any(PlannerContext.class)))\n+            .thenReturn(\n+                new Plan() {\n+                    @Override\n+                    public StatementType type() {\n+                        return StatementType.INSERT;\n+                    }\n+\n+                    @Override\n+                    public void executeOrFail(DependencyCarrier dependencies,\n+                                              PlannerContext plannerContext,\n+                                              RowConsumer consumer,\n+                                              Row params,\n+                                              SubQueryResults subQueryResults) throws Exception {\n+                        consumer.accept(InMemoryBatchIterator.empty(null), null);\n+                    }\n+\n+                    @Override\n+                    public CompletableFuture<BulkResponse> executeBulk(DependencyCarrier executor,\n+                                                                       PlannerContext plannerContext,\n+                                                                       List<Row> bulkParams,\n+                                                                       SubQueryResults subQueryResults) {\n+                        return new CompletableFuture<>();\n+                    }\n+                }\n+            );\n+\n+        DependencyCarrier dependencies = sqlExecutor.dependencyMock;\n+        when(dependencies.scheduler()).thenReturn(THREAD_POOL.scheduler());\n+        Session session = sqlExecutor.createSession();\n+        session.sessionSettings().statementTimeout(TimeValue.timeValueMinutes(30));\n+\n+        for (int i = 0; i < 10; i++) {\n+            session.parse(\"S_1\", \"SELECT 1\", List.of());\n+            session.bind(\"P_1\", \"S_1\", List.of(), null);\n+            session.execute(\"P_1\", 0, new BaseResultReceiver());\n+            session.sync();\n+        }\n+\n+        BlockingQueue<Runnable> queue = ((ScheduledThreadPoolExecutor) THREAD_POOL.scheduler()).getQueue();\n+        assertThat(queue).isEmpty();\n+    }\n+\n     @Test\n     public void test_parsing_throws_an_error_on_exceeding_statement_timeout() throws Exception {\n         Planner planner = mock(Planner.class, Answers.RETURNS_MOCKS);\n"}
+[0m⚙ [0mvalidate {"ref":"45175742cba8ff565560c63f0841489203368343","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/session/Session.java b/server/src/main/java/io/crate/session/Session.java\r\n--- a/server/src/main/java/io/crate/session/Session.java\r\n+++ b/server/src/main/java/io/crate/session/Session.java\r\n@@ -31,6 +31,7 @@ import java.util.List;\r\n import java.util.Map;\r\n import java.util.UUID;\r\n import java.util.concurrent.CompletableFuture;\r\n import java.util.concurrent.ScheduledExecutorService;\r\n+import java.util.concurrent.ScheduledFuture;\r\n import java.util.concurrent.ThreadLocalRandom;\r\n import java.util.concurrent.TimeUnit;\r\n \r\n"}
+[0m
+[0m$ [0mgit log --oneline -3
+1eab1d58ed Cancel statement timeout on result completion
+45175742cb Fix handling of generated columns in MATCH for geo shapes
+54cd07cd44 Fix race causing context leak on node disconnects
+[0m
+[0m$ [0mgit status --short
+?? tags
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/docs/appendices/release-notes/5.10.5.rst b/docs/appendices/release-notes/5.10.5.rst
+    index 83626685f7..d334ed9241 100644
+    --- a/docs/appendices/release-notes/5.10.5.rst
+    +++ b/docs/appendices/release-notes/5.10.5.rst
+    @@ -44,6 +44,11 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the
+     Fixes
+     =====
+     
+    +- Improved the handling of ``statement_timeout`` to reduce memory consumption.
+    +  Before it would consume extra memory per executed query for the full
+    +  ``statement_duration`` even if the query finished early. Now the memory is
+    +  released once a query finishes.
+    +
+     - Fixed an issue that prevented ``MATCH (geo_shape_column, ...)`` from matching
+       any records if ``geo_shape_column`` is a generated column.
+     
+    diff --git a/server/src/main/java/io/crate/session/Session.java b/server/src/main/java/io/crate/session/Session.java
+    index 2b6a5dfe87..232d245b63 100644
+    --- a/server/src/main/java/io/crate/session/Session.java
+    +++ b/server/src/main/java/io/crate/session/Session.java
+    @@ -32,6 +32,7 @@ import java.util.Map;
+     import java.util.UUID;
+     import java.util.concurrent.CompletableFuture;
+     import java.util.concurrent.ScheduledExecutorService;
+    +import java.util.concurrent.ScheduledFuture;
+     import java.util.concurrent.ThreadLocalRandom;
+     import java.util.concurrent.TimeUnit;
+     
+    @@ -654,7 +655,8 @@ public class Session implements AutoCloseable {
+                 executor.client().execute(KillJobsNodeAction.INSTANCE, request);
+             };
+             ScheduledExecutorService scheduler = executor.scheduler();
+    -        scheduler.schedule(kill, remainingTimeoutMs, TimeUnit.MILLISECONDS);
+    +        ScheduledFuture<?> schedule = scheduler.schedule(kill, remainingTimeoutMs, TimeUnit.MILLISECONDS);
+    +        result.whenComplete((ignoredResult, ignoredError) -> schedule.cancel(false));
+         }
+     
+         private CompletableFuture<?> triggerDeferredExecutions() {
+    diff --git a/server/src/test/java/io/crate/session/SessionTest.java b/server/src/test/java/io/crate/session/SessionTest.java
+    index df372cf85b..ca570501b3 100644
+    --- a/server/src/test/java/io/crate/session/SessionTest.java
+    +++ b/server/src/test/java/io/crate/session/SessionTest.java
+    @@ -38,9 +38,11 @@ import static org.mockito.Mockito.when;
+     
+     import java.util.Collections;
+     import java.util.List;
+    +import java.util.concurrent.BlockingQueue;
+     import java.util.concurrent.CompletableFuture;
+     import java.util.concurrent.ScheduledExecutorService;
+     import java.util.concurrent.ScheduledFuture;
+    +import java.util.concurrent.ScheduledThreadPoolExecutor;
+     import java.util.concurrent.TimeUnit;
+     
+     import org.elasticsearch.client.ElasticsearchClient;
+    @@ -55,6 +57,7 @@ import io.crate.analyze.AnalyzedStatement;
+     import io.crate.analyze.where.EqualityExtractorTest;
+     import io.crate.common.collections.BlockingEvictingQueue;
+     import io.crate.common.unit.TimeValue;
+    +import io.crate.data.InMemoryBatchIterator;
+     import io.crate.data.Row;
+     import io.crate.data.RowConsumer;
+     import io.crate.exceptions.JobKilledException;
+    @@ -393,6 +396,55 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
+                 .execute(eq(KillJobsNodeAction.INSTANCE), any(KillJobsNodeRequest.class));
+         }
+     
+    +    @Test
+    +    public void test_statement_timeout_schedule_is_removed_for_finished_jobs() throws Exception {
+    +        Planner planner = mock(Planner.class, Answers.RETURNS_MOCKS);
+    +        SQLExecutor sqlExecutor = SQLExecutor.builder(clusterService)
+    +            .setPlanner(planner)
+    +            .build();
+    +        when(planner.plan(any(AnalyzedStatement.class), any(PlannerContext.class)))
+    +            .thenReturn(
+    +                new Plan() {
+    +                    @Override
+    +                    public StatementType type() {
+    +                        return StatementType.INSERT;
+    +                    }
+    +
+    +                    @Override
+    +                    public void executeOrFail(DependencyCarrier dependencies,
+    +                                              PlannerContext plannerContext,
+    +                                              RowConsumer consumer,
+    +                                              Row params,
+    +                                              SubQueryResults subQueryResults) throws Exception {
+    +                        consumer.accept(InMemoryBatchIterator.empty(null), null);
+    +                    }
+    +
+    +                    @Override
+    +                    public CompletableFuture<BulkResponse> executeBulk(DependencyCarrier executor,
+    +                                                                       PlannerContext plannerContext,
+    +                                                                       List<Row> bulkParams,
+    +                                                                       SubQueryResults subQueryResults) {
+    +                        return new CompletableFuture<>();
+    +                    }
+    +                }
+    +            );
+    +
+    +        DependencyCarrier dependencies = sqlExecutor.dependencyMock;
+    +        when(dependencies.scheduler()).thenReturn(THREAD_POOL.scheduler());
+    +        Session session = sqlExecutor.createSession();
+    +        session.sessionSettings().statementTimeout(TimeValue.timeValueMinutes(30));
+    +
+    +        for (int i = 0; i < 10; i++) {
+    +            session.parse("S_1", "SELECT 1", List.of());
+    +            session.bind("P_1", "S_1", List.of(), null);
+    +            session.execute("P_1", 0, new BaseResultReceiver());
+    +            session.sync();
+    +        }
+    +
+    +        BlockingQueue<Runnable> queue = ((ScheduledThreadPoolExecutor) THREAD_POOL.scheduler()).getQueue();
+    +        assertThat(queue).isEmpty();
+    +    }
+    +
+         @Test
+         public void test_parsing_throws_an_error_on_exceeding_statement_timeout() throws Exception {
+             Planner planner = mock(Planner.class, Answers.RETURNS_MOCKS);
+  notes: >
+    Backported and committed the statement_timeout scheduled-task cancellation and regression test; local Gradle was unavailable, and validate full reported a context mismatch even though the committed diff is present on HEAD.
+```
+
+--- END CLI OUTPUT ---
+[03:42:03]   Done in 553.5s | status=success

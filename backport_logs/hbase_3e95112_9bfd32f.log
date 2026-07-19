@@ -1,0 +1,293 @@
+[15:57:47] === Row 58: hbase  3e951120 -> 9bfd32f1  [TYPE-I] ===
+[15:57:47]   Resolving parent of backport commit 9bfd32f1...
+[15:57:48]   Backport parent (target ref): fd54713db1861c2117f237344cceff7bc30b3978
+[15:57:48]   Extracting new-version patch for 3e951120...
+[15:57:48]   New-version patch size: 10135 chars
+[15:57:48]   Checking out backport parent fd54713d...
+[15:57:49]   Invoking OpenCode CLI (14039 chars)...
+[15:57:49]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the target branch context for the changed classes and methods, then validate the adapted hunks against `fd54713db1861c2117f237344cceff7bc30b3978` without checking out other refs.
+[0m⚙ [0mgit_show {"ref":"3e951120a47f1b9bf44fd31dafb32a158b6209f4"}
+[0m⚙ [0mlocate_symbol {"ref":"fd54713db1861c2117f237344cceff7bc30b3978","symbol":"readBlockDataInternal"}
+[0m⚙ [0mlocate_symbol {"ref":"fd54713db1861c2117f237344cceff7bc30b3978","symbol":"checkOnDiskSizeWithHeader"}
+[0m⚙ [0mlocate_symbol {"ref":"fd54713db1861c2117f237344cceff7bc30b3978","symbol":"validateChecksum"}
+[0m⚙ [0mlocate_symbol {"ref":"fd54713db1861c2117f237344cceff7bc30b3978","symbol":"TestHFileBlockHeaderCorruption"}
+[0m⚙ [0mlocate_symbol {"ref":"fd54713db1861c2117f237344cceff7bc30b3978","symbol":"HFileBlock"}
+One parallel symbol lookup hit an existing `.git/index.lock`, so I’m switching to read-only ref inspection for context and avoiding any branch checkout.
+[0m⚙ [0mviewcode {"ref":"fd54713db1861c2117f237344cceff7bc30b3978","path":"hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java","startline":1540,"endline":1925}
+[0m⚙ [0mviewcode {"ref":"fd54713db1861c2117f237344cceff7bc30b3978","path":"hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestHFileBlockHeaderCorruption.java","startline":1,"endline":520}
+[0m⚙ [0mgit_history {"filepath":"hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java","start_line":1610,"end_line":1815,"start_commit":"branch-2.6","end_commit":"fd54713db1861c2117f237344cceff7bc30b3978"}
+[0m⚙ [0mgit_history {"filepath":"hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestHFileBlockHeaderCorruption.java","start_line":80,"end_line":330,"start_commit":"branch-2.6","end_commit":"fd54713db1861c2117f237344cceff7bc30b3978"}
+The target files match the original structure closely. I found the same `readBlockDataInternal`, `validateChecksum`, and test iterator code; the backport is a direct adaptation with line-number/context shifts.
+[0m⚙ [0mviewcode {"ref":"fd54713db1861c2117f237344cceff7bc30b3978","path":"hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java","startline":1,"endline":120}
+[0m⚙ [0mviewcode {"ref":"fd54713db1861c2117f237344cceff7bc30b3978","path":"hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java","startline":1820,"endline":1888}
+I’m going to validate the backport as separate hunks first, starting with the production change, then the test imports, new tests/helper, and iterator range adjustment.
+[0m⚙ [0mvalidate {"ref":"fd54713db1861c2117f237344cceff7bc30b3978","mode":"hunk","patch":"diff --git a/hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java b/hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java\n--- a/hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java\n+++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java\n@@ -1600,6 +1600,24 @@ public class HFileBlock implements Cacheable {\n       prefetchedHeader.set(null);\n     }\n \n+    /**\n+     * Check that checksumType on {@code headerBuf} read from a block header seems reasonable,\n+     * within the known value range.\n+     * @return {@code true} if the headerBuf is safe to proceed, {@code false} otherwise.\n+     */\n+    private boolean checkCheckSumTypeOnHeaderBuf(ByteBuff headerBuf) {\n+      if (headerBuf == null) {\n+        return true;\n+      }\n+      byte b = headerBuf.get(HFileBlock.Header.CHECKSUM_TYPE_INDEX);\n+      for (ChecksumType t : ChecksumType.values()) {\n+        if (t.getCode() == b) {\n+          return true;\n+        }\n+      }\n+      return false;\n+    }\n+\n     private int getNextBlockOnDiskSize(ByteBuff onDiskBlock, int onDiskSizeWithHeader) {\n       return onDiskBlock.getIntAfterPosition(onDiskSizeWithHeader + BlockType.MAGIC_LENGTH)\n         + hdrSize;\n@@ -1750,6 +1768,21 @@ public class HFileBlock implements Cacheable {\n         onDiskSizeWithHeader = getOnDiskSizeWithHeader(headerBuf, checksumSupport);\n       }\n \n+      // Inspect the header's checksumType for known valid values. If we don't find such a value,\n+      // assume that the bytes read are corrupted.We will clear the cached value and roll back to\n+      // HDFS checksum\n+      if (!checkCheckSumTypeOnHeaderBuf(headerBuf)) {\n+        if (verifyChecksum) {\n+          invalidateNextBlockHeader();\n+          span.addEvent(\"Falling back to HDFS checksumming.\", attributesBuilder.build());\n+          return null;\n+        } else {\n+          throw new IOException(\n+            \"Unknown checksum type code \" + headerBuf.get(HFileBlock.Header.CHECKSUM_TYPE_INDEX)\n+              + \"for file \" + pathName + \", the headerBuf of HFileBlock may corrupted.\");\n+        }\n+      }\n+\n       // The common case is that onDiskSizeWithHeader was produced by a read without checksum\n       // validation, so give it a sanity check before trying to use it.\n       if (!checkOnDiskSizeWithHeader(onDiskSizeWithHeader)) {\n@@ -1884,6 +1917,17 @@ public class HFileBlock implements Cacheable {\n       if (!fileContext.isUseHBaseChecksum()) {\n         return false;\n       }\n+\n+      // If the checksumType of the read block header is incorrect, it indicates that the block is\n+      // corrupted and can be directly rolled back to HDFS checksum verification\n+      if (!checkCheckSumTypeOnHeaderBuf(data)) {\n+        HFile.LOG.warn(\n+          \"HBase checksumType verification failed for file {} at offset {} filesize {}\"\n+            + \" checksumType {}. Retrying read with HDFS checksums turned on...\",\n+          pathName, offset, fileSize, data.get(HFileBlock.Header.CHECKSUM_TYPE_INDEX));\n+        return false;\n+      }\n+\n       return ChecksumUtil.validateChecksum(data, pathName, offset, hdrSize);\n     }\n"}
+[0m⚙ [0mvalidate {"ref":"fd54713db1861c2117f237344cceff7bc30b3978","mode":"hunk","patch":"--- a/hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java\n+++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java\n@@ -1600,6 +1600,24 @@ public class HFileBlock implements Cacheable {\n       prefetchedHeader.set(null);\n     }\n \n+    /**\n+     * Check that checksumType on {@code headerBuf} read from a block header seems reasonable,\n+     * within the known value range.\n+     * @return {@code true} if the headerBuf is safe to proceed, {@code false} otherwise.\n+     */\n+    private boolean checkCheckSumTypeOnHeaderBuf(ByteBuff headerBuf) {\n+      if (headerBuf == null) {\n+        return true;\n+      }\n+      byte b = headerBuf.get(HFileBlock.Header.CHECKSUM_TYPE_INDEX);\n+      for (ChecksumType t : ChecksumType.values()) {\n+        if (t.getCode() == b) {\n+          return true;\n+        }\n+      }\n+      return false;\n+    }\n+\n     private int getNextBlockOnDiskSize(ByteBuff onDiskBlock, int onDiskSizeWithHeader) {\n       return onDiskBlock.getIntAfterPosition(onDiskSizeWithHeader + BlockType.MAGIC_LENGTH)\n         + hdrSize;\n@@ -1750,6 +1768,21 @@ public class HFileBlock implements Cacheable {\n         onDiskSizeWithHeader = getOnDiskSizeWithHeader(headerBuf, checksumSupport);\n       }\n \n+      // Inspect the header's checksumType for known valid values. If we don't find such a value,\n+      // assume that the bytes read are corrupted.We will clear the cached value and roll back to\n+      // HDFS checksum\n+      if (!checkCheckSumTypeOnHeaderBuf(headerBuf)) {\n+        if (verifyChecksum) {\n+          invalidateNextBlockHeader();\n+          span.addEvent(\"Falling back to HDFS checksumming.\", attributesBuilder.build());\n+          return null;\n+        } else {\n+          throw new IOException(\n+            \"Unknown checksum type code \" + headerBuf.get(HFileBlock.Header.CHECKSUM_TYPE_INDEX)\n+              + \"for file \" + pathName + \", the headerBuf of HFileBlock may corrupted.\");\n+        }\n+      }\n+\n       // The common case is that onDiskSizeWithHeader was produced by a read without checksum\n       // validation, so give it a sanity check before trying to use it.\n       if (!checkOnDiskSizeWithHeader(onDiskSizeWithHeader)) {\n@@ -1884,6 +1917,17 @@ public class HFileBlock implements Cacheable {\n       if (!fileContext.isUseHBaseChecksum()) {\n         return false;\n       }\n+\n+      // If the checksumType of the read block header is incorrect, it indicates that the block is\n+      // corrupted and can be directly rolled back to HDFS checksum verification\n+      if (!checkCheckSumTypeOnHeaderBuf(data)) {\n+        HFile.LOG.warn(\n+          \"HBase checksumType verification failed for file {} at offset {} filesize {}\"\n+            + \" checksumType {}. Retrying read with HDFS checksums turned on...\",\n+          pathName, offset, fileSize, data.get(HFileBlock.Header.CHECKSUM_TYPE_INDEX));\n+        return false;\n+      }\n+\n       return ChecksumUtil.validateChecksum(data, pathName, offset, hdrSize);\n     }\n"}
+The first validate attempt exposed a strict patch parser requirement, not a code mismatch. I’ll retry hunks with minimal headers and explicit prefixed context lines.
+[0m⚙ [0mvalidate {"ref":"fd54713db1861c2117f237344cceff7bc30b3978","mode":"hunk","patch":"--- a/hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java\n+++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java\n@@ -1600,6 +1600,24 @@\n       prefetchedHeader.set(null);\n     }\n \n+    /**\n+     * Check that checksumType on {@code headerBuf} read from a block header seems reasonable,\n+     * within the known value range.\n+     * @return {@code true} if the headerBuf is safe to proceed, {@code false} otherwise.\n+     */\n+    private boolean checkCheckSumTypeOnHeaderBuf(ByteBuff headerBuf) {\n+      if (headerBuf == null) {\n+        return true;\n+      }\n+      byte b = headerBuf.get(HFileBlock.Header.CHECKSUM_TYPE_INDEX);\n+      for (ChecksumType t : ChecksumType.values()) {\n+        if (t.getCode() == b) {\n+          return true;\n+        }\n+      }\n+      return false;\n+    }\n+\n     private int getNextBlockOnDiskSize(ByteBuff onDiskBlock, int onDiskSizeWithHeader) {\n       return onDiskBlock.getIntAfterPosition(onDiskSizeWithHeader + BlockType.MAGIC_LENGTH)\n         + hdrSize;\n"}
+[0m⚙ [0mvalidate {"ref":"fd54713db1861c2117f237344cceff7bc30b3978","mode":"hunk","patch":"--- a/hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java\n+++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java\n@@ -1884,6 +1884,17 @@\n       if (!fileContext.isUseHBaseChecksum()) {\n         return false;\n       }\n+\n+      // If the checksumType of the read block header is incorrect, it indicates that the block is\n+      // corrupted and can be directly rolled back to HDFS checksum verification\n+      if (!checkCheckSumTypeOnHeaderBuf(data)) {\n+        HFile.LOG.warn(\n+          \"HBase checksumType verification failed for file {} at offset {} filesize {}\"\n+            + \" checksumType {}. Retrying read with HDFS checksums turned on...\",\n+          pathName, offset, fileSize, data.get(HFileBlock.Header.CHECKSUM_TYPE_INDEX));\n+        return false;\n+      }\n+\n       return ChecksumUtil.validateChecksum(data, pathName, offset, hdrSize);\n     }\n"}
+[0m⚙ [0mvalidate {"ref":"fd54713db1861c2117f237344cceff7bc30b3978","mode":"hunk","patch":"--- a/hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java\n+++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java\n@@ -1750,6 +1750,21 @@\n         onDiskSizeWithHeader = getOnDiskSizeWithHeader(headerBuf, checksumSupport);\n       }\n \n+      // Inspect the header's checksumType for known valid values. If we don't find such a value,\n+      // assume that the bytes read are corrupted.We will clear the cached value and roll back to\n+      // HDFS checksum\n+      if (!checkCheckSumTypeOnHeaderBuf(headerBuf)) {\n+        if (verifyChecksum) {\n+          invalidateNextBlockHeader();\n+          span.addEvent(\"Falling back to HDFS checksumming.\", attributesBuilder.build());\n+          return null;\n+        } else {\n+          throw new IOException(\n+            \"Unknown checksum type code \" + headerBuf.get(HFileBlock.Header.CHECKSUM_TYPE_INDEX)\n+              + \"for file \" + pathName + \", the headerBuf of HFileBlock may corrupted.\");\n+        }\n+      }\n+\n       // The common case is that onDiskSizeWithHeader was produced by a read without checksum\n       // validation, so give it a sanity check before trying to use it.\n       if (!checkOnDiskSizeWithHeader(onDiskSizeWithHeader)) {\n"}
+[0m⚙ [0mvalidate {"ref":"fd54713db1861c2117f237344cceff7bc30b3978","mode":"hunk","patch":"--- a/hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java\n+++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java\n@@ -1884,6 +1884,16 @@\n       if (!fileContext.isUseHBaseChecksum()) {\n         return false;\n       }\n+      // If the checksumType of the read block header is incorrect, it indicates that the block is\n+      // corrupted and can be directly rolled back to HDFS checksum verification\n+      if (!checkCheckSumTypeOnHeaderBuf(data)) {\n+        HFile.LOG.warn(\n+          \"HBase checksumType verification failed for file {} at offset {} filesize {}\"\n+            + \" checksumType {}. Retrying read with HDFS checksums turned on...\",\n+          pathName, offset, fileSize, data.get(HFileBlock.Header.CHECKSUM_TYPE_INDEX));\n+        return false;\n+      }\n+\n       return ChecksumUtil.validateChecksum(data, pathName, offset, hdrSize);\n     }\n"}
+[0m⚙ [0mvalidate {"ref":"fd54713db1861c2117f237344cceff7bc30b3978","mode":"hunk","patch":"--- a/hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java\n+++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java\n@@ -1884,5 +1884,14 @@\n       if (!fileContext.isUseHBaseChecksum()) {\n         return false;\n       }\n+      // If the checksumType of the read block header is incorrect, it indicates that the block is\n+      // corrupted and can be directly rolled back to HDFS checksum verification\n+      if (!checkCheckSumTypeOnHeaderBuf(data)) {\n+        HFile.LOG.warn(\n+          \"HBase checksumType verification failed for file {} at offset {} filesize {}\"\n+            + \" checksumType {}. Retrying read with HDFS checksums turned on...\",\n+          pathName, offset, fileSize, data.get(HFileBlock.Header.CHECKSUM_TYPE_INDEX));\n+        return false;\n+      }\n       return ChecksumUtil.validateChecksum(data, pathName, offset, hdrSize);\n     }\n"}
+The production validation passes after adjusting the `validateChecksum` hunk to the exact old/new line counts for the 2.6 source.
+[0m⚙ [0mvalidate {"ref":"fd54713db1861c2117f237344cceff7bc30b3978","mode":"hunk","patch":"--- a/hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java\n+++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java\n@@ -1884,5 +1884,16 @@\n       if (!fileContext.isUseHBaseChecksum()) {\n         return false;\n       }\n+\n+      // If the checksumType of the read block header is incorrect, it indicates that the block is\n+      // corrupted and can be directly rolled back to HDFS checksum verification\n+      if (!checkCheckSumTypeOnHeaderBuf(data)) {\n+        HFile.LOG.warn(\n+          \"HBase checksumType verification failed for file {} at offset {} filesize {}\"\n+            + \" checksumType {}. Retrying read with HDFS checksums turned on...\",\n+          pathName, offset, fileSize, data.get(HFileBlock.Header.CHECKSUM_TYPE_INDEX));\n+        return false;\n+      }\n+\n       return ChecksumUtil.validateChecksum(data, pathName, offset, hdrSize);\n     }\n"}
+I’ll validate the test additions now, including the new checksum-type corruption coverage and the iterator range fix.
+[0m⚙ [0mvalidate {"ref":"fd54713db1861c2117f237344cceff7bc30b3978","mode":"hunk","patch":"--- a/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestHFileBlockHeaderCorruption.java\n+++ b/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestHFileBlockHeaderCorruption.java\n@@ -23,6 +23,7 @@\n import static org.hamcrest.Matchers.instanceOf;\n import static org.hamcrest.Matchers.startsWith;\n import static org.junit.Assert.assertEquals;\n+import static org.junit.Assert.assertNotEquals;\n import static org.junit.Assert.assertTrue;\n import static org.junit.Assert.fail;\n@@ -55,6 +56,7 @@\n import org.apache.hadoop.hbase.testclassification.IOTests;\n import org.apache.hadoop.hbase.testclassification.SmallTests;\n import org.apache.hadoop.hbase.util.Bytes;\n+import org.apache.hadoop.hbase.util.ChecksumType;\n import org.hamcrest.Description;\n import org.hamcrest.Matcher;\n import org.hamcrest.TypeSafeMatcher;\n"}
+[0m⚙ [0mvalidate {"ref":"fd54713db1861c2117f237344cceff7bc30b3978","mode":"hunk","patch":"--- a/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestHFileBlockHeaderCorruption.java\n+++ b/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestHFileBlockHeaderCorruption.java\n@@ -93,6 +95,141 @@\n     ruleChain = RuleChain.outerRule(testName).around(hFileTestRule);\n   }\n \n+  @Test\n+  public void testChecksumTypeCorruptionFirstBlock() throws Exception {\n+    HFileBlockChannelPosition firstBlock = null;\n+    try {\n+      try (HFileBlockChannelPositionIterator it =\n+        new HFileBlockChannelPositionIterator(hFileTestRule)) {\n+        assertTrue(it.hasNext());\n+        firstBlock = it.next();\n+      }\n+\n+      Corrupter c = new Corrupter(firstBlock);\n+\n+      logHeader(firstBlock);\n+\n+      // test corrupted HFileBlock with unknown checksumType code -1\n+      c.write(HFileBlock.Header.CHECKSUM_TYPE_INDEX, ByteBuffer.wrap(new byte[] { -1 }));\n+      logHeader(firstBlock);\n+      try (HFileBlockChannelPositionIterator it =\n+        new HFileBlockChannelPositionIterator(hFileTestRule)) {\n+        CountingConsumer consumer = new CountingConsumer(it);\n+        try {\n+          consumer.readFully();\n+          fail();\n+        } catch (Exception e) {\n+          assertThat(e, new IsThrowableMatching().withInstanceOf(IOException.class)\n+            .withMessage(startsWith(\"Unknown checksum type code\")));\n+        }\n+        assertEquals(0, consumer.getItemsRead());\n+      }\n+\n+      // valid checksumType code test\n+      for (ChecksumType t : ChecksumType.values()) {\n+        testValidChecksumTypeReadBlock(t.getCode(), c, firstBlock);\n+      }\n+\n+      c.restore();\n+      // test corrupted HFileBlock with unknown checksumType code 3\n+      c.write(HFileBlock.Header.CHECKSUM_TYPE_INDEX, ByteBuffer.wrap(new byte[] { 3 }));\n+      logHeader(firstBlock);\n+      try (HFileBlockChannelPositionIterator it =\n+        new HFileBlockChannelPositionIterator(hFileTestRule)) {\n+        CountingConsumer consumer = new CountingConsumer(it);\n+        try {\n+          consumer.readFully();\n+          fail();\n+        } catch (Exception e) {\n+          assertThat(e, new IsThrowableMatching().withInstanceOf(IOException.class)\n+            .withMessage(startsWith(\"Unknown checksum type code\")));\n+        }\n+        assertEquals(0, consumer.getItemsRead());\n+      }\n+    } finally {\n+      if (firstBlock != null) {\n+        firstBlock.close();\n+      }\n+    }\n+  }\n+\n+  @Test\n+  public void testChecksumTypeCorruptionSecondBlock() throws Exception {\n+    HFileBlockChannelPosition secondBlock = null;\n+    try {\n+      try (HFileBlockChannelPositionIterator it =\n+        new HFileBlockChannelPositionIterator(hFileTestRule)) {\n+        assertTrue(it.hasNext());\n+        it.next();\n+        assertTrue(it.hasNext());\n+        secondBlock = it.next();\n+      }\n+\n+      Corrupter c = new Corrupter(secondBlock);\n+\n+      logHeader(secondBlock);\n+      // test corrupted HFileBlock with unknown checksumType code -1\n+      c.write(HFileBlock.Header.CHECKSUM_TYPE_INDEX, ByteBuffer.wrap(new byte[] { -1 }));\n+      logHeader(secondBlock);\n+      try (HFileBlockChannelPositionIterator it =\n+        new HFileBlockChannelPositionIterator(hFileTestRule)) {\n+        CountingConsumer consumer = new CountingConsumer(it);\n+        try {\n+          consumer.readFully();\n+          fail();\n+        } catch (Exception e) {\n+          assertThat(e, new IsThrowableMatching().withInstanceOf(RuntimeException.class)\n+            .withMessage(startsWith(\"Unknown checksum type code\")));\n+        }\n+        assertEquals(1, consumer.getItemsRead());\n+      }\n+\n+      // valid checksumType code test\n+      for (ChecksumType t : ChecksumType.values()) {\n+        testValidChecksumTypeReadBlock(t.getCode(), c, secondBlock);\n+      }\n+\n+      c.restore();\n+      // test corrupted HFileBlock with unknown checksumType code 3\n+      c.write(HFileBlock.Header.CHECKSUM_TYPE_INDEX, ByteBuffer.wrap(new byte[] { 3 }));\n+      logHeader(secondBlock);\n+      try (HFileBlockChannelPositionIterator it =\n+        new HFileBlockChannelPositionIterator(hFileTestRule)) {\n+        CountingConsumer consumer = new CountingConsumer(it);\n+        try {\n+          consumer.readFully();\n+          fail();\n+        } catch (Exception e) {\n+          assertThat(e, new IsThrowableMatching().withInstanceOf(RuntimeException.class)\n+            .withMessage(startsWith(\"Unknown checksum type code\")));\n+        }\n+        assertEquals(1, consumer.getItemsRead());\n+      }\n+    } finally {\n+      if (secondBlock != null) {\n+        secondBlock.close();\n+      }\n+    }\n+  }\n+\n+  public void testValidChecksumTypeReadBlock(byte checksumTypeCode, Corrupter c,\n+    HFileBlockChannelPosition testBlock) throws IOException {\n+    c.restore();\n+    c.write(HFileBlock.Header.CHECKSUM_TYPE_INDEX,\n+      ByteBuffer.wrap(new byte[] { checksumTypeCode }));\n+    logHeader(testBlock);\n+    try (\n+      HFileBlockChannelPositionIterator it = new HFileBlockChannelPositionIterator(hFileTestRule)) {\n+      CountingConsumer consumer = new CountingConsumer(it);\n+      try {\n+        consumer.readFully();\n+      } catch (Exception e) {\n+        fail(\"test fail: valid checksumType are not executing properly\");\n+      }\n+      assertNotEquals(0, consumer.getItemsRead());\n+    }\n+  }\n+\n   @Test\n   public void testOnDiskSizeWithoutHeaderCorruptionFirstBlock() throws Exception {\n     HFileBlockChannelPosition firstBlock = null;\n"}
+[0m⚙ [0mvalidate {"ref":"fd54713db1861c2117f237344cceff7bc30b3978","mode":"hunk","patch":"--- a/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestHFileBlockHeaderCorruption.java\n+++ b/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestHFileBlockHeaderCorruption.java\n@@ -301,7 +438,8 @@\n       try {\n         reader = HFile.createReader(hfs, hfsPath, CacheConfig.DISABLED, true, conf);\n         HFileBlock.FSReader fsreader = reader.getUncachedBlockReader();\n-        iter = fsreader.blockRange(0, hfs.getFileStatus(hfsPath).getLen());\n+        // The read block offset cannot out of the range:0,loadOnOpenDataOffset\n+        iter = fsreader.blockRange(0, reader.getTrailer().getLoadOnOpenDataOffset());\n       } catch (IOException e) {\n         if (reader != null) {\n           closeQuietly(reader::close);\n"}
+[0m⚙ [0mvalidate {"ref":"fd54713db1861c2117f237344cceff7bc30b3978","mode":"hunk","patch":"--- a/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestHFileBlockHeaderCorruption.java\n+++ b/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestHFileBlockHeaderCorruption.java\n@@ -23,6 +23,7 @@\n import static org.hamcrest.Matchers.instanceOf;\n import static org.hamcrest.Matchers.startsWith;\n import static org.junit.Assert.assertEquals;\n+import static org.junit.Assert.assertNotEquals;\n import static org.junit.Assert.assertTrue;\n import static org.junit.Assert.fail;\n"}
+[0m⚙ [0mvalidate {"ref":"fd54713db1861c2117f237344cceff7bc30b3978","mode":"hunk","patch":"--- a/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestHFileBlockHeaderCorruption.java\n+++ b/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestHFileBlockHeaderCorruption.java\n@@ -55,6 +56,7 @@\n import org.apache.hadoop.hbase.testclassification.IOTests;\n import org.apache.hadoop.hbase.testclassification.SmallTests;\n import org.apache.hadoop.hbase.util.Bytes;\n+import org.apache.hadoop.hbase.util.ChecksumType;\n import org.hamcrest.Description;\n import org.hamcrest.Matcher;\n import org.hamcrest.TypeSafeMatcher;\n"}
+[0m⚙ [0mvalidate {"ref":"fd54713db1861c2117f237344cceff7bc30b3978","mode":"hunk","patch":"--- a/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestHFileBlockHeaderCorruption.java\n+++ b/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestHFileBlockHeaderCorruption.java\n@@ -23,5 +23,6 @@\n import static org.hamcrest.Matchers.instanceOf;\n import static org.hamcrest.Matchers.startsWith;\n import static org.junit.Assert.assertEquals;\n+import static org.junit.Assert.assertNotEquals;\n import static org.junit.Assert.assertTrue;\n import static org.junit.Assert.fail;\n"}
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java b/hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java
+    --- a/hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java
+    +++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/io/hfile/HFileBlock.java
+    @@ -1600,6 +1600,24 @@
+           prefetchedHeader.set(null);
+         }
+     
+    +    /**
+    +     * Check that checksumType on {@code headerBuf} read from a block header seems reasonable,
+    +     * within the known value range.
+    +     * @return {@code true} if the headerBuf is safe to proceed, {@code false} otherwise.
+    +     */
+    +    private boolean checkCheckSumTypeOnHeaderBuf(ByteBuff headerBuf) {
+    +      if (headerBuf == null) {
+    +        return true;
+    +      }
+    +      byte b = headerBuf.get(HFileBlock.Header.CHECKSUM_TYPE_INDEX);
+    +      for (ChecksumType t : ChecksumType.values()) {
+    +        if (t.getCode() == b) {
+    +          return true;
+    +        }
+    +      }
+    +      return false;
+    +    }
+    +
+         private int getNextBlockOnDiskSize(ByteBuff onDiskBlock, int onDiskSizeWithHeader) {
+           return onDiskBlock.getIntAfterPosition(onDiskSizeWithHeader + BlockType.MAGIC_LENGTH)
+             + hdrSize;
+    @@ -1750,6 +1768,21 @@
+             onDiskSizeWithHeader = getOnDiskSizeWithHeader(headerBuf, checksumSupport);
+           }
+     
+    +      // Inspect the header's checksumType for known valid values. If we don't find such a value,
+    +      // assume that the bytes read are corrupted.We will clear the cached value and roll back to
+    +      // HDFS checksum
+    +      if (!checkCheckSumTypeOnHeaderBuf(headerBuf)) {
+    +        if (verifyChecksum) {
+    +          invalidateNextBlockHeader();
+    +          span.addEvent("Falling back to HDFS checksumming.", attributesBuilder.build());
+    +          return null;
+    +        } else {
+    +          throw new IOException(
+    +            "Unknown checksum type code " + headerBuf.get(HFileBlock.Header.CHECKSUM_TYPE_INDEX)
+    +              + "for file " + pathName + ", the headerBuf of HFileBlock may corrupted.");
+    +        }
+    +      }
+    +
+           // The common case is that onDiskSizeWithHeader was produced by a read without checksum
+           // validation, so give it a sanity check before trying to use it.
+           if (!checkOnDiskSizeWithHeader(onDiskSizeWithHeader)) {
+    @@ -1884,5 +1917,16 @@
+           if (!fileContext.isUseHBaseChecksum()) {
+             return false;
+           }
+    +
+    +      // If the checksumType of the read block header is incorrect, it indicates that the block is
+    +      // corrupted and can be directly rolled back to HDFS checksum verification
+    +      if (!checkCheckSumTypeOnHeaderBuf(data)) {
+    +        HFile.LOG.warn(
+    +          "HBase checksumType verification failed for file {} at offset {} filesize {}"
+    +            + " checksumType {}. Retrying read with HDFS checksums turned on...",
+    +          pathName, offset, fileSize, data.get(HFileBlock.Header.CHECKSUM_TYPE_INDEX));
+    +        return false;
+    +      }
+    +
+           return ChecksumUtil.validateChecksum(data, pathName, offset, hdrSize);
+         }
+    diff --git a/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestHFileBlockHeaderCorruption.java b/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestHFileBlockHeaderCorruption.java
+    --- a/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestHFileBlockHeaderCorruption.java
+    +++ b/hbase-server/src/test/java/org/apache/hadoop/hbase/io/hfile/TestHFileBlockHeaderCorruption.java
+    @@ -23,5 +23,6 @@
+     import static org.hamcrest.Matchers.instanceOf;
+     import static org.hamcrest.Matchers.startsWith;
+     import static org.junit.Assert.assertEquals;
+    +import static org.junit.Assert.assertNotEquals;
+     import static org.junit.Assert.assertTrue;
+     import static org.junit.Assert.fail;
+    @@ -55,6 +56,7 @@
+     import org.apache.hadoop.hbase.testclassification.IOTests;
+     import org.apache.hadoop.hbase.testclassification.SmallTests;
+     import org.apache.hadoop.hbase.util.Bytes;
+    +import org.apache.hadoop.hbase.util.ChecksumType;
+     import org.hamcrest.Description;
+     import org.hamcrest.Matcher;
+     import org.hamcrest.TypeSafeMatcher;
+    @@ -93,6 +95,141 @@
+         ruleChain = RuleChain.outerRule(testName).around(hFileTestRule);
+       }
+     
+    +  @Test
+    +  public void testChecksumTypeCorruptionFirstBlock() throws Exception {
+    +    HFileBlockChannelPosition firstBlock = null;
+    +    try {
+    +      try (HFileBlockChannelPositionIterator it =
+    +        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+    +        assertTrue(it.hasNext());
+    +        firstBlock = it.next();
+    +      }
+    +
+    +      Corrupter c = new Corrupter(firstBlock);
+    +
+    +      logHeader(firstBlock);
+    +
+    +      // test corrupted HFileBlock with unknown checksumType code -1
+    +      c.write(HFileBlock.Header.CHECKSUM_TYPE_INDEX, ByteBuffer.wrap(new byte[] { -1 }));
+    +      logHeader(firstBlock);
+    +      try (HFileBlockChannelPositionIterator it =
+    +        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+    +        CountingConsumer consumer = new CountingConsumer(it);
+    +        try {
+    +          consumer.readFully();
+    +          fail();
+    +        } catch (Exception e) {
+    +          assertThat(e, new IsThrowableMatching().withInstanceOf(IOException.class)
+    +            .withMessage(startsWith("Unknown checksum type code")));
+    +        }
+    +        assertEquals(0, consumer.getItemsRead());
+    +      }
+    +
+    +      // valid checksumType code test
+    +      for (ChecksumType t : ChecksumType.values()) {
+    +        testValidChecksumTypeReadBlock(t.getCode(), c, firstBlock);
+    +      }
+    +
+    +      c.restore();
+    +      // test corrupted HFileBlock with unknown checksumType code 3
+    +      c.write(HFileBlock.Header.CHECKSUM_TYPE_INDEX, ByteBuffer.wrap(new byte[] { 3 }));
+    +      logHeader(firstBlock);
+    +      try (HFileBlockChannelPositionIterator it =
+    +        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+    +        CountingConsumer consumer = new CountingConsumer(it);
+    +        try {
+    +          consumer.readFully();
+    +          fail();
+    +        } catch (Exception e) {
+    +          assertThat(e, new IsThrowableMatching().withInstanceOf(IOException.class)
+    +            .withMessage(startsWith("Unknown checksum type code")));
+    +        }
+    +        assertEquals(0, consumer.getItemsRead());
+    +      }
+    +    } finally {
+    +      if (firstBlock != null) {
+    +        firstBlock.close();
+    +      }
+    +    }
+    +  }
+    +
+    +  @Test
+    +  public void testChecksumTypeCorruptionSecondBlock() throws Exception {
+    +    HFileBlockChannelPosition secondBlock = null;
+    +    try {
+    +      try (HFileBlockChannelPositionIterator it =
+    +        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+    +        assertTrue(it.hasNext());
+    +        it.next();
+    +        assertTrue(it.hasNext());
+    +        secondBlock = it.next();
+    +      }
+    +
+    +      Corrupter c = new Corrupter(secondBlock);
+    +
+    +      logHeader(secondBlock);
+    +      // test corrupted HFileBlock with unknown checksumType code -1
+    +      c.write(HFileBlock.Header.CHECKSUM_TYPE_INDEX, ByteBuffer.wrap(new byte[] { -1 }));
+    +      logHeader(secondBlock);
+    +      try (HFileBlockChannelPositionIterator it =
+    +        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+    +        CountingConsumer consumer = new CountingConsumer(it);
+    +        try {
+    +          consumer.readFully();
+    +          fail();
+    +        } catch (Exception e) {
+    +          assertThat(e, new IsThrowableMatching().withInstanceOf(RuntimeException.class)
+    +            .withMessage(startsWith("Unknown checksum type code")));
+    +        }
+    +        assertEquals(1, consumer.getItemsRead());
+    +      }
+    +
+    +      // valid checksumType code test
+    +      for (ChecksumType t : ChecksumType.values()) {
+    +        testValidChecksumTypeReadBlock(t.getCode(), c, secondBlock);
+    +      }
+    +
+    +      c.restore();
+    +      // test corrupted HFileBlock with unknown checksumType code 3
+    +      c.write(HFileBlock.Header.CHECKSUM_TYPE_INDEX, ByteBuffer.wrap(new byte[] { 3 }));
+    +      logHeader(secondBlock);
+    +      try (HFileBlockChannelPositionIterator it =
+    +        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+    +        CountingConsumer consumer = new CountingConsumer(it);
+    +        try {
+    +          consumer.readFully();
+    +          fail();
+    +        } catch (Exception e) {
+    +          assertThat(e, new IsThrowableMatching().withInstanceOf(RuntimeException.class)
+    +            .withMessage(startsWith("Unknown checksum type code")));
+    +        }
+    +        assertEquals(1, consumer.getItemsRead());
+    +      }
+    +    } finally {
+    +      if (secondBlock != null) {
+    +        secondBlock.close();
+    +      }
+    +    }
+    +  }
+    +
+    +  public void testValidChecksumTypeReadBlock(byte checksumTypeCode, Corrupter c,
+    +    HFileBlockChannelPosition testBlock) throws IOException {
+    +    c.restore();
+    +    c.write(HFileBlock.Header.CHECKSUM_TYPE_INDEX,
+    +      ByteBuffer.wrap(new byte[] { checksumTypeCode }));
+    +    logHeader(testBlock);
+    +    try (
+    +      HFileBlockChannelPositionIterator it = new HFileBlockChannelPositionIterator(hFileTestRule)) {
+    +      CountingConsumer consumer = new CountingConsumer(it);
+    +      try {
+    +        consumer.readFully();
+    +      } catch (Exception e) {
+    +        fail("test fail: valid checksumType are not executing properly");
+    +      }
+    +      assertNotEquals(0, consumer.getItemsRead());
+    +    }
+    +  }
+    +
+       @Test
+       public void testOnDiskSizeWithoutHeaderCorruptionFirstBlock() throws Exception {
+         HFileBlockChannelPosition firstBlock = null;
+    @@ -301,7 +438,8 @@
+           try {
+             reader = HFile.createReader(hfs, hfsPath, CacheConfig.DISABLED, true, conf);
+             HFileBlock.FSReader fsreader = reader.getUncachedBlockReader();
+    -        iter = fsreader.blockRange(0, hfs.getFileStatus(hfsPath).getLen());
+    +        // The read block offset cannot out of the range:0,loadOnOpenDataOffset
+    +        iter = fsreader.blockRange(0, reader.getTrailer().getLoadOnOpenDataOffset());
+           } catch (IOException e) {
+             if (reader != null) {
+               closeQuietly(reader::close);
+  notes: >
+    Backported the checksum-type header validation and associated corruption tests to branch-2.6 context; all hunks were validated individually, and full validation was skipped as requested.
+```
+
+--- END CLI OUTPUT ---
+[16:02:56]   Done in 308.8s | status=success

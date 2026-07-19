@@ -1,0 +1,188 @@
+[13:11:13] === Row 4: graylog  b17cee73 -> 197b8477  [TYPE-I] ===
+[13:11:13]   Resolving parent of backport commit 197b8477...
+[13:11:13]   Backport parent (target ref): 8efd5504413a13268ee4eb4446dd83a765f870b1
+[13:11:13]   Extracting new-version patch for b17cee73...
+[13:11:14]   New-version patch size: 6678 chars
+[13:11:14]   Checking out backport parent 8efd5504...
+[13:11:19]   Invoking OpenCode CLI (10537 chars)...
+[13:11:19]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the 6.1-side files and symbols at the target ref, then build and hunk-validate a minimal backport diff matching the provided change.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target 6.1 code context
+[ ] Construct unified backport patch adapted to 6.1
+[ ] Validate each patch hunk against target ref
+[ ] Return parseable YAML result
+[0m
+[0m⚙ [0mlocate_symbol {"ref":"8efd5504413a13268ee4eb4446dd83a765f870b1","symbol":"SyslogTCPFramingRouterHandler"}
+[0m⚙ [0mgit_show {"ref":"b17cee737de905c07e9aa9403fb98e40ba018cbe"}
+[0m⚙ [0mlocate_symbol {"ref":"8efd5504413a13268ee4eb4446dd83a765f870b1","symbol":"SyslogOctetCountFrameDecoderTest"}
+[0m⚙ [0mlocate_symbol {"ref":"8efd5504413a13268ee4eb4446dd83a765f870b1","symbol":"SyslogTCPFramingRouterHandlerTest"}
+[0m⚙ [0mlocate_symbol {"ref":"8efd5504413a13268ee4eb4446dd83a765f870b1","symbol":"SyslogOctetCountFrameDecoder"}
+The parallel symbol lookup hit a stale `.git/index.lock` contention from concurrent git-backed tools. I’ll avoid further concurrent git checkout operations and inspect the current working tree directly, since it is already at the requested target ref.
+[0m→ [0mRead graylog2-server/src/main/java/org/graylog2/inputs/syslog/tcp/SyslogOctetCountFrameDecoder.java[90m [limit=180][0m
+[0m→ [0mRead graylog2-server/src/test/java/org/graylog2/inputs/syslog/tcp/SyslogTCPFramingRouterHandlerTest.java[90m [limit=180][0m
+[0m→ [0mRead graylog2-server/src/main/java/org/graylog2/inputs/syslog/tcp/SyslogTCPFramingRouterHandler.java[90m [limit=140][0m
+[0m→ [0mRead graylog2-server/src/test/java/org/graylog2/inputs/syslog/tcp/SyslogOctetCountFrameDecoderTest.java[90m [limit=220][0m
+[0m⚙ [0mgit_history {"filepath":"graylog2-server/src/main/java/org/graylog2/inputs/syslog/tcp/SyslogTCPFramingRouterHandler.java","start_line":37,"end_line":50,"start_commit":"8efd5504413a13268ee4eb4446dd83a765f870b1","end_commit":"8efd5504413a13268ee4eb4446dd83a765f870b1"}
+[0m⚙ [0mgit_history {"filepath":"graylog2-server/src/main/java/org/graylog2/inputs/syslog/tcp/SyslogOctetCountFrameDecoder.java","start_line":45,"end_line":61,"start_commit":"8efd5504413a13268ee4eb4446dd83a765f870b1","end_commit":"8efd5504413a13268ee4eb4446dd83a765f870b1"}
+[0m⚙ [0mviewcode {"ref":"8efd5504413a13268ee4eb4446dd83a765f870b1","path":"graylog2-server/src/main/java/org/graylog2/inputs/syslog/tcp/SyslogOctetCountFrameDecoder.java","startline":19,"endline":80}
+[0m⚙ [0mviewcode {"ref":"8efd5504413a13268ee4eb4446dd83a765f870b1","path":"graylog2-server/src/main/java/org/graylog2/inputs/syslog/tcp/SyslogTCPFramingRouterHandler.java","startline":19,"endline":61}
+The 6.1 files match the original code locations. The test baseline differs slightly: `SyslogOctetCountFrameDecoderTest` already imports `DecoderException`, but not AssertJ’s exception assertion helper, so the test hunk needs a small import adaptation.
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target 6.1 code context
+[•] Construct unified backport patch adapted to 6.1
+[ ] Validate each patch hunk against target ref
+[ ] Return parseable YAML result
+[0m
+I’ll hunk-validate the constructed diff directly without changing the working tree. If the stale git lock blocks validation, I’ll resolve only that lock contention and retry.
+[0m$ [0m$gitProcs = @(Get-Process -Name git -ErrorAction SilentlyContinue); if ($gitProcs.Count -eq 0) { 'no git processes' } else { $gitProcs | ForEach-Object { "git process $($_.Id)" } }; if (Test-Path -LiteralPath ".git\index.lock") { 'index.lock exists' } else { 'no index.lock' }
+no git processes
+no index.lock
+[0m
+Validation can proceed; there are no active git processes and no current index lock.
+[0m⚙ [0mvalidate {"ref":"8efd5504413a13268ee4eb4446dd83a765f870b1","mode":"hunk","patch":"diff --git a/changelog/unreleased/issue-23312.toml b/changelog/unreleased/issue-23312.toml\nnew file mode 100644\nindex 0000000000..0563f1d09b\n--- /dev/null\n+++ b/changelog/unreleased/issue-23312.toml\n@@ -0,0 +1,5 @@\n+type = \"f\"\n+message = \"Ensure retained ByteBuf is released in SyslogTCPFramingRouterHandler on decode failure.\"\n+\n+pulls = [\"23317\"]\n+issues = [\"23312\"]\n"}
+The changelog hunk applies cleanly. Continuing validation file by file to avoid git lock contention.
+[0m⚙ [0mvalidate {"ref":"8efd5504413a13268ee4eb4446dd83a765f870b1","mode":"hunk","patch":"diff --git a/graylog2-server/src/main/java/org/graylog2/inputs/syslog/tcp/SyslogOctetCountFrameDecoder.java b/graylog2-server/src/main/java/org/graylog2/inputs/syslog/tcp/SyslogOctetCountFrameDecoder.java\nindex 4e2829904c..04cbc4dcde 100644\n--- a/graylog2-server/src/main/java/org/graylog2/inputs/syslog/tcp/SyslogOctetCountFrameDecoder.java\n+++ b/graylog2-server/src/main/java/org/graylog2/inputs/syslog/tcp/SyslogOctetCountFrameDecoder.java\n@@ -20,6 +20,7 @@ package org.graylog2.inputs.syslog.tcp;\n import io.netty.buffer.ByteBuf;\n import io.netty.channel.ChannelHandlerContext;\n import io.netty.handler.codec.ByteToMessageDecoder;\n+import io.netty.handler.codec.DecoderException;\n import io.netty.util.ByteProcessor;\n \n import java.nio.charset.StandardCharsets;\n@@ -44,7 +45,7 @@ public class SyslogOctetCountFrameDecoder extends ByteToMessageDecoder {\n \n         // Convert the frame length value bytes into an integer without mutating the buffer reader index.\n         final String lengthString = buffer.slice(buffer.readerIndex(), frameSizeValueLength).toString(StandardCharsets.UTF_8);\n-        final int length = Integer.parseInt(lengthString);\n+        final int length = getLengthFromString(lengthString);\n         final int skipLength = frameSizeValueLength + 1; // Frame length value bytes and the whitespace that follows it.\n \n         // We have to take the skipped bytes (frame size value length + whitespace) into account when checking if\n@@ -61,6 +62,14 @@ public class SyslogOctetCountFrameDecoder extends ByteToMessageDecoder {\n         out.add(frame);\n     }\n \n+    private int getLengthFromString(String lengthString) {\n+        try {\n+            return Integer.parseInt(lengthString);\n+        } catch (NumberFormatException e) {\n+            throw new DecoderException(\"Invalid syslog message format: missing or invalid frame length at start: \" + lengthString, e);\n+        }\n+    }\n+\n     /**\n      * Find the byte length of the frame length value.\n      *\n"}
+[0m⚙ [0mvalidate {"ref":"8efd5504413a13268ee4eb4446dd83a765f870b1","mode":"hunk","patch":"diff --git a/graylog2-server/src/main/java/org/graylog2/inputs/syslog/tcp/SyslogTCPFramingRouterHandler.java b/graylog2-server/src/main/java/org/graylog2/inputs/syslog/tcp/SyslogTCPFramingRouterHandler.java\nindex bf2c7958c2..186197c0a1 100644\n--- a/graylog2-server/src/main/java/org/graylog2/inputs/syslog/tcp/SyslogTCPFramingRouterHandler.java\n+++ b/graylog2-server/src/main/java/org/graylog2/inputs/syslog/tcp/SyslogTCPFramingRouterHandler.java\n@@ -45,8 +45,14 @@ public class SyslogTCPFramingRouterHandler extends SimpleChannelInboundHandler<B\n                     handler = new DelimiterBasedFrameDecoder(maxFrameLength, delimiter);\n                 }\n             }\n+            try {\n+                handler.channelRead(ctx, ReferenceCountUtil.retain(msg));\n+            } catch (Exception e) {\n+                // Because we've retained the buffer, we must release it in case of an exception to avoid memory leaks\n+                ReferenceCountUtil.release(msg);\n+                throw e;\n+            }\n \n-            handler.channelRead(ctx, ReferenceCountUtil.retain(msg));\n         } else {\n             ctx.fireChannelRead(msg);\n         }\n"}
+[0m⚙ [0mvalidate {"ref":"8efd5504413a13268ee4eb4446dd83a765f870b1","mode":"hunk","patch":"diff --git a/graylog2-server/src/test/java/org/graylog2/inputs/syslog/tcp/SyslogOctetCountFrameDecoderTest.java b/graylog2-server/src/test/java/org/graylog2/inputs/syslog/tcp/SyslogOctetCountFrameDecoderTest.java\n--- a/graylog2-server/src/test/java/org/graylog2/inputs/syslog/tcp/SyslogOctetCountFrameDecoderTest.java\n+++ b/graylog2-server/src/test/java/org/graylog2/inputs/syslog/tcp/SyslogOctetCountFrameDecoderTest.java\n@@ -25,6 +25,7 @@ import org.junit.Test;\n \n import java.nio.charset.StandardCharsets;\n \n+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;\n import static org.junit.Assert.assertEquals;\n import static org.junit.Assert.assertFalse;\n import static org.junit.Assert.assertNull;\n@@ -142,4 +143,12 @@ public class SyslogOctetCountFrameDecoderTest {\n         assertEquals(\"<45>1 2014-10-21T10:21:09+00:00 c4dc57ba1ebb syslog-ng 7120 - \" + longString + \"\\n\", actual.toString(StandardCharsets.US_ASCII));\n         assertNull(channel.readInbound());\n     }\n+\n+    @Test\n+    public void testInvalidFrameLenghtThrowsDecodingException() {\n+        final ByteBuf buf = Unpooled.copiedBuffer(\"2025-07-29 12:34:56 myhost myapp: This is a test syslog message\\n\", StandardCharsets.US_ASCII);\n+        assertThatExceptionOfType(DecoderException.class)\n+                .isThrownBy(() -> channel.writeInbound(buf))\n+                .withMessage(\"Invalid syslog message format: missing or invalid frame length at start: 2025-07-29\");\n+    }\n }\n"}
+[0m⚙ [0mvalidate {"ref":"8efd5504413a13268ee4eb4446dd83a765f870b1","mode":"hunk","patch":"diff --git a/graylog2-server/src/test/java/org/graylog2/inputs/syslog/tcp/SyslogTCPFramingRouterHandlerTest.java b/graylog2-server/src/test/java/org/graylog2/inputs/syslog/tcp/SyslogTCPFramingRouterHandlerTest.java\n--- a/graylog2-server/src/test/java/org/graylog2/inputs/syslog/tcp/SyslogTCPFramingRouterHandlerTest.java\n+++ b/graylog2-server/src/test/java/org/graylog2/inputs/syslog/tcp/SyslogTCPFramingRouterHandlerTest.java\n@@ -19,6 +19,7 @@ package org.graylog2.inputs.syslog.tcp;\n import io.netty.buffer.ByteBuf;\n import io.netty.buffer.Unpooled;\n import io.netty.channel.embedded.EmbeddedChannel;\n+import io.netty.handler.codec.DecoderException;\n import io.netty.handler.codec.Delimiters;\n import io.netty.handler.codec.TooLongFrameException;\n import org.junit.After;\n@@ -114,4 +115,18 @@ public class SyslogTCPFramingRouterHandlerTest {\n         assertThat((ByteBuf) channel.readInbound()).isEqualTo(emptyBuffer);\n         assertThat((ByteBuf) channel.readInbound()).isNull();\n     }\n+\n+    @Test\n+    public void testRetainedBufferReleasedDuringException() {\n+        // Creates an initial reference count of 1\n+        final ByteBuf buf = Unpooled.copiedBuffer(\"2025-07-29 12:34:56 myhost myapp: This is a test syslog message\\n\", StandardCharsets.US_ASCII);\n+        assertThat(buf.refCnt()).isNotZero();\n+\n+        // Trying to decode aboves msg throws an exception\n+        assertThatExceptionOfType(DecoderException.class)\n+                .isThrownBy(() -> channel.writeInbound(buf));\n+\n+        // Buffer is properly released even after running into an exception\n+        assertThat(buf.refCnt()).isZero();\n+    }\n }\n"}
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target 6.1 code context
+[✓] Construct unified backport patch adapted to 6.1
+[✓] Validate each patch hunk against target ref
+[•] Return parseable YAML result
+[0m
+backport_result:
+  status: success
+  patch: |
+    diff --git a/changelog/unreleased/issue-23312.toml b/changelog/unreleased/issue-23312.toml
+    new file mode 100644
+    index 0000000000..0563f1d09b
+    --- /dev/null
+    +++ b/changelog/unreleased/issue-23312.toml
+    @@ -0,0 +1,5 @@
+    +type = "f"
+    +message = "Ensure retained ByteBuf is released in SyslogTCPFramingRouterHandler on decode failure."
+    +
+    +pulls = ["23317"]
+    +issues = ["23312"]
+    diff --git a/graylog2-server/src/main/java/org/graylog2/inputs/syslog/tcp/SyslogOctetCountFrameDecoder.java b/graylog2-server/src/main/java/org/graylog2/inputs/syslog/tcp/SyslogOctetCountFrameDecoder.java
+    --- a/graylog2-server/src/main/java/org/graylog2/inputs/syslog/tcp/SyslogOctetCountFrameDecoder.java
+    +++ b/graylog2-server/src/main/java/org/graylog2/inputs/syslog/tcp/SyslogOctetCountFrameDecoder.java
+    @@ -20,6 +20,7 @@ package org.graylog2.inputs.syslog.tcp;
+     import io.netty.buffer.ByteBuf;
+     import io.netty.channel.ChannelHandlerContext;
+     import io.netty.handler.codec.ByteToMessageDecoder;
+    +import io.netty.handler.codec.DecoderException;
+     import io.netty.util.ByteProcessor;
+     
+     import java.nio.charset.StandardCharsets;
+    @@ -44,7 +45,7 @@ public class SyslogOctetCountFrameDecoder extends ByteToMessageDecoder {
+     
+             // Convert the frame length value bytes into an integer without mutating the buffer reader index.
+             final String lengthString = buffer.slice(buffer.readerIndex(), frameSizeValueLength).toString(StandardCharsets.UTF_8);
+    -        final int length = Integer.parseInt(lengthString);
+    +        final int length = getLengthFromString(lengthString);
+             final int skipLength = frameSizeValueLength + 1; // Frame length value bytes and the whitespace that follows it.
+     
+             // We have to take the skipped bytes (frame size value length + whitespace) into account when checking if
+    @@ -61,6 +62,14 @@ public class SyslogOctetCountFrameDecoder extends ByteToMessageDecoder {
+             out.add(frame);
+         }
+     
+    +    private int getLengthFromString(String lengthString) {
+    +        try {
+    +            return Integer.parseInt(lengthString);
+    +        } catch (NumberFormatException e) {
+    +            throw new DecoderException("Invalid syslog message format: missing or invalid frame length at start: " + lengthString, e);
+    +        }
+    +    }
+    +
+         /**
+          * Find the byte length of the frame length value.
+          *
+    diff --git a/graylog2-server/src/main/java/org/graylog2/inputs/syslog/tcp/SyslogTCPFramingRouterHandler.java b/graylog2-server/src/main/java/org/graylog2/inputs/syslog/tcp/SyslogTCPFramingRouterHandler.java
+    --- a/graylog2-server/src/main/java/org/graylog2/inputs/syslog/tcp/SyslogTCPFramingRouterHandler.java
+    +++ b/graylog2-server/src/main/java/org/graylog2/inputs/syslog/tcp/SyslogTCPFramingRouterHandler.java
+    @@ -45,8 +45,14 @@ public class SyslogTCPFramingRouterHandler extends SimpleChannelInboundHandler<B
+                         handler = new DelimiterBasedFrameDecoder(maxFrameLength, delimiter);
+                     }
+                 }
+    +            try {
+    +                handler.channelRead(ctx, ReferenceCountUtil.retain(msg));
+    +            } catch (Exception e) {
+    +                // Because we've retained the buffer, we must release it in case of an exception to avoid memory leaks
+    +                ReferenceCountUtil.release(msg);
+    +                throw e;
+    +            }
+     
+    -            handler.channelRead(ctx, ReferenceCountUtil.retain(msg));
+             } else {
+                 ctx.fireChannelRead(msg);
+             }
+    diff --git a/graylog2-server/src/test/java/org/graylog2/inputs/syslog/tcp/SyslogOctetCountFrameDecoderTest.java b/graylog2-server/src/test/java/org/graylog2/inputs/syslog/tcp/SyslogOctetCountFrameDecoderTest.java
+    --- a/graylog2-server/src/test/java/org/graylog2/inputs/syslog/tcp/SyslogOctetCountFrameDecoderTest.java
+    +++ b/graylog2-server/src/test/java/org/graylog2/inputs/syslog/tcp/SyslogOctetCountFrameDecoderTest.java
+    @@ -25,6 +25,7 @@ import org.junit.Test;
+     
+     import java.nio.charset.StandardCharsets;
+     
+    +import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+     import static org.junit.Assert.assertEquals;
+     import static org.junit.Assert.assertFalse;
+     import static org.junit.Assert.assertNull;
+    @@ -142,4 +143,12 @@ public class SyslogOctetCountFrameDecoderTest {
+             assertEquals("<45>1 2014-10-21T10:21:09+00:00 c4dc57ba1ebb syslog-ng 7120 - " + longString + "\n", actual.toString(StandardCharsets.US_ASCII));
+             assertNull(channel.readInbound());
+         }
+    +
+    +    @Test
+    +    public void testInvalidFrameLenghtThrowsDecodingException() {
+    +        final ByteBuf buf = Unpooled.copiedBuffer("2025-07-29 12:34:56 myhost myapp: This is a test syslog message\n", StandardCharsets.US_ASCII);
+    +        assertThatExceptionOfType(DecoderException.class)
+    +                .isThrownBy(() -> channel.writeInbound(buf))
+    +                .withMessage("Invalid syslog message format: missing or invalid frame length at start: 2025-07-29");
+    +    }
+     }
+    diff --git a/graylog2-server/src/test/java/org/graylog2/inputs/syslog/tcp/SyslogTCPFramingRouterHandlerTest.java b/graylog2-server/src/test/java/org/graylog2/inputs/syslog/tcp/SyslogTCPFramingRouterHandlerTest.java
+    --- a/graylog2-server/src/test/java/org/graylog2/inputs/syslog/tcp/SyslogTCPFramingRouterHandlerTest.java
+    +++ b/graylog2-server/src/test/java/org/graylog2/inputs/syslog/tcp/SyslogTCPFramingRouterHandlerTest.java
+    @@ -19,6 +19,7 @@ package org.graylog2.inputs.syslog.tcp;
+     import io.netty.buffer.ByteBuf;
+     import io.netty.buffer.Unpooled;
+     import io.netty.channel.embedded.EmbeddedChannel;
+    +import io.netty.handler.codec.DecoderException;
+     import io.netty.handler.codec.Delimiters;
+     import io.netty.handler.codec.TooLongFrameException;
+     import org.junit.After;
+    @@ -114,4 +115,18 @@ public class SyslogTCPFramingRouterHandlerTest {
+             assertThat((ByteBuf) channel.readInbound()).isEqualTo(emptyBuffer);
+             assertThat((ByteBuf) channel.readInbound()).isNull();
+         }
+    +
+    +    @Test
+    +    public void testRetainedBufferReleasedDuringException() {
+    +        // Creates an initial reference count of 1
+    +        final ByteBuf buf = Unpooled.copiedBuffer("2025-07-29 12:34:56 myhost myapp: This is a test syslog message\n", StandardCharsets.US_ASCII);
+    +        assertThat(buf.refCnt()).isNotZero();
+    +
+    +        // Trying to decode aboves msg throws an exception
+    +        assertThatExceptionOfType(DecoderException.class)
+    +                .isThrownBy(() -> channel.writeInbound(buf));
+    +
+    +        // Buffer is properly released even after running into an exception
+    +        assertThat(buf.refCnt()).isZero();
+    +    }
+     }
+  notes: >
+    Backported the decoder exception wrapping, retained ByteBuf release-on-exception handling, changelog, and adapted tests; all hunks validated successfully against 8efd5504413a13268ee4eb4446dd83a765f870b1.
+
+--- END CLI OUTPUT ---
+[13:15:35]   Done in 261.6s | status=unknown

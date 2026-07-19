@@ -1,0 +1,242 @@
+[15:17:40] === Row 50: hadoop  a386ac1f -> efc53d87  [TYPE-I] ===
+[15:17:40]   Resolving parent of backport commit efc53d87...
+[15:17:40]   Backport parent (target ref): da26b4561f6628c9b974463fbc294b9f1499f45c
+[15:17:40]   Extracting new-version patch for a386ac1f...
+[15:17:40]   New-version patch size: 13246 chars
+[15:17:40]   Checking out backport parent da26b456...
+[15:17:43]   ERROR: Could not checkout backport parent da26b4561f6628c9b974463fbc294b9f1499f45c: error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-applications-catalog/hadoop-yarn-applications-catalog-webapp/src/main/java/org/apache/hadoop/yarn/appcatalog/application/AppCatalogInitializer.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-applications-catalog/hadoop-yarn-applications-catalog-webapp/src/main/java/org/apache/hadoop/yarn/appcatalog/application/AppCatalogSolrClient.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-applications-catalog/hadoop-yarn-applications-catalog-webapp/src/main/java/org/apache/hadoop/yarn/appcatalog/controller/AppDetailsController.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-applications-catalog/hadoop-yarn-applications-catalog-webapp/src/test/java/org/apache/hadoop/yarn/appcatalog/application/EmbeddedSolrServerFactory.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-applications-catalog/hadoop-yarn-applications-catalog-webapp/src/test/java/org/apache/hadoop/yarn/appcatalog/application/TestAppCatalogSolrClient.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-applications-catalog/hadoop-yarn-applications-catalog-webapp/src/test/java/org/apache/hadoop/yarn/appcatalog/controller/AppDetailsControllerTest.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-applications-catalog/hadoop-yarn-applications-catalog-webapp/src/test/java/org/apache/hadoop/yarn/appcatalog/controller/AppListControllerTest.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-applications-catalog/hadoop-yarn-applications-catalog-webapp/src/test/java/org/apache/hadoop/yarn/appcatalog/controller/AppStoreControllerTest.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-applicationhistoryservice/src/main/java/org/apache/hadoop/yarn/server/applicationhistoryservice/records/impl/pb/ApplicationAttemptFinishDataPBImpl.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-applicationhistoryservice/src/main/java/org/apache/hadoop/yarn/server/applicationhistoryservice/records/impl/pb/ApplicationAttemptStartDataPBImpl.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-applicationhistoryservice/src/main/java/org/apache/hadoop/yarn/server/applicationhistoryservice/records/impl/pb/ApplicationFinishDataPBImpl.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-applicationhistoryservice/src/test/java/org/apache/hadoop/yarn/server/applicationhistoryservice/TestApplicationHistoryManagerOnTimelineStore.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-globalpolicygenerator/src/main/java/org/apache/hadoop/yarn/server/globalpolicygenerator/policygenerator/UniformWeightedLocalityGlobalPolicy.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/java/org/apache/hadoop/yarn/server/nodemanager/containermanager/logaggregation/AMOrFailedContainerLogAggregationPolicy.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/java/org/apache/hadoop/yarn/server/nodemanager/containermanager/logaggregation/FailedOrKilledContainerLogAggregationPolicy.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/java/org/apache/hadoop/yarn/server/nodemanager/containermanager/resourceplugin/deviceframework/DeviceResourceDockerRuntimePluginImpl.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/java/org/apache/hadoop/yarn/server/nodemanager/containermanager/resourceplugin/deviceframework/DeviceResourceHandlerImpl.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/java/org/apache/hadoop/yarn/server/nodemanager/containermanager/resourceplugin/deviceframework/DeviceResourceUpdaterImpl.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/java/org/apache/hadoop/yarn/server/nodemanager/containermanager/resourceplugin/fpga/discovery/AoclOutputBasedDiscoveryStrategy.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/java/org/apache/hadoop/yarn/server/nodemanager/containermanager/resourceplugin/fpga/discovery/ScriptBasedFPGADiscoveryStrategy.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/java/org/apache/hadoop/yarn/server/nodemanager/containermanager/resourceplugin/fpga/discovery/SettingsBasedFPGADiscoveryStrategy.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/test/java/org/apache/hadoop/yarn/server/nodemanager/containermanager/linux/resources/TestCgroupsV2MemoryResourceHandlerImpl.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/test/java/org/apache/hadoop/yarn/server/nodemanager/containermanager/linux/resources/TestTrafficControlBandwidthHandlerImpl.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/test/java/org/apache/hadoop/yarn/server/nodemanager/containermanager/resourceplugin/com/nvidia/TestNvidiaGPUPluginForRuntimeV2.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/test/java/org/apache/hadoop/yarn/server/nodemanager/containermanager/resourceplugin/deviceframework/TestDeviceMappingManager.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/test/java/org/apache/hadoop/yarn/server/nodemanager/containermanager/resourceplugin/deviceframework/TestDevicePluginAdapter.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/test/java/org/apache/hadoop/yarn/server/nodemanager/containermanager/scheduler/TestAllocationBasedResourceUtilizationTracker.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/test/java/org/apache/hadoop/yarn/server/nodemanager/containermanager/scheduler/TestContainerSchedulerOppContainersByResources.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/capacity/conf/QueueAdminConfigurationMutationACLPolicy.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/capacity/conf/YarnConfStoreVersionIncompatibleException.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/capacity/policy/PriorityUtilizationQueueOrderingPolicy.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/capacity/queuemanagement/DeactivatedLeafQueuesByLabel.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/capacity/queuemanagement/GuaranteedOrZeroCapacityOverTimePolicy.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/constraint/api/ConstraintPlacementAlgorithmOutputCollector.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/distributed/CentralizedOpportunisticContainerAllocator.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/converter/weightconversion/CapacityConverterFactory.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/converter/weightconversion/WeightToPercentConverter.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/converter/weightconversion/WeightToWeightConverter.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/monitor/capacity/TestProportionalCapacityPreemptionPolicyForNodePartitions.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/monitor/capacity/TestProportionalCapacityPreemptionPolicyForReservedContainers.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/monitor/capacity/TestProportionalCapacityPreemptionPolicyInterQueueWithDRF.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/monitor/capacity/TestProportionalCapacityPreemptionPolicyIntraQueue.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/monitor/capacity/TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/monitor/capacity/TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/monitor/capacity/TestProportionalCapacityPreemptionPolicyIntraQueueWithDRF.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/monitor/capacity/TestProportionalCapacityPreemptionPolicyMockFramework.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/monitor/capacity/TestProportionalCapacityPreemptionPolicyPreemptToBalance.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/monitor/capacity/mockframework/ProportionalCapacityPreemptionPolicyMockFramework.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/capacity/TestCapacitySchedulerAutoCreatedQueuePreemption.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/capacity/TestCapacitySchedulerMultiNodesWithPreemption.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/capacity/TestCapacitySchedulerNewQueueAutoCreationWithCapacityVectors.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/capacity/TestCapacitySchedulerSchedulingRequestUpdate.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/capacity/TestCapacitySchedulerWorkflowPriorityMapping.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/capacity/TestSchedulingRequestContainerAllocationAsync.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/capacity/placement/converter/TestLegacyMappingRuleToJson.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/capacity/policy/TestPriorityUtilizationQueueOrderingPolicy.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/capacity/queuemanagement/TestDeactivatedLeafQueuesByLabel.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/distributed/TestCentralizedOpportunisticContainerAllocator.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/allocationfile/AllocationFileQueuePlacementPolicy.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/converter/weightconversion/TestWeightToPercentageConverter.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/converter/weightconversion/TestWeightToWeightConverter.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/converter/weightconversion/WeightConverterTestBase.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/webapp/TestRMWebServicesCapacitySchedDynamicConfigWeightModeDQC.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/webapp/TestRMWebServicesCapacitySchedLegacyQueueCreationAbsoluteMode.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/webapp/TestRMWebServicesCapacitySchedulerMixedModeAbsoluteAndPercentage.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/webapp/TestRMWebServicesCapacitySchedulerMixedModeAbsoluteAndPercentageAndWeight.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/webapp/TestRMWebServicesCapacitySchedulerMixedModeAbsoluteAndPercentageAndWeightVector.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/webapp/TestRMWebServicesCapacitySchedulerMixedModeAbsoluteAndPercentageVector.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/webapp/TestRMWebServicesCapacitySchedulerMixedModeAbsoluteAndWeight.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/webapp/TestRMWebServicesCapacitySchedulerMixedModeAbsoluteAndWeightVector.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/webapp/TestRMWebServicesCapacitySchedulerMixedModePercentageAndWeight.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/webapp/TestRMWebServicesCapacitySchedulerMixedModePercentageAndWeightVector.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/webapp/TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/webapp/fairscheduler/TestRMWebServicesFairSchedulerCustomResourceTypes.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-timelineservice-documentstore/src/main/java/org/apache/hadoop/yarn/server/timelineservice/documentstore/collection/document/NoDocumentFoundException.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-timelineservice-documentstore/src/main/java/org/apache/hadoop/yarn/server/timelineservice/documentstore/collection/document/TimelineDocument.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-timelineservice-documentstore/src/main/java/org/apache/hadoop/yarn/server/timelineservice/documentstore/collection/document/entity/TimelineEntityDocument.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-timelineservice-documentstore/src/main/java/org/apache/hadoop/yarn/server/timelineservice/documentstore/collection/document/entity/TimelineEventSubDoc.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-timelineservice-documentstore/src/main/java/org/apache/hadoop/yarn/server/timelineservice/documentstore/collection/document/entity/TimelineMetricSubDoc.java': Filename too long
+error: cannot stat 'hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-timelineservice-documentstore/src/main/java/org/apache/hadoop/yarn/server/timelineservice/documentstore/collection/document/entity/package-info.java': Filename too long
+error: The following untracked working tree files would be overwritten by checkout:
+	.gitattributes
+	.github/pull_request_template.md
+	.gitignore
+	BUILDING.txt
+	LICENSE-binary
+	LICENSE.txt
+	NOTICE-binary
+	NOTICE.txt
+	README.txt
+	dev-support/Jenkinsfile
+	dev-support/README.md
+	dev-support/bin/checkcompatibility.py
+	dev-support/bin/create-release
+	dev-support/bin/dist-copynativelibs
+	dev-support/bin/dist-layout-stitching
+	dev-support/bin/dist-tar-stitching
+	dev-support/bin/dist-tools-hooks-maker
+	dev-support/bin/hadoop.sh
+	dev-support/bin/qbt
+	dev-support/bin/releasedocmaker
+	dev-support/bin/shelldocs
+	dev-support/bin/smart-apply-patch
+	dev-support/bin/test-patch
+	dev-support/bin/verify-license-files
+	dev-support/bin/win-vs-upgrade.cmd
+	dev-support/bin/yetus-wrapper
+	dev-support/byteman/README.md
+	dev-support/byteman/hadooprpc.btm
+	dev-support/docker/hadoop_env_checks.sh
+	dev-support/findHangingTest.sh
+	dev-support/git-jira-validation/README.md
+	dev-support/git-jira-validation/git_jira_fix_version_check.py
+	dev-support/git-jira-validation/requirements.txt
+	dev-support/verify-xml.sh
+	dev-support/win-paths-eg.cmd
+	hadoop-assemblies/pom.xml
+	hadoop-assemblies/src/main/resources/assemblies/hadoop-dist.xml
+	hadoop-assemblies/src/main/resources/assemblies/hadoop-dynamometer-blockgen.xml
+	hadoop-assemblies/src/main/resources/assemblies/hadoop-dynamometer-infra.xml
+	hadoop-assemblies/src/main/resources/assemblies/hadoop-dynamometer-workload.xml
+	hadoop-assemblies/src/main/resources/assemblies/hadoop-dynamometer.xml
+	hadoop-assemblies/src/main/resources/assemblies/hadoop-hdfs-nfs-dist.xml
+	hadoop-assemblies/src/main/resources/assemblies/hadoop-httpfs-dist.xml
+	hadoop-assemblies/src/main/resources/assemblies/hadoop-kms-dist.xml
+	hadoop-assemblies/src/main/resources/assemblies/hadoop-mapreduce-dist.xml
+	hadoop-assemblies/src/main/resources/assemblies/hadoop-nfs-dist.xml
+	hadoop-assemblies/src/main/resources/assemblies/hadoop-registry-dist.xml
+	hadoop-assemblies/src/main/resources/assemblies/hadoop-resourceestimator.xml
+	hadoop-assemblies/src/main/resources/assemblies/hadoop-sls.xml
+	hadoop-assemblies/src/main/resources/assemblies/hadoop-src.xml
+	hadoop-assemblies/src/main/resources/assemblies/hadoop-tools.xml
+	hadoop-assemblies/src/main/resources/assemblies/hadoop-yarn-dist.xml
+	hadoop-build-tools/pom.xml
+	hadoop-build-tools/src/main/resources/checkstyle/checkstyle-noframes-sorted.xsl
+	hadoop-build-tools/src/main/resources/checkstyle/checkstyle.xml
+	hadoop-build-tools/src/main/resources/checkstyle/suppressions.xml
+	hadoop-client-modules/hadoop-client-api/pom.xml
+	hadoop-client-modules/hadoop-client-check-invariants/pom.xml
+	hadoop-client-modules/hadoop-client-check-invariants/src/test/resources/ensure-jars-have-correct-contents.sh
+	hadoop-client-modules/hadoop-client-check-test-invariants/pom.xml
+	hadoop-client-modules/hadoop-client-check-test-invariants/src/test/resources/ensure-jars-have-correct-contents.sh
+	hadoop-client-modules/hadoop-client-integration-tests/pom.xml
+	hadoop-client-modules/hadoop-client-integration-tests/src/test/java/org/apache/hadoop/example/ITUseHadoopCodecs.java
+	hadoop-client-modules/hadoop-client-integration-tests/src/test/java/org/apache/hadoop/example/ITUseMiniCluster.java
+	hadoop-client-modules/hadoop-client-integration-tests/src/test/resources/hdfs-site.xml
+	hadoop-client-modules/hadoop-client-integration-tests/src/test/resources/log4j.properties
+	hadoop-client-modules/hadoop-client-minicluster/pom.xml
+	hadoop-client-modules/hadoop-client-runtime/pom.xml
+	hadoop-client-modules/hadoop-client/pom.xml
+	hadoop-client-modules/pom.xml
+	hadoop-cloud-storage-project/hadoop-cloud-storage/pom.xml
+	hadoop-cloud-storage-project/hadoop-cos/dev-support/findbugs-exclude.xml
+	hadoop-cloud-storage-project/hadoop-cos/pom.xml
+	hadoop-cloud-storage-project/hadoop-cos/src/main/java/org/apache/hadoop/fs/cosn/BufferPool.java
+	hadoop-cloud-storage-project/hadoop-cos/src/main/java/org/apache/hadoop/fs/cosn/ByteBufferInputStream.java
+	hadoop-cloud-storage-project/hadoop-cos/src/main/java/org/apache/hadoop/fs/cosn/ByteBufferOutp
+error: The following untracked working tree files would be removed by checkout:
+	.asf.yaml
+	.github/actions/build_image/action.yml
+	.github/actions/build_image_url/action.yml
+	.github/gha-tests/README.md
+	.github/gha-tests/exclude-tests.txt
+	.github/gha-tests/hadoop-aws-localstack-excludes.txt
+	.github/labeler.yml
+	.github/workflow-security.md
+	.github/workflows/build_and_test.yml
+	.github/workflows/build_image_cache.yml
+	.github/workflows/cloud_aws.yml
+	.github/workflows/codeql.yml
+	.github/workflows/images/workflow-enable-button.png
+	.github/workflows/labeler.yml
+	.github/workflows/notify_test_workflow.yml
+	.github/workflows/report_cloud_aws.yml
+	.github/workflows/stale.yml
+	.github/workflows/templates/auth-keys.xml.tmpl
+	.github/workflows/tmpl_build_and_test.yml
+	.github/workflows/tmpl_build_image_cache.yml
+	.github/workflows/tmpl_cloud_aws.yml
+	.github/workflows/update_build_status.yml
+	.github/workflows/website.yml
+	.mvn/jvm.config
+	.mvn/wrapper/MavenWrapperDownloader.java
+	.mvn/wrapper/maven-wrapper.properties
+	.yetus/excludes.txt
+	AGENTS.md
+	SECURITY.md
+	dev-support/code-formatter/hadoop_idea_formatter.xml
+	dev-support/docker/Dockerfile_debian_12
+	dev-support/docker/Dockerfile_debian_13
+	dev-support/docker/Dockerfile_rockylinux_8
+	dev-support/docker/Dockerfile_ubuntu_24
+	dev-support/docker/Dockerfile_ubuntu_24_aarch64
+	dev-support/docker/Dockerfile_windows_10
+	dev-support/docker/README.md
+	dev-support/docker/pkg-resolver/check_platform.py
+	dev-support/docker/pkg-resolver/install-boost.sh
+	dev-support/docker/pkg-resolver/install-common-pkgs.sh
+	dev-support/docker/pkg-resolver/install-epel.sh
+	dev-support/docker/pkg-resolver/install-hadolint.sh
+	dev-support/docker/pkg-resolver/install-intel-isa-l.sh
+	dev-support/docker/pkg-resolver/install-maven.sh
+	dev-support/docker/pkg-resolver/install-nodejs.sh
+	dev-support/docker/pkg-resolver/install-pip.ps1
+	dev-support/docker/pkg-resolver/install-pkg-resolver.sh
+	dev-support/docker/pkg-resolver/install-protobuf.sh
+	dev-support/docker/pkg-resolver/install-python.ps1
+	dev-support/docker/pkg-resolver/install-spotbugs.sh
+	dev-support/docker/pkg-resolver/install-yasm.sh
+	dev-support/docker/pkg-resolver/packages.json
+	dev-support/docker/pkg-resolver/platforms.json
+	dev-support/docker/pkg-resolver/resolve.py
+	dev-support/docker/vcpkg/vcpkg.json
+	dev-support/findbugs-exclude-global.xml
+	dev-support/hadoop-vote.sh
+	dev-support/jenkins.sh
+	dev-support/jenkinsfile-windows-10
+	hadoop-assemblies/src/main/resources/assemblies/hadoop-cloud-storage.xml
+	hadoop-cloud-storage-project/hadoop-bos/dev-support/findbugs-exclude.xml
+	hadoop-cloud-storage-project/hadoop-bos/pom.xml
+	hadoop-cloud-storage-project/hadoop-bos/src/config/checkstyle-suppressions.xml
+	hadoop-cloud-storage-project/hadoop-bos/src/main/java/org/apache/hadoop/fs/bos/BOS.java
+	hadoop-cloud-storage-project/hadoop-bos/src/main/java/org/apache/hadoop/fs/bos/BaiduBosConstants.java
+	hadoop-cloud-storage-project/hadoop-bos/src/main/java/org/apache/hadoop/fs/bos/BaiduBosFileSystem.java
+	hadoop-cloud-storage-project/hadoop-bos/src/main/java/org/apache/hadoop/fs/bos/BaiduBosFileSystemAdapter.java
+	hadoop-cloud-storage-project/hadoop-bos/src/main/java/org/apache/hadoop/fs/bos/BosBlockBuffer.java
+	hadoop-cloud-storage-project/hadoop-bos/src/main/java/org/apache/hadoop/fs/bos/BosClientProxy.java
+	hadoop-cloud-storage-project/hadoop-bos/src/main/java/org/apache/hadoop/fs/bos/BosClientProxyImpl.java
+	hadoop-cloud-storage-project/hadoop-bos/src/main/java/org/apache/hadoop/fs/bos/BosInputStream.java
+	hadoop-cloud-storage-project/hadoop-bos/src/main/java/org/apache/hadoop/fs/bos/BosNativeFileSystemStore.java
+	hadoop-cloud-storage-project/hadoop-bos/src/main/java/org/apache/hadoop/fs/bos/BosOutputStream.java
+	hadoop-cloud-storage-project/hadoop-bos/src/main/java/org/apache/hadoop/fs/bos/BosRandomRetryPolicy.java
+	hadoop-cloud-storage-project/hadoop-bos/src/main/java/org/apache/hadoop/fs/bos/BosTryOnceThenFail.java
+	hadoop-cloud-storage-project/hadoop-bos/src/main/java/org/apache/hadoop/fs/bos/FileMetadata.java
+	hadoop-cloud-storage-project/hadoo
+Aborting

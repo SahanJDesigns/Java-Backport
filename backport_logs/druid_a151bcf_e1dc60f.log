@@ -1,0 +1,15 @@
+[12:52:59] === Row 10: druid  a151bcfd -> e1dc60f2  [TYPE-II] ===
+[12:52:59]   Resolving parent of backport commit e1dc60f2...
+[12:52:59]   Backport parent (target ref): 44d0d3245c063e3c9d7a3805632fa1295143b115
+[12:52:59]   Extracting new-version patch for a151bcfd...
+[12:52:59]   New-version patch size: 20136 chars
+[12:52:59]   Checking out backport parent 44d0d324...
+[12:52:59]   ERROR: Could not checkout backport parent 44d0d3245c063e3c9d7a3805632fa1295143b115: error: Your local changes to the following files would be overwritten by checkout:
+	extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java
+	processing/src/main/java/org/apache/druid/frame/allocation/AppendableMemory.java
+	processing/src/main/java/org/apache/druid/frame/allocation/HeapMemoryAllocator.java
+	processing/src/main/java/org/apache/druid/frame/write/RowBasedFrameWriter.java
+	processing/src/test/java/org/apache/druid/frame/allocation/HeapMemoryAllocatorTest.java
+	processing/src/test/java/org/apache/druid/frame/write/RowBasedFrameWriterTest.java
+Please commit your changes or stash them before you switch branches.
+Aborting

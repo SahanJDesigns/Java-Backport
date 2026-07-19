@@ -1,0 +1,2451 @@
+[23:38:01] === Row 14: crate  5e1bc6c9 -> 999e7691  [TYPE-I] ===
+[23:38:01]   Resolving parent of backport commit 999e7691...
+[23:38:01]   Backport parent (target ref): a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e
+[23:38:01]   Extracting new-version patch for 5e1bc6c9...
+[23:38:01]   New-version patch size: 7954 chars
+[23:38:01]   Checking out backport parent a4b9f2fe...
+[23:38:02]   Invoking OpenCode CLI (11982 chars)...
+[23:38:02]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the target branch context for each changed file, then construct and validate a minimal backport patch against the provided parent ref.
+[0m# [0mTodos
+[•] Study original commit metadata and target context
+[ ] Construct unified backport patch for 5.9
+[ ] Validate hunks and apply patch
+[ ] Commit changes and run full validation
+[0m
+[0m⚙ [0mviewcode {"ref":"a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e","path":"server/src/main/java/io/crate/planner/operators/SubQueryResults.java","startline":1,"endline":140}
+[0m⚙ [0mgit_show {"ref":"5e1bc6c9d8ed874baa4fc99500561c4e94c37d9d"}
+[0m⚙ [0mviewcode {"ref":"a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e","path":"server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java","startline":420,"endline":500}
+[0m⚙ [0mviewcode {"ref":"a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e","path":"docs/appendices/release-notes/5.9.5.rst","startline":1,"endline":140}
+[0m⚙ [0mlocate_symbol {"ref":"a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e","symbol":"test_can_mix_correlated_qubquery_and_sub_select"}
+[0m⚙ [0mlocate_symbol {"ref":"a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e","symbol":"SubQueryResults"}
+The target branch already has the same `SubQueryResults` and correlated-subquery test locations; the release note equivalent is `5.9.5.rst` rather than `5.10.1.rst`. A stale `.git/index.lock` is present, so I’ll verify it is not an active Git operation before continuing.
+[0m✱ [0mGlob "server/src/test/java/io/crate/planner/operators/*SubQuery*Test.java"[90m 1 match[0m
+[0m✱ [0mGrep "new SelectSymbol\("[90m in server/src/test/java · 1 match[0m
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/planner/operators/SubQueryResults.java","start_line":90,"end_line":113,"start_commit":"a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e","end_commit":"a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e"}
+[0m⚙ [0mgit_history {"filepath":"server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java","start_line":446,"end_line":464,"start_commit":"a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e","end_commit":"a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e"}
+The direct history query is not meaningful with identical start/end refs, but symbol lookup and file context confirm no relocation for the main code. I’m checking the repository state before editing and committing.
+[0m→ [0mRead server/src/test/java/io/crate/planner/CorrelatedJoinPlannerTest.java[90m [offset=110, limit=40][0m
+[0m→ [0mRead server/src/test/java/io/crate/planner/operators/SubQueryAndParamBinderTest.java[90m [offset=1, limit=80][0m
+[0m
+[0m$ [0mTest-Path -LiteralPath ".git\index.lock"; git status --short
+False
+?? tags
+[0m
+I’m going to port the runtime fix unchanged, add the regression coverage, and place the release note in the 5.9 release notes file that exists at the target ref.
+[0m✱ [0mGrep "new SubQueryResults\([^\n]*,"[90m in server/src · 4 matches[0m
+[0m✱ [0mGrep "new SubQueryResults\("[90m in server/src · 8 matches[0m
+[0m⚙ [0mviewcode {"ref":"a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e","path":"server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java","startline":1,"endline":40}
+The two-argument `SubQueryResults` constructor is only used inside `SubQueryResults`, so the original visibility tightening can be ported safely.
+[0m⚙ [0mvalidate {"ref":"a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java b/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java\n--- a/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java\n+++ b/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java\n@@ -446,7 +446,7 @@ public class CorrelatedSubqueryITest extends IntegTestCase {\n      * Tests a bug https://github.com/crate/crate/issues/15398.\n      */\n     @Test\n-    public void test_can_mix_correlated_qubquery_and_sub_select() {\n+    public void test_can_mix_correlated_subquery_and_sub_select() {\n         execute(\"CREATE TABLE tbl(x int)\");\n         execute(\"INSERT INTO tbl(x) VALUES (1)\");\n         execute(\"refresh table tbl\");\n@@ -462,6 +462,23 @@ public class CorrelatedSubqueryITest extends IntegTestCase {\n         assertThat(response).hasRows(\"1\");\n     }\n \n+    /*\n+     * https://github.com/crate/crate/issues/17307\n+     */\n+    @Test\n+    public void test_can_mix_correlated_subquery_and_sub_selects_with_sub_select() {\n+        execute(\"\"\"\n+            WITH tbl AS (SELECT 1 as x)\n+            SELECT (\n+              SELECT x FROM tbl\n+              WHERE t.x = tbl.x\n+                AND\n+                tbl.x IN (SELECT x FROM unnest([1]))\n+            ), (SELECT y FROM unnest([2]) as t2(y))\n+            FROM tbl t\n+            \"\"\");\n+        assertThat(response).hasRows(\"1| 2\");\n+    }\n \n     /*\n      * https://github.com/crate/crate/issues/16124\n"}
+[0m⚙ [0mvalidate {"ref":"a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.9.5.rst b/docs/appendices/release-notes/5.9.5.rst\n--- a/docs/appendices/release-notes/5.9.5.rst\n+++ b/docs/appendices/release-notes/5.9.5.rst\n@@ -56,4 +56,18 @@ Fixes\n   :ref:`sql-create-repo-azure-secondary_endpoint` URI for defining an\n   :ref:`azure repository <sql-create-repo-azure>`.\n+\n+- Fixed an issue that caused an error when using a correlated sub-query and\n+  a normal subquery on the same level together with an additional sub-query on\n+  an outer level. Example::\n+\n+    WITH tbl AS (SELECT 1 as x)\n+    SELECT (\n+      SELECT x FROM tbl\n+      WHERE t.x = tbl.x\n+        AND tbl.x IN (SELECT x FROM unnest([1]))\n+    ),\n+    (SELECT y FROM unnest([2]) as t2(y))\n+    FROM tbl t\n \n"}
+[0m⚙ [0mvalidate {"ref":"a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/planner/operators/SubQueryResults.java b/server/src/main/java/io/crate/planner/operators/SubQueryResults.java\n--- a/server/src/main/java/io/crate/planner/operators/SubQueryResults.java\n+++ b/server/src/main/java/io/crate/planner/operators/SubQueryResults.java\n@@ -22,6 +22,7 @@\n package io.crate.planner.operators;\n \n import java.util.Collections;\n+import java.util.HashMap;\n import java.util.List;\n import java.util.Map;\n \n@@ -46,11 +47,10 @@ public class SubQueryResults {\n     private Row inputRow = Row.EMPTY;\n \n     public SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery) {\n-        this.valuesBySubQuery = valuesBySubQuery;\n-        this.boundOuterColumns = EMPTY_OUTER_COLUMNS;\n+        this(valuesBySubQuery, EMPTY_OUTER_COLUMNS);\n     }\n \n-    public SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery,\n+    private SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery,\n                            ObjectIntMap<OuterColumn> boundOuterColumns) {\n         this.valuesBySubQuery = valuesBySubQuery;\n         this.boundOuterColumns = boundOuterColumns;\n@@ -90,7 +90,15 @@ public class SubQueryResults {\n     }\n \n     public static SubQueryResults merge(SubQueryResults subQueryResults1, SubQueryResults subQueryResults2) {\n-        // Correlated subquery related fields.\n+        // Correlated subquery related fields, expect only one of them to contain correlated subquery fields.\n+        assert subQueryResults1.boundOuterColumns.isEmpty()\n+            || subQueryResults2.boundOuterColumns.isEmpty()\n+            : \"Can't merge two SubQueryResults with non-empty boundOuterColumns\";\n+\n+        assert subQueryResults1.inputRow.equals(Row.EMPTY)\n+            || subQueryResults2.inputRow.equals(Row.EMPTY)\n+            : \"Can't merge two SubQueryResults with non-empty inputRow\";\n+\n         Row mergedRow = subQueryResults1.inputRow;\n         ObjectIntMap<OuterColumn> mergedBoundOuterColumns = subQueryResults1.boundOuterColumns;\n         if (mergedRow.equals(Row.EMPTY)) {\n@@ -100,11 +108,11 @@ public class SubQueryResults {\n             mergedBoundOuterColumns = subQueryResults2.boundOuterColumns;\n         }\n \n-        // Regular sub-select field.\n-        Map<SelectSymbol, Object> mergedValuesBySubQuery = subQueryResults1.valuesBySubQuery;\n-        if (mergedValuesBySubQuery.isEmpty()) {\n-            mergedValuesBySubQuery = subQueryResults2.valuesBySubQuery;\n-        }\n+        // Fully merge regular sub-select field.\n+        Map<SelectSymbol, Object> mergedValuesBySubQuery = new HashMap<>();\n+        mergedValuesBySubQuery.putAll(subQueryResults1.valuesBySubQuery);\n+        mergedValuesBySubQuery.putAll(subQueryResults2.valuesBySubQuery);\n+\n \n         SubQueryResults combinedSubQueryResults = new SubQueryResults(mergedValuesBySubQuery, mergedBoundOuterColumns);\n         combinedSubQueryResults.bindOuterColumnInputRow(mergedRow);\n"}
+[0m⚙ [0mvalidate {"ref":"a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java b/server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java\nnew file mode 100644\n--- /dev/null\n+++ b/server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java\n@@ -0,0 +1,58 @@\n+/*\n+ * Licensed to Crate.io GmbH (\"Crate\") under one or more contributor\n+ * license agreements.  See the NOTICE file distributed with this work for\n+ * additional information regarding copyright ownership.  Crate licenses\n+ * this file to you under the Apache License, Version 2.0 (the \"License\");\n+ * you may not use this file except in compliance with the License.  You may\n+ * obtain a copy of the License at\n+ *\n+ *   http://www.apache.org/licenses/LICENSE-2.0\n+ *\n+ * Unless required by applicable law or agreed to in writing, software\n+ * distributed under the License is distributed on an \"AS IS\" BASIS, WITHOUT\n+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the\n+ * License for the specific language governing permissions and limitations\n+ * under the License.\n+ *\n+ * However, if you have executed another commercial license agreement\n+ * with Crate these terms will supersede the license and you may use the\n+ * software solely pursuant to the terms of the relevant commercial agreement.\n+ */\n+\n+package io.crate.planner.operators;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import java.util.Map;\n+\n+import org.elasticsearch.test.ESTestCase;\n+import org.junit.Test;\n+\n+import io.crate.expression.symbol.SelectSymbol;\n+import io.crate.testing.DummyRelation;\n+import io.crate.types.DataTypes;\n+\n+public class SubQueryResultsTest extends ESTestCase {\n+\n+    @Test\n+    public void test_merges_values_of_both_sides() {\n+        SelectSymbol selectSymbol1 = new SelectSymbol(\n+            new DummyRelation(\"x\"),\n+            DataTypes.STRING_ARRAY,\n+            SelectSymbol.ResultType.SINGLE_COLUMN_SINGLE_VALUE,\n+            false);\n+        SelectSymbol selectSymbol2 = new SelectSymbol(\n+            new DummyRelation(\"y\"),\n+            DataTypes.STRING_ARRAY,\n+            SelectSymbol.ResultType.SINGLE_COLUMN_SINGLE_VALUE,\n+            false);\n+\n+        SubQueryResults subQueryResults1 = new SubQueryResults(Map.of(selectSymbol1, \"foo\"));\n+        SubQueryResults subQueryResults2 = new SubQueryResults(Map.of(selectSymbol2, \"bar\"));\n+\n+        SubQueryResults merged = SubQueryResults.merge(subQueryResults1, subQueryResults2);\n+\n+        assertThat(merged.getSafe(selectSymbol1)).isEqualTo(\"foo\");\n+        assertThat(merged.getSafe(selectSymbol2)).isEqualTo(\"bar\");\n+    }\n+}\n"}
+Code and test hunks validate cleanly. The docs hunk had patch-format whitespace issue only, so I’m correcting that before applying.
+[0m⚙ [0mvalidate {"ref":"a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.9.5.rst b/docs/appendices/release-notes/5.9.5.rst\n--- a/docs/appendices/release-notes/5.9.5.rst\n+++ b/docs/appendices/release-notes/5.9.5.rst\n@@ -54,6 +54,20 @@ Fixes\n - Return a proper error message when using an invalid\n   :ref:`sql-create-repo-azure-endpoint` or\n   :ref:`sql-create-repo-azure-secondary_endpoint` URI for defining an\n   :ref:`azure repository <sql-create-repo-azure>`.\n+\n+- Fixed an issue that caused an error when using a correlated sub-query and\n+  a normal subquery on the same level together with an additional sub-query on\n+  an outer level. Example::\n+\n+    WITH tbl AS (SELECT 1 as x)\n+    SELECT (\n+      SELECT x FROM tbl\n+      WHERE t.x = tbl.x\n+        AND tbl.x IN (SELECT x FROM unnest([1]))\n+    ),\n+    (SELECT y FROM unnest([2]) as t2(y))\n+    FROM tbl t\n \n"}
+[0m⚙ [0mvalidate {"ref":"a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.9.5.rst b/docs/appendices/release-notes/5.9.5.rst\n--- a/docs/appendices/release-notes/5.9.5.rst\n+++ b/docs/appendices/release-notes/5.9.5.rst\n@@ -54,4 +54,18 @@ Fixes\n - Return a proper error message when using an invalid\n   :ref:`sql-create-repo-azure-endpoint` or\n   :ref:`sql-create-repo-azure-secondary_endpoint` URI for defining an\n   :ref:`azure repository <sql-create-repo-azure>`.\n+\n+- Fixed an issue that caused an error when using a correlated sub-query and\n+  a normal subquery on the same level together with an additional sub-query on\n+  an outer level. Example::\n+\n+    WITH tbl AS (SELECT 1 as x)\n+    SELECT (\n+      SELECT x FROM tbl\n+      WHERE t.x = tbl.x\n+        AND tbl.x IN (SELECT x FROM unnest([1]))\n+    ),\n+    (SELECT y FROM unnest([2]) as t2(y))\n+    FROM tbl t"}
+[0m⚙ [0mvalidate {"ref":"a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.9.5.rst b/docs/appendices/release-notes/5.9.5.rst\n--- a/docs/appendices/release-notes/5.9.5.rst\n+++ b/docs/appendices/release-notes/5.9.5.rst\n@@ -54,4 +54,18 @@ Fixes\n - Return a proper error message when using an invalid\n   :ref:`sql-create-repo-azure-endpoint` or\n   :ref:`sql-create-repo-azure-secondary_endpoint` URI for defining an\n   :ref:`azure repository <sql-create-repo-azure>`.\n+\n+- Fixed an issue that caused an error when using a correlated sub-query and\n+  a normal subquery on the same level together with an additional sub-query on\n+  an outer level. Example::\n+\n+    WITH tbl AS (SELECT 1 as x)\n+    SELECT (\n+      SELECT x FROM tbl\n+      WHERE t.x = tbl.x\n+        AND tbl.x IN (SELECT x FROM unnest([1]))\n+    ),\n+    (SELECT y FROM unnest([2]) as t2(y))\n+    FROM tbl t"}
+The docs validation issue is because the release-note bullet begins with `-`, so its context line must be explicitly patch-prefixed. I’m validating a wider docs hunk to avoid ambiguity.
+[0m⚙ [0mvalidate {"ref":"a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.9.5.rst b/docs/appendices/release-notes/5.9.5.rst\n--- a/docs/appendices/release-notes/5.9.5.rst\n+++ b/docs/appendices/release-notes/5.9.5.rst\n@@ -51,9 +51,23 @@ Fixes\n \n       SELECT count(*) FROM (SELECT id FROM users UNION ALL SELECT 1 as renamed) t;\n \n - Return a proper error message when using an invalid\n   :ref:`sql-create-repo-azure-endpoint` or\n   :ref:`sql-create-repo-azure-secondary_endpoint` URI for defining an\n   :ref:`azure repository <sql-create-repo-azure>`.\n+\n+- Fixed an issue that caused an error when using a correlated sub-query and\n+  a normal subquery on the same level together with an additional sub-query on\n+  an outer level. Example::\n+\n+    WITH tbl AS (SELECT 1 as x)\n+    SELECT (\n+      SELECT x FROM tbl\n+      WHERE t.x = tbl.x\n+        AND tbl.x IN (SELECT x FROM unnest([1]))\n+    ),\n+    (SELECT y FROM unnest([2]) as t2(y))\n+    FROM tbl t\n \n"}
+The validation parser is still rejecting the docs hunk formatting, so I’m reducing that hunk to a pure EOF insertion while preserving standard unified diff syntax.
+[0m⚙ [0mvalidate {"ref":"a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.9.5.rst b/docs/appendices/release-notes/5.9.5.rst\n--- a/docs/appendices/release-notes/5.9.5.rst\n+++ b/docs/appendices/release-notes/5.9.5.rst\n@@ -59,0 +60,14 @@ Fixes\n+\n+- Fixed an issue that caused an error when using a correlated sub-query and\n+  a normal subquery on the same level together with an additional sub-query on\n+  an outer level. Example::\n+\n+    WITH tbl AS (SELECT 1 as x)\n+    SELECT (\n+      SELECT x FROM tbl\n+      WHERE t.x = tbl.x\n+        AND tbl.x IN (SELECT x FROM unnest([1]))\n+    ),\n+    (SELECT y FROM unnest([2]) as t2(y))\n+    FROM tbl t\n+"}
+[0m⚙ [0mvalidate {"ref":"a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e","mode":"hunk","revise_context":true,"patch":"diff --git a/docs/appendices/release-notes/5.9.5.rst b/docs/appendices/release-notes/5.9.5.rst\n--- a/docs/appendices/release-notes/5.9.5.rst\n+++ b/docs/appendices/release-notes/5.9.5.rst\n@@ -59,0 +60,14 @@\n+\n+- Fixed an issue that caused an error when using a correlated sub-query and\n+  a normal subquery on the same level together with an additional sub-query on\n+  an outer level. Example::\n+\n+    WITH tbl AS (SELECT 1 as x)\n+    SELECT (\n+      SELECT x FROM tbl\n+      WHERE t.x = tbl.x\n+        AND tbl.x IN (SELECT x FROM unnest([1]))\n+    ),\n+    (SELECT y FROM unnest([2]) as t2(y))\n+    FROM tbl t\n+"}
+[0m⚙ [0mvalidate {"ref":"a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.9.5.rst b/docs/appendices/release-notes/5.9.5.rst\n--- a/docs/appendices/release-notes/5.9.5.rst\n+++ b/docs/appendices/release-notes/5.9.5.rst\n@@ -59,0 +60,13 @@\n+- Fixed an issue that caused an error when using a correlated sub-query and\n+  a normal subquery on the same level together with an additional sub-query on\n+  an outer level. Example::\n+\n+    WITH tbl AS (SELECT 1 as x)\n+    SELECT (\n+      SELECT x FROM tbl\n+      WHERE t.x = tbl.x\n+        AND tbl.x IN (SELECT x FROM unnest([1]))\n+    ),\n+    (SELECT y FROM unnest([2]) as t2(y))\n+    FROM tbl t\n+"}
+[0m⚙ [0mvalidate {"ref":"a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e","mode":"hunk","patch":"--- a/docs/appendices/release-notes/5.9.5.rst\n+++ b/docs/appendices/release-notes/5.9.5.rst\n@@ -59,0 +60,13 @@\n+- Fixed an issue that caused an error when using a correlated sub-query and\n+  a normal subquery on the same level together with an additional sub-query on\n+  an outer level. Example::\n+\n+    WITH tbl AS (SELECT 1 as x)\n+    SELECT (\n+      SELECT x FROM tbl\n+      WHERE t.x = tbl.x\n+        AND tbl.x IN (SELECT x FROM unnest([1]))\n+    ),\n+    (SELECT y FROM unnest([2]) as t2(y))\n+    FROM tbl t\n+"}
+The docs-only validation tool keeps reporting a parser error despite valid diff syntax; I’ll apply the validated code/test changes plus the same docs insertion directly, then use the full-patch validator on the resulting diff.
+[0m% [0mPatch 4 files
+The patch is applied in the working tree. I’ll inspect the resulting diff and run targeted tests before committing.
+[0m
+[0m# [0mTodos
+[✓] Study original commit metadata and target context
+[✓] Construct unified backport patch for 5.9
+[•] Validate hunks and apply patch
+[ ] Commit changes and run full validation
+[0m
+[0m$ [0mgit diff -- docs/appendices/release-notes/5.9.5.rst server/src/main/java/io/crate/planner/operators/SubQueryResults.java server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java
+warning: in the working copy of 'docs/appendices/release-notes/5.9.5.rst', LF will be replaced by CRLF the next time Git touches it
+diff --git a/docs/appendices/release-notes/5.9.5.rst b/docs/appendices/release-notes/5.9.5.rst
+index e72ed8d043..cc77ee6ebb 100644
+--- a/docs/appendices/release-notes/5.9.5.rst
++++ b/docs/appendices/release-notes/5.9.5.rst
+@@ -56,3 +56,16 @@ Fixes
+   :ref:`sql-create-repo-azure-endpoint` or
+   :ref:`sql-create-repo-azure-secondary_endpoint` URI for defining an
+   :ref:`azure repository <sql-create-repo-azure>`.
++
++- Fixed an issue that caused an error when using a correlated sub-query and
++  a normal subquery on the same level together with an additional sub-query on
++  an outer level. Example::
++
++    WITH tbl AS (SELECT 1 as x)
++    SELECT (
++      SELECT x FROM tbl
++      WHERE t.x = tbl.x
++        AND tbl.x IN (SELECT x FROM unnest([1]))
++    ),
++    (SELECT y FROM unnest([2]) as t2(y))
++    FROM tbl t
+diff --git a/server/src/main/java/io/crate/planner/operators/SubQueryResults.java b/server/src/main/java/io/crate/planner/operators/SubQueryResults.java
+index 57077b2404..832eee0345 100644
+--- a/server/src/main/java/io/crate/planner/operators/SubQueryResults.java
++++ b/server/src/main/java/io/crate/planner/operators/SubQueryResults.java
+@@ -22,6 +22,7 @@
+ package io.crate.planner.operators;
+ 
+ import java.util.Collections;
++import java.util.HashMap;
+ import java.util.List;
+ import java.util.Map;
+ 
+@@ -46,11 +47,10 @@ public class SubQueryResults {
+     private Row inputRow = Row.EMPTY;
+ 
+     public SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery) {
+-        this.valuesBySubQuery = valuesBySubQuery;
+-        this.boundOuterColumns = EMPTY_OUTER_COLUMNS;
++        this(valuesBySubQuery, EMPTY_OUTER_COLUMNS);
+     }
+ 
+-    public SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery,
++    private SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery,
+                            ObjectIntMap<OuterColumn> boundOuterColumns) {
+         this.valuesBySubQuery = valuesBySubQuery;
+         this.boundOuterColumns = boundOuterColumns;
+@@ -90,7 +90,15 @@ public class SubQueryResults {
+     }
+ 
+     public static SubQueryResults merge(SubQueryResults subQueryResults1, SubQueryResults subQueryResults2) {
+-        // Correlated subquery related fields.
++        // Correlated subquery related fields, expect only one of them to contain correlated subquery fields.
++        assert subQueryResults1.boundOuterColumns.isEmpty()
++            || subQueryResults2.boundOuterColumns.isEmpty()
++            : "Can't merge two SubQueryResults with non-empty boundOuterColumns";
++
++        assert subQueryResults1.inputRow.equals(Row.EMPTY)
++            || subQueryResults2.inputRow.equals(Row.EMPTY)
++            : "Can't merge two SubQueryResults with non-empty inputRow";
++
+         Row mergedRow = subQueryResults1.inputRow;
+         ObjectIntMap<OuterColumn> mergedBoundOuterColumns = subQueryResults1.boundOuterColumns;
+         if (mergedRow.equals(Row.EMPTY)) {
+@@ -100,11 +108,11 @@ public class SubQueryResults {
+             mergedBoundOuterColumns = subQueryResults2.boundOuterColumns;
+         }
+ 
+-        // Regular sub-select field.
+-        Map<SelectSymbol, Object> mergedValuesBySubQuery = subQueryResults1.valuesBySubQuery;
+-        if (mergedValuesBySubQuery.isEmpty()) {
+-            mergedValuesBySubQuery = subQueryResults2.valuesBySubQuery;
+-        }
++        // Fully merge regular sub-select field.
++        Map<SelectSymbol, Object> mergedValuesBySubQuery = new HashMap<>();
++        mergedValuesBySubQuery.putAll(subQueryResults1.valuesBySubQuery);
++        mergedValuesBySubQuery.putAll(subQueryResults2.valuesBySubQuery);
++
+ 
+         SubQueryResults combinedSubQueryResults = new SubQueryResults(mergedValuesBySubQuery, mergedBoundOuterColumns);
+         combinedSubQueryResults.bindOuterColumnInputRow(mergedRow);
+diff --git a/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java b/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java
+index 91ddb1fb56..f7eb7485e0 100644
+--- a/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java
++++ b/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java
+@@ -452,7 +452,7 @@ public class CorrelatedSubqueryITest extends IntegTestCase {
+      * Tests a bug https://github.com/crate/crate/issues/15398.
+      */
+     @Test
+-    public void test_can_mix_correlated_qubquery_and_sub_select() {
++    public void test_can_mix_correlated_subquery_and_sub_select() {
+         execute("CREATE TABLE tbl(x int)");
+         execute("INSERT INTO tbl(x) VALUES (1)");
+         execute("refresh table tbl");
+@@ -468,6 +468,23 @@ public class CorrelatedSubqueryITest extends IntegTestCase {
+         assertThat(response).hasRows("1");
+     }
+ 
++    /*
++     * https://github.com/crate/crate/issues/17307
++     */
++    @Test
++    public void test_can_mix_correlated_subquery_and_sub_selects_with_sub_select() {
++        execute("""
++            WITH tbl AS (SELECT 1 as x)
++            SELECT (
++              SELECT x FROM tbl
++              WHERE t.x = tbl.x
++                AND
++                tbl.x IN (SELECT x FROM unnest([1]))
++            ), (SELECT y FROM unnest([2]) as t2(y))
++            FROM tbl t
++            """);
++        assertThat(response).hasRows("1| 2");
++    }
+ 
+     /*
+      * https://github.com/crate/crate/issues/16124
+warning: in the working copy of 'server/src/main/java/io/crate/planner/operators/SubQueryResults.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java', LF will be replaced by CRLF the next time Git touches it
+[0m
+[0m$ [0m.\gradlew.bat :server:test --tests io.crate.planner.operators.SubQueryResultsTest
+.\gradlew.bat : The term '.\gradlew.bat' is not recognized as the name of a cmdlet, function, script file, or operable 
+program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:1
++ .\gradlew.bat :server:test --tests io.crate.planner.operators.SubQuer ...
++ ~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (.\gradlew.bat:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+[0m
+The diff matches the intended source changes. The local Gradle wrapper is not `gradlew.bat`, so I’ll locate the available wrapper before running tests.
+[0m✱ [0mGlob "gradlew*"[90m 0 matches[0m
+[0m→ [0mRead server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java[90m [offset=1, limit=80][0m
+[0m
+[0m$ [0mgit status --short
+M docs/appendices/release-notes/5.9.5.rst
+ M server/src/main/java/io/crate/planner/operators/SubQueryResults.java
+ M server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java
+?? server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java
+?? tags
+[0m
+There is no Gradle wrapper in this checkout, so targeted test execution via wrapper is not available. I’ll proceed with patch validation and commit, leaving the untracked `tags` file untouched.
+[0m✱ [0mGlob "build.gradle*"[90m 0 matches[0m
+[0m✱ [0mGlob "pom.xml"[90m 26 matches[0m
+[0m✱ [0mGlob "mvnw*"[90m 2 matches[0m
+[0m
+[0m$ [0mgit diff -- docs/appendices/release-notes/5.9.5.rst server/src/main/java/io/crate/planner/operators/SubQueryResults.java server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java; git diff --no-index -- /dev/null server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java
+warning: in the working copy of 'docs/appendices/release-notes/5.9.5.rst', LF will be replaced by CRLF the next time Git touches it
+diff --git a/docs/appendices/release-notes/5.9.5.rst b/docs/appendices/release-notes/5.9.5.rst
+index e72ed8d043..cc77ee6ebb 100644
+--- a/docs/appendices/release-notes/5.9.5.rst
++++ b/docs/appendices/release-notes/5.9.5.rst
+@@ -56,3 +56,16 @@ Fixes
+   :ref:`sql-create-repo-azure-endpoint` or
+   :ref:`sql-create-repo-azure-secondary_endpoint` URI for defining an
+   :ref:`azure repository <sql-create-repo-azure>`.
++
++- Fixed an issue that caused an error when using a correlated sub-query and
++  a normal subquery on the same level together with an additional sub-query on
++  an outer level. Example::
++
++    WITH tbl AS (SELECT 1 as x)
++    SELECT (
++      SELECT x FROM tbl
++      WHERE t.x = tbl.x
++        AND tbl.x IN (SELECT x FROM unnest([1]))
++    ),
++    (SELECT y FROM unnest([2]) as t2(y))
++    FROM tbl t
+diff --git a/server/src/main/java/io/crate/planner/operators/SubQueryResults.java b/server/src/main/java/io/crate/planner/operators/SubQueryResults.java
+index 57077b2404..832eee0345 100644
+--- a/server/src/main/java/io/crate/planner/operators/SubQueryResults.java
++++ b/server/src/main/java/io/crate/planner/operators/SubQueryResults.java
+@@ -22,6 +22,7 @@
+ package io.crate.planner.operators;
+ 
+ import java.util.Collections;
++import java.util.HashMap;
+ import java.util.List;
+ import java.util.Map;
+ 
+@@ -46,11 +47,10 @@ public class SubQueryResults {
+     private Row inputRow = Row.EMPTY;
+ 
+     public SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery) {
+-        this.valuesBySubQuery = valuesBySubQuery;
+-        this.boundOuterColumns = EMPTY_OUTER_COLUMNS;
++        this(valuesBySubQuery, EMPTY_OUTER_COLUMNS);
+     }
+ 
+-    public SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery,
++    private SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery,
+                            ObjectIntMap<OuterColumn> boundOuterColumns) {
+         this.valuesBySubQuery = valuesBySubQuery;
+         this.boundOuterColumns = boundOuterColumns;
+@@ -90,7 +90,15 @@ public class SubQueryResults {
+     }
+ 
+     public static SubQueryResults merge(SubQueryResults subQueryResults1, SubQueryResults subQueryResults2) {
+-        // Correlated subquery related fields.
++        // Correlated subquery related fields, expect only one of them to contain correlated subquery fields.
++        assert subQueryResults1.boundOuterColumns.isEmpty()
++            || subQueryResults2.boundOuterColumns.isEmpty()
++            : "Can't merge two SubQueryResults with non-empty boundOuterColumns";
++
++        assert subQueryResults1.inputRow.equals(Row.EMPTY)
++            || subQueryResults2.inputRow.equals(Row.EMPTY)
++            : "Can't merge two SubQueryResults with non-empty inputRow";
++
+         Row mergedRow = subQueryResults1.inputRow;
+         ObjectIntMap<OuterColumn> mergedBoundOuterColumns = subQueryResults1.boundOuterColumns;
+         if (mergedRow.equals(Row.EMPTY)) {
+@@ -100,11 +108,11 @@ public class SubQueryResults {
+             mergedBoundOuterColumns = subQueryResults2.boundOuterColumns;
+         }
+ 
+-        // Regular sub-select field.
+-        Map<SelectSymbol, Object> mergedValuesBySubQuery = subQueryResults1.valuesBySubQuery;
+-        if (mergedValuesBySubQuery.isEmpty()) {
+-            mergedValuesBySubQuery = subQueryResults2.valuesBySubQuery;
+-        }
++        // Fully merge regular sub-select field.
++        Map<SelectSymbol, Object> mergedValuesBySubQuery = new HashMap<>();
++        mergedValuesBySubQuery.putAll(subQueryResults1.valuesBySubQuery);
++        mergedValuesBySubQuery.putAll(subQueryResults2.valuesBySubQuery);
++
+ 
+         SubQueryResults combinedSubQueryResults = new SubQueryResults(mergedValuesBySubQuery, mergedBoundOuterColumns);
+         combinedSubQueryResults.bindOuterColumnInputRow(mergedRow);
+diff --git a/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java b/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java
+index 91ddb1fb56..f7eb7485e0 100644
+--- a/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java
++++ b/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java
+@@ -452,7 +452,7 @@ public class CorrelatedSubqueryITest extends IntegTestCase {
+      * Tests a bug https://github.com/crate/crate/issues/15398.
+      */
+     @Test
+-    public void test_can_mix_correlated_qubquery_and_sub_select() {
++    public void test_can_mix_correlated_subquery_and_sub_select() {
+         execute("CREATE TABLE tbl(x int)");
+         execute("INSERT INTO tbl(x) VALUES (1)");
+         execute("refresh table tbl");
+@@ -468,6 +468,23 @@ public class CorrelatedSubqueryITest extends IntegTestCase {
+         assertThat(response).hasRows("1");
+     }
+ 
++    /*
++     * https://github.com/crate/crate/issues/17307
++     */
++    @Test
++    public void test_can_mix_correlated_subquery_and_sub_selects_with_sub_select() {
++        execute("""
++            WITH tbl AS (SELECT 1 as x)
++            SELECT (
++              SELECT x FROM tbl
++              WHERE t.x = tbl.x
++                AND
++                tbl.x IN (SELECT x FROM unnest([1]))
++            ), (SELECT y FROM unnest([2]) as t2(y))
++            FROM tbl t
++            """);
++        assertThat(response).hasRows("1| 2");
++    }
+ 
+     /*
+      * https://github.com/crate/crate/issues/16124
+warning: in the working copy of 'server/src/main/java/io/crate/planner/operators/SubQueryResults.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java', LF will be replaced by CRLF the next time Git touches it
+diff --git a/server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java b/server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java
+new file mode 100644
+index 0000000000..1ae115df2c
+--- /dev/null
++++ b/server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java
+@@ -0,0 +1,58 @@
++/*
++ * Licensed to Crate.io GmbH ("Crate") under one or more contributor
++ * license agreements.  See the NOTICE file distributed with this work for
++ * additional information regarding copyright ownership.  Crate licenses
++ * this file to you under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.  You may
++ * obtain a copy of the License at
++ *
++ *   http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
++ * License for the specific language governing permissions and limitations
++ * under the License.
++ *
++ * However, if you have executed another commercial license agreement
++ * with Crate these terms will supersede the license and you may use the
++ * software solely pursuant to the terms of the relevant commercial agreement.
++ */
++
++package io.crate.planner.operators;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++import java.util.Map;
++
++import org.elasticsearch.test.ESTestCase;
++import org.junit.Test;
++
++import io.crate.expression.symbol.SelectSymbol;
++import io.crate.testing.DummyRelation;
++import io.crate.types.DataTypes;
++
++public class SubQueryResultsTest extends ESTestCase {
++
++    @Test
++    public void test_merges_values_of_both_sides() {
++        SelectSymbol selectSymbol1 = new SelectSymbol(
++            new DummyRelation("x"),
++            DataTypes.STRING_ARRAY,
++            SelectSymbol.ResultType.SINGLE_COLUMN_SINGLE_VALUE,
++            false);
++        SelectSymbol selectSymbol2 = new SelectSymbol(
++            new DummyRelation("y"),
++            DataTypes.STRING_ARRAY,
++            SelectSymbol.ResultType.SINGLE_COLUMN_SINGLE_VALUE,
++            false);
++
++        SubQueryResults subQueryResults1 = new SubQueryResults(Map.of(selectSymbol1, "foo"));
++        SubQueryResults subQueryResults2 = new SubQueryResults(Map.of(selectSymbol2, "bar"));
++
++        SubQueryResults merged = SubQueryResults.merge(subQueryResults1, subQueryResults2);
++
++        assertThat(merged.getSafe(selectSymbol1)).isEqualTo("foo");
++        assertThat(merged.getSafe(selectSymbol2)).isEqualTo("bar");
++    }
++}
+[0m
+This repository uses Maven (`mvnw.cmd`), not Gradle. I’ll run the targeted unit test with the Maven wrapper.
+[0m$ [0m.\mvnw.cmd -pl server -Dtest=io.crate.planner.operators.SubQueryResultsTest test
+Error: JAVA_HOME not found in your environment. 
+Please set the JAVA_HOME variable in your environment to match the 
+location of your Java installation.
+[0m
+The targeted Maven test could not start because `JAVA_HOME` is unset in this environment. I’ll commit only the intended backport files and leave the unrelated untracked `tags` file untouched.
+[0m$ [0mgit diff -- docs/appendices/release-notes/5.9.5.rst server/src/main/java/io/crate/planner/operators/SubQueryResults.java server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java
+warning: in the working copy of 'docs/appendices/release-notes/5.9.5.rst', LF will be replaced by CRLF the next time Git touches it
+diff --git a/docs/appendices/release-notes/5.9.5.rst b/docs/appendices/release-notes/5.9.5.rst
+index e72ed8d043..cc77ee6ebb 100644
+--- a/docs/appendices/release-notes/5.9.5.rst
++++ b/docs/appendices/release-notes/5.9.5.rst
+@@ -56,3 +56,16 @@ Fixes
+   :ref:`sql-create-repo-azure-endpoint` or
+   :ref:`sql-create-repo-azure-secondary_endpoint` URI for defining an
+   :ref:`azure repository <sql-create-repo-azure>`.
++
++- Fixed an issue that caused an error when using a correlated sub-query and
++  a normal subquery on the same level together with an additional sub-query on
++  an outer level. Example::
++
++    WITH tbl AS (SELECT 1 as x)
++    SELECT (
++      SELECT x FROM tbl
++      WHERE t.x = tbl.x
++        AND tbl.x IN (SELECT x FROM unnest([1]))
++    ),
++    (SELECT y FROM unnest([2]) as t2(y))
++    FROM tbl t
+diff --git a/server/src/main/java/io/crate/planner/operators/SubQueryResults.java b/server/src/main/java/io/crate/planner/operators/SubQueryResults.java
+index 57077b2404..832eee0345 100644
+--- a/server/src/main/java/io/crate/planner/operators/SubQueryResults.java
++++ b/server/src/main/java/io/crate/planner/operators/SubQueryResults.java
+@@ -22,6 +22,7 @@
+ package io.crate.planner.operators;
+ 
+ import java.util.Collections;
++import java.util.HashMap;
+ import java.util.List;
+ import java.util.Map;
+ 
+@@ -46,11 +47,10 @@ public class SubQueryResults {
+     private Row inputRow = Row.EMPTY;
+ 
+     public SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery) {
+-        this.valuesBySubQuery = valuesBySubQuery;
+-        this.boundOuterColumns = EMPTY_OUTER_COLUMNS;
++        this(valuesBySubQuery, EMPTY_OUTER_COLUMNS);
+     }
+ 
+-    public SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery,
++    private SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery,
+                            ObjectIntMap<OuterColumn> boundOuterColumns) {
+         this.valuesBySubQuery = valuesBySubQuery;
+         this.boundOuterColumns = boundOuterColumns;
+@@ -90,7 +90,15 @@ public class SubQueryResults {
+     }
+ 
+     public static SubQueryResults merge(SubQueryResults subQueryResults1, SubQueryResults subQueryResults2) {
+-        // Correlated subquery related fields.
++        // Correlated subquery related fields, expect only one of them to contain correlated subquery fields.
++        assert subQueryResults1.boundOuterColumns.isEmpty()
++            || subQueryResults2.boundOuterColumns.isEmpty()
++            : "Can't merge two SubQueryResults with non-empty boundOuterColumns";
++
++        assert subQueryResults1.inputRow.equals(Row.EMPTY)
++            || subQueryResults2.inputRow.equals(Row.EMPTY)
++            : "Can't merge two SubQueryResults with non-empty inputRow";
++
+         Row mergedRow = subQueryResults1.inputRow;
+         ObjectIntMap<OuterColumn> mergedBoundOuterColumns = subQueryResults1.boundOuterColumns;
+         if (mergedRow.equals(Row.EMPTY)) {
+@@ -100,11 +108,11 @@ public class SubQueryResults {
+             mergedBoundOuterColumns = subQueryResults2.boundOuterColumns;
+         }
+ 
+-        // Regular sub-select field.
+-        Map<SelectSymbol, Object> mergedValuesBySubQuery = subQueryResults1.valuesBySubQuery;
+-        if (mergedValuesBySubQuery.isEmpty()) {
+-            mergedValuesBySubQuery = subQueryResults2.valuesBySubQuery;
+-        }
++        // Fully merge regular sub-select field.
++        Map<SelectSymbol, Object> mergedValuesBySubQuery = new HashMap<>();
++        mergedValuesBySubQuery.putAll(subQueryResults1.valuesBySubQuery);
++        mergedValuesBySubQuery.putAll(subQueryResults2.valuesBySubQuery);
++
+ 
+         SubQueryResults combinedSubQueryResults = new SubQueryResults(mergedValuesBySubQuery, mergedBoundOuterColumns);
+         combinedSubQueryResults.bindOuterColumnInputRow(mergedRow);
+diff --git a/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java b/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java
+index 91ddb1fb56..f7eb7485e0 100644
+--- a/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java
++++ b/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java
+@@ -452,7 +452,7 @@ public class CorrelatedSubqueryITest extends IntegTestCase {
+      * Tests a bug https://github.com/crate/crate/issues/15398.
+      */
+     @Test
+-    public void test_can_mix_correlated_qubquery_and_sub_select() {
++    public void test_can_mix_correlated_subquery_and_sub_select() {
+         execute("CREATE TABLE tbl(x int)");
+         execute("INSERT INTO tbl(x) VALUES (1)");
+         execute("refresh table tbl");
+@@ -468,6 +468,23 @@ public class CorrelatedSubqueryITest extends IntegTestCase {
+         assertThat(response).hasRows("1");
+     }
+ 
++    /*
++     * https://github.com/crate/crate/issues/17307
++     */
++    @Test
++    public void test_can_mix_correlated_subquery_and_sub_selects_with_sub_select() {
++        execute("""
++            WITH tbl AS (SELECT 1 as x)
++            SELECT (
++              SELECT x FROM tbl
++              WHERE t.x = tbl.x
++                AND
++                tbl.x IN (SELECT x FROM unnest([1]))
++            ), (SELECT y FROM unnest([2]) as t2(y))
++            FROM tbl t
++            """);
++        assertThat(response).hasRows("1| 2");
++    }
+ 
+     /*
+      * https://github.com/crate/crate/issues/16124
+warning: in the working copy of 'server/src/main/java/io/crate/planner/operators/SubQueryResults.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java', LF will be replaced by CRLF the next time Git touches it
+[0m
+[0m$ [0mgit status --short
+M docs/appendices/release-notes/5.9.5.rst
+ M server/src/main/java/io/crate/planner/operators/SubQueryResults.java
+ M server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java
+?? server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java
+?? tags
+[0m
+[0m$ [0mgit log --oneline -10
+a4b9f2fe0e Fix eval projection to support fewer outputs than its source
+b1bbb0de22 Return existing SharedShardContext if a FetchTask tries to create a new one with same shardId/readerId
+e99f76f4b5 Fix issue with ScopedSymbol subscript and FetchRewrite
+19b59dfcc1 Reflect 5.7.6 and 5.8.6 releases
+34022d949a Bump version to 5.9.10
+d53c2b27e5 Release 5.9.9
+24575109d2 Fix link to HLL++ publication, use archive, original starts failing
+927c73d7ff Adds details to the repository rate limiter settings
+2be3ea5bde Fix fetch outputs resolution in the Fetch operator
+5e2783183f Chore: Fix broken link error for https://dev.mysql.com
+[0m
+Pre-commit inspection is complete. I’m staging only the four intended backport files and committing with the original fix summary.
+[0m$ [0mgit add -- docs/appendices/release-notes/5.9.5.rst server/src/main/java/io/crate/planner/operators/SubQueryResults.java server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java; if ($?) { git diff --cached --check }; if ($?) { git commit -m "Fix SubQueryResults.merge()" }
+warning: in the working copy of 'docs/appendices/release-notes/5.9.5.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/planner/operators/SubQueryResults.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java', LF will be replaced by CRLF the next time Git touches it
+[detached HEAD 7cee268a16] Fix SubQueryResults.merge()
+ 4 files changed, 106 insertions(+), 10 deletions(-)
+ create mode 100644 server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java
+[0m
+The committed diff is one line shorter than the source because the release note omitted the trailing blank line from the original patch. I’ll add that small docs-only adjustment as a follow-up commit rather than amending.
+[0m% [0mPatch 1 file
+The release note now preserves the trailing blank line from the original change. I’ll commit this adjustment and then run the full patch validator.
+[0m
+[0m$ [0mgit add -- docs/appendices/release-notes/5.9.5.rst; if ($?) { git diff --cached --check }; if ($?) { git commit -m "Update release notes for subquery fix" }
+warning: in the working copy of 'docs/appendices/release-notes/5.9.5.rst', LF will be replaced by CRLF the next time Git touches it
+HEAD detached from a4b9f2fe0e
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	tags
+
+nothing added to commit but untracked files present (use "git add" to track)
+[0m
+The trailing blank line was already represented as the file’s final newline, so there was no additional Git change to commit. I’ll validate the full committed patch now.
+[0m$ [0mgit diff a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e HEAD
+diff --git a/docs/appendices/release-notes/5.9.5.rst b/docs/appendices/release-notes/5.9.5.rst
+index e72ed8d043..cc77ee6ebb 100644
+--- a/docs/appendices/release-notes/5.9.5.rst
++++ b/docs/appendices/release-notes/5.9.5.rst
+@@ -56,3 +56,16 @@ Fixes
+   :ref:`sql-create-repo-azure-endpoint` or
+   :ref:`sql-create-repo-azure-secondary_endpoint` URI for defining an
+   :ref:`azure repository <sql-create-repo-azure>`.
++
++- Fixed an issue that caused an error when using a correlated sub-query and
++  a normal subquery on the same level together with an additional sub-query on
++  an outer level. Example::
++
++    WITH tbl AS (SELECT 1 as x)
++    SELECT (
++      SELECT x FROM tbl
++      WHERE t.x = tbl.x
++        AND tbl.x IN (SELECT x FROM unnest([1]))
++    ),
++    (SELECT y FROM unnest([2]) as t2(y))
++    FROM tbl t
+diff --git a/server/src/main/java/io/crate/planner/operators/SubQueryResults.java b/server/src/main/java/io/crate/planner/operators/SubQueryResults.java
+index 57077b2404..832eee0345 100644
+--- a/server/src/main/java/io/crate/planner/operators/SubQueryResults.java
++++ b/server/src/main/java/io/crate/planner/operators/SubQueryResults.java
+@@ -22,6 +22,7 @@
+ package io.crate.planner.operators;
+ 
+ import java.util.Collections;
++import java.util.HashMap;
+ import java.util.List;
+ import java.util.Map;
+ 
+@@ -46,11 +47,10 @@ public class SubQueryResults {
+     private Row inputRow = Row.EMPTY;
+ 
+     public SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery) {
+-        this.valuesBySubQuery = valuesBySubQuery;
+-        this.boundOuterColumns = EMPTY_OUTER_COLUMNS;
++        this(valuesBySubQuery, EMPTY_OUTER_COLUMNS);
+     }
+ 
+-    public SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery,
++    private SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery,
+                            ObjectIntMap<OuterColumn> boundOuterColumns) {
+         this.valuesBySubQuery = valuesBySubQuery;
+         this.boundOuterColumns = boundOuterColumns;
+@@ -90,7 +90,15 @@ public class SubQueryResults {
+     }
+ 
+     public static SubQueryResults merge(SubQueryResults subQueryResults1, SubQueryResults subQueryResults2) {
+-        // Correlated subquery related fields.
++        // Correlated subquery related fields, expect only one of them to contain correlated subquery fields.
++        assert subQueryResults1.boundOuterColumns.isEmpty()
++            || subQueryResults2.boundOuterColumns.isEmpty()
++            : "Can't merge two SubQueryResults with non-empty boundOuterColumns";
++
++        assert subQueryResults1.inputRow.equals(Row.EMPTY)
++            || subQueryResults2.inputRow.equals(Row.EMPTY)
++            : "Can't merge two SubQueryResults with non-empty inputRow";
++
+         Row mergedRow = subQueryResults1.inputRow;
+         ObjectIntMap<OuterColumn> mergedBoundOuterColumns = subQueryResults1.boundOuterColumns;
+         if (mergedRow.equals(Row.EMPTY)) {
+@@ -100,11 +108,11 @@ public class SubQueryResults {
+             mergedBoundOuterColumns = subQueryResults2.boundOuterColumns;
+         }
+ 
+-        // Regular sub-select field.
+-        Map<SelectSymbol, Object> mergedValuesBySubQuery = subQueryResults1.valuesBySubQuery;
+-        if (mergedValuesBySubQuery.isEmpty()) {
+-            mergedValuesBySubQuery = subQueryResults2.valuesBySubQuery;
+-        }
++        // Fully merge regular sub-select field.
++        Map<SelectSymbol, Object> mergedValuesBySubQuery = new HashMap<>();
++        mergedValuesBySubQuery.putAll(subQueryResults1.valuesBySubQuery);
++        mergedValuesBySubQuery.putAll(subQueryResults2.valuesBySubQuery);
++
+ 
+         SubQueryResults combinedSubQueryResults = new SubQueryResults(mergedValuesBySubQuery, mergedBoundOuterColumns);
+         combinedSubQueryResults.bindOuterColumnInputRow(mergedRow);
+diff --git a/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java b/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java
+index 91ddb1fb56..f7eb7485e0 100644
+--- a/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java
++++ b/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java
+@@ -452,7 +452,7 @@ public class CorrelatedSubqueryITest extends IntegTestCase {
+      * Tests a bug https://github.com/crate/crate/issues/15398.
+      */
+     @Test
+-    public void test_can_mix_correlated_qubquery_and_sub_select() {
++    public void test_can_mix_correlated_subquery_and_sub_select() {
+         execute("CREATE TABLE tbl(x int)");
+         execute("INSERT INTO tbl(x) VALUES (1)");
+         execute("refresh table tbl");
+@@ -468,6 +468,23 @@ public class CorrelatedSubqueryITest extends IntegTestCase {
+         assertThat(response).hasRows("1");
+     }
+ 
++    /*
++     * https://github.com/crate/crate/issues/17307
++     */
++    @Test
++    public void test_can_mix_correlated_subquery_and_sub_selects_with_sub_select() {
++        execute("""
++            WITH tbl AS (SELECT 1 as x)
++            SELECT (
++              SELECT x FROM tbl
++              WHERE t.x = tbl.x
++                AND
++                tbl.x IN (SELECT x FROM unnest([1]))
++            ), (SELECT y FROM unnest([2]) as t2(y))
++            FROM tbl t
++            """);
++        assertThat(response).hasRows("1| 2");
++    }
+ 
+     /*
+      * https://github.com/crate/crate/issues/16124
+diff --git a/server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java b/server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java
+new file mode 100644
+index 0000000000..1ae115df2c
+--- /dev/null
++++ b/server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java
+@@ -0,0 +1,58 @@
++/*
++ * Licensed to Crate.io GmbH ("Crate") under one or more contributor
++ * license agreements.  See the NOTICE file distributed with this work for
++ * additional information regarding copyright ownership.  Crate licenses
++ * this file to you under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.  You may
++ * obtain a copy of the License at
++ *
++ *   http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
++ * License for the specific language governing permissions and limitations
++ * under the License.
++ *
++ * However, if you have executed another commercial license agreement
++ * with Crate these terms will supersede the license and you may use the
++ * software solely pursuant to the terms of the relevant commercial agreement.
++ */
++
++package io.crate.planner.operators;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++import java.util.Map;
++
++import org.elasticsearch.test.ESTestCase;
++import org.junit.Test;
++
++import io.crate.expression.symbol.SelectSymbol;
++import io.crate.testing.DummyRelation;
++import io.crate.types.DataTypes;
++
++public class SubQueryResultsTest extends ESTestCase {
++
++    @Test
++    public void test_merges_values_of_both_sides() {
++        SelectSymbol selectSymbol1 = new SelectSymbol(
++            new DummyRelation("x"),
++            DataTypes.STRING_ARRAY,
++            SelectSymbol.ResultType.SINGLE_COLUMN_SINGLE_VALUE,
++            false);
++        SelectSymbol selectSymbol2 = new SelectSymbol(
++            new DummyRelation("y"),
++            DataTypes.STRING_ARRAY,
++            SelectSymbol.ResultType.SINGLE_COLUMN_SINGLE_VALUE,
++            false);
++
++        SubQueryResults subQueryResults1 = new SubQueryResults(Map.of(selectSymbol1, "foo"));
++        SubQueryResults subQueryResults2 = new SubQueryResults(Map.of(selectSymbol2, "bar"));
++
++        SubQueryResults merged = SubQueryResults.merge(subQueryResults1, subQueryResults2);
++
++        assertThat(merged.getSafe(selectSymbol1)).isEqualTo("foo");
++        assertThat(merged.getSafe(selectSymbol2)).isEqualTo("bar");
++    }
++}
+[0m
+The committed patch is ready; running full validation against the target parent ref now.
+[0m⚙ [0mvalidate {"ref":"a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.9.5.rst b/docs/appendices/release-notes/5.9.5.rst\nindex e72ed8d043..cc77ee6ebb 100644\n--- a/docs/appendices/release-notes/5.9.5.rst\n+++ b/docs/appendices/release-notes/5.9.5.rst\n@@ -56,3 +56,16 @@ Fixes\n   :ref:`sql-create-repo-azure-endpoint` or\n   :ref:`sql-create-repo-azure-secondary_endpoint` URI for defining an\n   :ref:`azure repository <sql-create-repo-azure>`.\n+\n+- Fixed an issue that caused an error when using a correlated sub-query and\n+  a normal subquery on the same level together with an additional sub-query on\n+  an outer level. Example::\n+\n+    WITH tbl AS (SELECT 1 as x)\n+    SELECT (\n+      SELECT x FROM tbl\n+      WHERE t.x = tbl.x\n+        AND tbl.x IN (SELECT x FROM unnest([1]))\n+    ),\n+    (SELECT y FROM unnest([2]) as t2(y))\n+    FROM tbl t\ndiff --git a/server/src/main/java/io/crate/planner/operators/SubQueryResults.java b/server/src/main/java/io/crate/planner/operators/SubQueryResults.java\nindex 57077b2404..832eee0345 100644\n--- a/server/src/main/java/io/crate/planner/operators/SubQueryResults.java\n+++ b/server/src/main/java/io/crate/planner/operators/SubQueryResults.java\n@@ -22,6 +22,7 @@\n package io.crate.planner.operators;\n \n import java.util.Collections;\n+import java.util.HashMap;\n import java.util.List;\n import java.util.Map;\n \n@@ -46,11 +47,10 @@ public class SubQueryResults {\n     private Row inputRow = Row.EMPTY;\n \n     public SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery) {\n-        this.valuesBySubQuery = valuesBySubQuery;\n-        this.boundOuterColumns = EMPTY_OUTER_COLUMNS;\n+        this(valuesBySubQuery, EMPTY_OUTER_COLUMNS);\n     }\n \n-    public SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery,\n+    private SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery,\n                            ObjectIntMap<OuterColumn> boundOuterColumns) {\n         this.valuesBySubQuery = valuesBySubQuery;\n         this.boundOuterColumns = boundOuterColumns;\n@@ -90,7 +90,15 @@ public class SubQueryResults {\n     }\n \n     public static SubQueryResults merge(SubQueryResults subQueryResults1, SubQueryResults subQueryResults2) {\n-        // Correlated subquery related fields.\n+        // Correlated subquery related fields, expect only one of them to contain correlated subquery fields.\n+        assert subQueryResults1.boundOuterColumns.isEmpty()\n+            || subQueryResults2.boundOuterColumns.isEmpty()\n+            : \"Can't merge two SubQueryResults with non-empty boundOuterColumns\";\n+\n+        assert subQueryResults1.inputRow.equals(Row.EMPTY)\n+            || subQueryResults2.inputRow.equals(Row.EMPTY)\n+            : \"Can't merge two SubQueryResults with non-empty inputRow\";\n+\n         Row mergedRow = subQueryResults1.inputRow;\n         ObjectIntMap<OuterColumn> mergedBoundOuterColumns = subQueryResults1.boundOuterColumns;\n         if (mergedRow.equals(Row.EMPTY)) {\n@@ -100,11 +108,11 @@ public class SubQueryResults {\n             mergedBoundOuterColumns = subQueryResults2.boundOuterColumns;\n         }\n \n-        // Regular sub-select field.\n-        Map<SelectSymbol, Object> mergedValuesBySubQuery = subQueryResults1.valuesBySubQuery;\n-        if (mergedValuesBySubQuery.isEmpty()) {\n-            mergedValuesBySubQuery = subQueryResults2.valuesBySubQuery;\n-        }\n+        // Fully merge regular sub-select field.\n+        Map<SelectSymbol, Object> mergedValuesBySubQuery = new HashMap<>();\n+        mergedValuesBySubQuery.putAll(subQueryResults1.valuesBySubQuery);\n+        mergedValuesBySubQuery.putAll(subQueryResults2.valuesBySubQuery);\n+\n \n         SubQueryResults combinedSubQueryResults = new SubQueryResults(mergedValuesBySubQuery, mergedBoundOuterColumns);\n         combinedSubQueryResults.bindOuterColumnInputRow(mergedRow);\ndiff --git a/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java b/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java\nindex 91ddb1fb56..f7eb7485e0 100644\n--- a/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java\n+++ b/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java\n@@ -452,7 +452,7 @@ public class CorrelatedSubqueryITest extends IntegTestCase {\n      * Tests a bug https://github.com/crate/crate/issues/15398.\n      */\n     @Test\n-    public void test_can_mix_correlated_qubquery_and_sub_select() {\n+    public void test_can_mix_correlated_subquery_and_sub_select() {\n         execute(\"CREATE TABLE tbl(x int)\");\n         execute(\"INSERT INTO tbl(x) VALUES (1)\");\n         execute(\"refresh table tbl\");\n@@ -468,6 +468,23 @@ public class CorrelatedSubqueryITest extends IntegTestCase {\n         assertThat(response).hasRows(\"1\");\n     }\n \n+    /*\n+     * https://github.com/crate/crate/issues/17307\n+     */\n+    @Test\n+    public void test_can_mix_correlated_subquery_and_sub_selects_with_sub_select() {\n+        execute(\"\"\"\n+            WITH tbl AS (SELECT 1 as x)\n+            SELECT (\n+              SELECT x FROM tbl\n+              WHERE t.x = tbl.x\n+                AND\n+                tbl.x IN (SELECT x FROM unnest([1]))\n+            ), (SELECT y FROM unnest([2]) as t2(y))\n+            FROM tbl t\n+            \"\"\");\n+        assertThat(response).hasRows(\"1| 2\");\n+    }\n \n     /*\n      * https://github.com/crate/crate/issues/16124\ndiff --git a/server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java b/server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java\nnew file mode 100644\nindex 0000000000..1ae115df2c\n--- /dev/null\n+++ b/server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java\n@@ -0,0 +1,58 @@\n+/*\n+ * Licensed to Crate.io GmbH (\"Crate\") under one or more contributor\n+ * license agreements.  See the NOTICE file distributed with this work for\n+ * additional information regarding copyright ownership.  Crate licenses\n+ * this file to you under the Apache License, Version 2.0 (the \"License\");\n+ * you may not use this file except in compliance with the License.  You may\n+ * obtain a copy of the License at\n+ *\n+ *   http://www.apache.org/licenses/LICENSE-2.0\n+ *\n+ * Unless required by applicable law or agreed to in writing, software\n+ * distributed under the License is distributed on an \"AS IS\" BASIS, WITHOUT\n+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the\n+ * License for the specific language governing permissions and limitations\n+ * under the License.\n+ *\n+ * However, if you have executed another commercial license agreement\n+ * with Crate these terms will supersede the license and you may use the\n+ * software solely pursuant to the terms of the relevant commercial agreement.\n+ */\n+\n+package io.crate.planner.operators;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import java.util.Map;\n+\n+import org.elasticsearch.test.ESTestCase;\n+import org.junit.Test;\n+\n+import io.crate.expression.symbol.SelectSymbol;\n+import io.crate.testing.DummyRelation;\n+import io.crate.types.DataTypes;\n+\n+public class SubQueryResultsTest extends ESTestCase {\n+\n+    @Test\n+    public void test_merges_values_of_both_sides() {\n+        SelectSymbol selectSymbol1 = new SelectSymbol(\n+            new DummyRelation(\"x\"),\n+            DataTypes.STRING_ARRAY,\n+            SelectSymbol.ResultType.SINGLE_COLUMN_SINGLE_VALUE,\n+            false);\n+        SelectSymbol selectSymbol2 = new SelectSymbol(\n+            new DummyRelation(\"y\"),\n+            DataTypes.STRING_ARRAY,\n+            SelectSymbol.ResultType.SINGLE_COLUMN_SINGLE_VALUE,\n+            false);\n+\n+        SubQueryResults subQueryResults1 = new SubQueryResults(Map.of(selectSymbol1, \"foo\"));\n+        SubQueryResults subQueryResults2 = new SubQueryResults(Map.of(selectSymbol2, \"bar\"));\n+\n+        SubQueryResults merged = SubQueryResults.merge(subQueryResults1, subQueryResults2);\n+\n+        assertThat(merged.getSafe(selectSymbol1)).isEqualTo(\"foo\");\n+        assertThat(merged.getSafe(selectSymbol2)).isEqualTo(\"bar\");\n+    }\n+}\n"}
+[0m
+[0m$ [0mgit log --oneline -3
+7cee268a16 Fix SubQueryResults.merge()
+a4b9f2fe0e Fix eval projection to support fewer outputs than its source
+b1bbb0de22 Return existing SharedShardContext if a FetchTask tries to create a new one with same shardId/readerId
+[0m
+[0m$ [0mgit status --short
+?? tags
+[0m
+Full validation attempted after commit, but the validator applied against the already-patched working tree and reported duplicate-apply failures. The committed tree is otherwise clean except for the pre-existing untracked `tags` file.
+[0m$ [0mgit diff a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e HEAD
+diff --git a/docs/appendices/release-notes/5.9.5.rst b/docs/appendices/release-notes/5.9.5.rst
+index e72ed8d043..cc77ee6ebb 100644
+--- a/docs/appendices/release-notes/5.9.5.rst
++++ b/docs/appendices/release-notes/5.9.5.rst
+@@ -56,3 +56,16 @@ Fixes
+   :ref:`sql-create-repo-azure-endpoint` or
+   :ref:`sql-create-repo-azure-secondary_endpoint` URI for defining an
+   :ref:`azure repository <sql-create-repo-azure>`.
++
++- Fixed an issue that caused an error when using a correlated sub-query and
++  a normal subquery on the same level together with an additional sub-query on
++  an outer level. Example::
++
++    WITH tbl AS (SELECT 1 as x)
++    SELECT (
++      SELECT x FROM tbl
++      WHERE t.x = tbl.x
++        AND tbl.x IN (SELECT x FROM unnest([1]))
++    ),
++    (SELECT y FROM unnest([2]) as t2(y))
++    FROM tbl t
+diff --git a/server/src/main/java/io/crate/planner/operators/SubQueryResults.java b/server/src/main/java/io/crate/planner/operators/SubQueryResults.java
+index 57077b2404..832eee0345 100644
+--- a/server/src/main/java/io/crate/planner/operators/SubQueryResults.java
++++ b/server/src/main/java/io/crate/planner/operators/SubQueryResults.java
+@@ -22,6 +22,7 @@
+ package io.crate.planner.operators;
+ 
+ import java.util.Collections;
++import java.util.HashMap;
+ import java.util.List;
+ import java.util.Map;
+ 
+@@ -46,11 +47,10 @@ public class SubQueryResults {
+     private Row inputRow = Row.EMPTY;
+ 
+     public SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery) {
+-        this.valuesBySubQuery = valuesBySubQuery;
+-        this.boundOuterColumns = EMPTY_OUTER_COLUMNS;
++        this(valuesBySubQuery, EMPTY_OUTER_COLUMNS);
+     }
+ 
+-    public SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery,
++    private SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery,
+                            ObjectIntMap<OuterColumn> boundOuterColumns) {
+         this.valuesBySubQuery = valuesBySubQuery;
+         this.boundOuterColumns = boundOuterColumns;
+@@ -90,7 +90,15 @@ public class SubQueryResults {
+     }
+ 
+     public static SubQueryResults merge(SubQueryResults subQueryResults1, SubQueryResults subQueryResults2) {
+-        // Correlated subquery related fields.
++        // Correlated subquery related fields, expect only one of them to contain correlated subquery fields.
++        assert subQueryResults1.boundOuterColumns.isEmpty()
++            || subQueryResults2.boundOuterColumns.isEmpty()
++            : "Can't merge two SubQueryResults with non-empty boundOuterColumns";
++
++        assert subQueryResults1.inputRow.equals(Row.EMPTY)
++            || subQueryResults2.inputRow.equals(Row.EMPTY)
++            : "Can't merge two SubQueryResults with non-empty inputRow";
++
+         Row mergedRow = subQueryResults1.inputRow;
+         ObjectIntMap<OuterColumn> mergedBoundOuterColumns = subQueryResults1.boundOuterColumns;
+         if (mergedRow.equals(Row.EMPTY)) {
+@@ -100,11 +108,11 @@ public class SubQueryResults {
+             mergedBoundOuterColumns = subQueryResults2.boundOuterColumns;
+         }
+ 
+-        // Regular sub-select field.
+-        Map<SelectSymbol, Object> mergedValuesBySubQuery = subQueryResults1.valuesBySubQuery;
+-        if (mergedValuesBySubQuery.isEmpty()) {
+-            mergedValuesBySubQuery = subQueryResults2.valuesBySubQuery;
+-        }
++        // Fully merge regular sub-select field.
++        Map<SelectSymbol, Object> mergedValuesBySubQuery = new HashMap<>();
++        mergedValuesBySubQuery.putAll(subQueryResults1.valuesBySubQuery);
++        mergedValuesBySubQuery.putAll(subQueryResults2.valuesBySubQuery);
++
+ 
+         SubQueryResults combinedSubQueryResults = new SubQueryResults(mergedValuesBySubQuery, mergedBoundOuterColumns);
+         combinedSubQueryResults.bindOuterColumnInputRow(mergedRow);
+diff --git a/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java b/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java
+index 91ddb1fb56..f7eb7485e0 100644
+--- a/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java
++++ b/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java
+@@ -452,7 +452,7 @@ public class CorrelatedSubqueryITest extends IntegTestCase {
+      * Tests a bug https://github.com/crate/crate/issues/15398.
+      */
+     @Test
+-    public void test_can_mix_correlated_qubquery_and_sub_select() {
++    public void test_can_mix_correlated_subquery_and_sub_select() {
+         execute("CREATE TABLE tbl(x int)");
+         execute("INSERT INTO tbl(x) VALUES (1)");
+         execute("refresh table tbl");
+@@ -468,6 +468,23 @@ public class CorrelatedSubqueryITest extends IntegTestCase {
+         assertThat(response).hasRows("1");
+     }
+ 
++    /*
++     * https://github.com/crate/crate/issues/17307
++     */
++    @Test
++    public void test_can_mix_correlated_subquery_and_sub_selects_with_sub_select() {
++        execute("""
++            WITH tbl AS (SELECT 1 as x)
++            SELECT (
++              SELECT x FROM tbl
++              WHERE t.x = tbl.x
++                AND
++                tbl.x IN (SELECT x FROM unnest([1]))
++            ), (SELECT y FROM unnest([2]) as t2(y))
++            FROM tbl t
++            """);
++        assertThat(response).hasRows("1| 2");
++    }
+ 
+     /*
+      * https://github.com/crate/crate/issues/16124
+diff --git a/server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java b/server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java
+new file mode 100644
+index 0000000000..1ae115df2c
+--- /dev/null
++++ b/server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java
+@@ -0,0 +1,58 @@
++/*
++ * Licensed to Crate.io GmbH ("Crate") under one or more contributor
++ * license agreements.  See the NOTICE file distributed with this work for
++ * additional information regarding copyright ownership.  Crate licenses
++ * this file to you under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.  You may
++ * obtain a copy of the License at
++ *
++ *   http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
++ * License for the specific language governing permissions and limitations
++ * under the License.
++ *
++ * However, if you have executed another commercial license agreement
++ * with Crate these terms will supersede the license and you may use the
++ * software solely pursuant to the terms of the relevant commercial agreement.
++ */
++
++package io.crate.planner.operators;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++import java.util.Map;
++
++import org.elasticsearch.test.ESTestCase;
++import org.junit.Test;
++
++import io.crate.expression.symbol.SelectSymbol;
++import io.crate.testing.DummyRelation;
++import io.crate.types.DataTypes;
++
++public class SubQueryResultsTest extends ESTestCase {
++
++    @Test
++    public void test_merges_values_of_both_sides() {
++        SelectSymbol selectSymbol1 = new SelectSymbol(
++            new DummyRelation("x"),
++            DataTypes.STRING_ARRAY,
++            SelectSymbol.ResultType.SINGLE_COLUMN_SINGLE_VALUE,
++            false);
++        SelectSymbol selectSymbol2 = new SelectSymbol(
++            new DummyRelation("y"),
++            DataTypes.STRING_ARRAY,
++            SelectSymbol.ResultType.SINGLE_COLUMN_SINGLE_VALUE,
++            false);
++
++        SubQueryResults subQueryResults1 = new SubQueryResults(Map.of(selectSymbol1, "foo"));
++        SubQueryResults subQueryResults2 = new SubQueryResults(Map.of(selectSymbol2, "bar"));
++
++        SubQueryResults merged = SubQueryResults.merge(subQueryResults1, subQueryResults2);
++
++        assertThat(merged.getSafe(selectSymbol1)).isEqualTo("foo");
++        assertThat(merged.getSafe(selectSymbol2)).isEqualTo("bar");
++    }
++}
+[0m
+[0m$ [0mjava -version
+java version "17.0.12" 2024-07-16 LTS
+Java(TM) SE Runtime Environment (build 17.0.12+8-LTS-286)
+Java HotSpot(TM) 64-Bit Server VM (build 17.0.12+8-LTS-286, mixed mode, sharing)
+[0m
+A Java runtime is installed, but `JAVA_HOME` is not set. I’ll derive `JAVA_HOME` from the Java executable and retry the targeted Maven test.
+[0m$ [0m$java = (Get-Command java).Source; $javaHome = Split-Path -Parent (Split-Path -Parent $java); $env:JAVA_HOME = $javaHome; .\mvnw.cmd -pl server -Dtest=io.crate.planner.operators.SubQueryResultsTest test
+Error: JAVA_HOME is set to an invalid directory. 
+JAVA_HOME = "C:\Program Files\Common Files\Oracle\Java" 
+Please set the JAVA_HOME variable in your environment to match the 
+location of your Java installation.
+[0m
+[0m$ [0mwhere.exe java
+C:\Program Files\Common Files\Oracle\Java\javapath\java.exe
+[0m
+[0m$ [0mGet-ChildItem -LiteralPath "C:\Program Files\Java" -ErrorAction SilentlyContinue
+Directory: C:\Program Files\Java
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+d-----         5/15/2026   7:18 PM                jdk-17
+[0m
+`java.exe` is routed through Oracle’s javapath shim; the actual JDK is under `C:\Program Files\Java\jdk-17`. I’ll retry with that `JAVA_HOME`.
+[0m$ [0m$env:JAVA_HOME = "C:\Program Files\Java\jdk-17"; .\mvnw.cmd -pl server -Dtest=io.crate.planner.operators.SubQueryResultsTest test
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] Using the MultiThreadedBuilder implementation with a thread count of 16
+[INFO] 
+[INFO] -----------------------< io.crate:crate-server >------------------------
+[INFO] Building crate-server 5.9.10
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  1.218 s (Wall Clock)
+[INFO] Finished at: 2026-07-18T23:45:28+05:30
+[INFO] ------------------------------------------------------------------------
+[ERROR] Unknown lifecycle phase ".crate.planner.operators.SubQueryResultsTest". You must specify a valid lifecycle phase or a goal in the format <plugin-prefix>:<goal> or <plugin-group-id>:<plugin-artifact-id>[:<plugin-version>]:<goal>. Available lifecycle phases are: pre-clean, clean, post-clean, validate, initialize, generate-sources, process-sources, generate-resources, process-resources, compile, process-classes, generate-test-sources, process-test-sources, generate-test-resources, process-test-resources, test-compile, process-test-classes, test, prepare-package, package, pre-integration-test, integration-test, post-integration-test, verify, install, deploy, pre-site, site, post-site, site-deploy. -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/LifecyclePhaseNotFoundException
+[0m
+Maven is available with the corrected `JAVA_HOME`; the previous invocation was a PowerShell argument parsing issue. I’ll quote the `-Dtest` argument and rerun.
+[0m$ [0m$env:JAVA_HOME = "C:\Program Files\Java\jdk-17"; .\mvnw.cmd -pl server "-Dtest=io.crate.planner.operators.SubQueryResultsTest" test
+...output truncated...
+
+Full output saved to: C:\Users\Thimira\.local\share\opencode\tool-output\tool_f767102f9001kG9XXQpoMdVn6D
+
+Downloading from central: https://repo.maven.apache.org/maven2/org/junit/jupiter/junit-jupiter-api/5.10.3/junit-jupiter-api-5.10.3.jar
+Progress (3): 1.8/4.2 MB | 1.4/1.9 MB | 0.3/1.6 MB
+Progress (3): 1.8/4.2 MB | 1.4/1.9 MB | 0.3/1.6 MB
+Progress (3): 1.8/4.2 MB | 1.4/1.9 MB | 0.3/1.6 MB
+Progress (3): 1.8/4.2 MB | 1.4/1.9 MB | 0.3/1.6 MB
+Progress (3): 1.8/4.2 MB | 1.4/1.9 MB | 0.3/1.6 MB
+Progress (3): 1.8/4.2 MB | 1.4/1.9 MB | 0.4/1.6 MB
+Progress (3): 1.8/4.2 MB | 1.4/1.9 MB | 0.4/1.6 MB
+Progress (3): 1.8/4.2 MB | 1.4/1.9 MB | 0.4/1.6 MB
+Progress (3): 1.8/4.2 MB | 1.4/1.9 MB | 0.4/1.6 MB
+Progress (3): 1.8/4.2 MB | 1.4/1.9 MB | 0.4/1.6 MB
+Progress (3): 1.8/4.2 MB | 1.4/1.9 MB | 0.4/1.6 MB
+Progress (3): 1.8/4.2 MB | 1.4/1.9 MB | 0.4/1.6 MB
+Progress (3): 1.8/4.2 MB | 1.4/1.9 MB | 0.4/1.6 MB
+Progress (3): 1.8/4.2 MB | 1.5/1.9 MB | 0.4/1.6 MB
+Progress (3): 1.8/4.2 MB | 1.5/1.9 MB | 0.4/1.6 MB
+Progress (3): 1.8/4.2 MB | 1.5/1.9 MB | 0.4/1.6 MB
+Progress (3): 1.8/4.2 MB | 1.5/1.9 MB | 0.4/1.6 MB
+Progress (3): 1.8/4.2 MB | 1.5/1.9 MB | 0.4/1.6 MB
+Progress (3): 1.8/4.2 MB | 1.5/1.9 MB | 0.4/1.6 MB
+Progress (3): 1.8/4.2 MB | 1.5/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.8/4.2 MB | 1.5/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.8/4.2 MB | 1.5/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.5/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.5/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.5/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.5/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.5/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.6/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.6/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.6/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.6/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.6/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.6/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.6/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.6/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.6/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.6/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.6/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.6/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.7/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.7/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.7/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.7/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.7/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.7/1.9 MB | 0.5/1.6 MB
+Progress (3): 1.9/4.2 MB | 1.7/1.9 MB | 0.5/1.6 MB
+Progress (4): 1.9/4.2 MB | 1.7/1.9 MB | 0.5/1.6 MB | 3.2/6.4 kB
+Progress (4): 1.9/4.2 MB | 1.7/1.9 MB | 0.5/1.6 MB | 6.4 kB    
+Progress (4): 2.0/4.2 MB | 1.7/1.9 MB | 0.5/1.6 MB | 6.4 kB
+Progress (4): 2.0/4.2 MB | 1.8/1.9 MB | 0.5/1.6 MB | 6.4 kB
+Progress (4): 2.0/4.2 MB | 1.8/1.9 MB | 0.6/1.6 MB | 6.4 kB
+Progress (4): 2.0/4.2 MB | 1.8/1.9 MB | 0.6/1.6 MB | 6.4 kB
+Progress (4): 2.0/4.2 MB | 1.8/1.9 MB | 0.6/1.6 MB | 6.4 kB
+Progress (4): 2.0/4.2 MB | 1.8/1.9 MB | 0.6/1.6 MB | 6.4 kB
+Progress (4): 2.0/4.2 MB | 1.8/1.9 MB | 0.6/1.6 MB | 6.4 kB
+Progress (4): 2.0/4.2 MB | 1.8/1.9 MB | 0.6/1.6 MB | 6.4 kB
+Progress (4): 2.0/4.2 MB | 1.8/1.9 MB | 0.6/1.6 MB | 6.4 kB
+Progress (4): 2.0/4.2 MB | 1.8/1.9 MB | 0.6/1.6 MB | 6.4 kB
+                                                           
+Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/jupiter/junit-jupiter/5.10.3/junit-jupiter-5.10.3.jar (6.4 kB at 5.1 kB/s)
+Downloading from central: https://repo.maven.apache.org/maven2/org/junit/jupiter/junit-jupiter-params/5.10.3/junit-jupiter-params-5.10.3.jar
+Progress (3): 2.0/4.2 MB | 1.8/1.9 MB | 0.6/1.6 MB
+Progress (3): 2.0/4.2 MB | 1.8/1.9 MB | 0.6/1.6 MB
+Progress (3): 2.0/4.2 MB | 1.8/1.9 MB | 0.6/1.6 MB
+Progress (3): 2.0/4.2 MB | 1.8/1.9 MB | 0.6/1.6 MB
+Progress (3): 2.0/4.2 MB | 1.8/1.9 MB | 0.6/1.6 MB
+Progress (3): 2.0/4.2 MB | 1.8/1.9 MB | 0.6/1.6 MB
+Progress (3): 2.0/4.2 MB | 1.8/1.9 MB | 0.7/1.6 MB
+Progress (3): 2.0/4.2 MB | 1.8/1.9 MB | 0.7/1.6 MB
+Progress (3): 2.0/4.2 MB | 1.9/1.9 MB | 0.7/1.6 MB
+Progress (3): 2.0/4.2 MB | 1.9/1.9 MB | 0.7/1.6 MB
+Progress (3): 2.0/4.2 MB | 1.9/1.9 MB | 0.7/1.6 MB
+Progress (3): 2.0/4.2 MB | 1.9/1.9 MB | 0.7/1.6 MB
+Progress (3): 2.0/4.2 MB | 1.9/1.9 MB | 0.7/1.6 MB
+Progress (3): 2.0/4.2 MB | 1.9 MB | 0.7/1.6 MB    
+Progress (3): 2.0/4.2 MB | 1.9 MB | 0.7/1.6 MB
+Progress (3): 2.1/4.2 MB | 1.9 MB | 0.7/1.6 MB
+Progress (3): 2.1/4.2 MB | 1.9 MB | 0.7/1.6 MB
+Progress (3): 2.1/4.2 MB | 1.9 MB | 0.7/1.6 MB
+Progress (3): 2.1/4.2 MB | 1.9 MB | 0.7/1.6 MB
+Progress (3): 2.1/4.2 MB | 1.9 MB | 0.7/1.6 MB
+Progress (3): 2.1/4.2 MB | 1.9 MB | 0.8/1.6 MB
+Progress (3): 2.1/4.2 MB | 1.9 MB | 0.8/1.6 MB
+Progress (4): 2.1/4.2 MB | 1.9 MB | 0.8/1.6 MB | 7.7/211 kB
+Progress (4): 2.1/4.2 MB | 1.9 MB | 0.8/1.6 MB | 12/211 kB 
+Progress (4): 2.1/4.2 MB | 1.9 MB | 0.8/1.6 MB | 29/211 kB
+                                                          
+Downloaded from central: https://repo.maven.apache.org/maven2/net/java/dev/jna/jna/5.14.0/jna-5.14.0.jar (1.9 MB at 1.5 MB/s)
+Downloading from central: https://repo.maven.apache.org/maven2/org/junit/jupiter/junit-jupiter-engine/5.10.3/junit-jupiter-engine-5.10.3.jar
+Progress (3): 2.1/4.2 MB | 0.8/1.6 MB | 45/211 kB
+Progress (3): 2.1/4.2 MB | 0.8/1.6 MB | 45/211 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 45/211 kB | 7.7/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 45/211 kB | 7.7/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 45/211 kB | 24/586 kB 
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 45/211 kB | 40/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 45/211 kB | 57/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 61/211 kB | 57/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 61/211 kB | 73/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 61/211 kB | 90/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 78/211 kB | 90/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 78/211 kB | 106/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 78/211 kB | 106/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 78/211 kB | 122/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 78/211 kB | 122/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 94/211 kB | 122/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 94/211 kB | 122/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 94/211 kB | 139/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 94/211 kB | 155/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 111/211 kB | 155/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 127/211 kB | 155/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 143/211 kB | 155/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 143/211 kB | 155/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 143/211 kB | 155/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 160/211 kB | 155/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 160/211 kB | 155/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 176/211 kB | 155/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 193/211 kB | 155/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 209/211 kB | 155/586 kB
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 211 kB | 155/586 kB    
+Progress (4): 2.1/4.2 MB | 0.8/1.6 MB | 211 kB | 155/586 kB
+Progress (4): 2.1/4.2 MB | 0.9/1.6 MB | 211 kB | 155/586 kB
+Progress (4): 2.1/4.2 MB | 0.9/1.6 MB | 211 kB | 155/586 kB
+Progress (4): 2.2/4.2 MB | 0.9/1.6 MB | 211 kB | 155/586 kB
+Progress (4): 2.2/4.2 MB | 0.9/1.6 MB | 211 kB | 155/586 kB
+Progress (4): 2.2/4.2 MB | 0.9/1.6 MB | 211 kB | 155/586 kB
+Progress (4): 2.2/4.2 MB | 0.9/1.6 MB | 211 kB | 155/586 kB
+Progress (4): 2.2/4.2 MB | 0.9/1.6 MB | 211 kB | 155/586 kB
+Progress (4): 2.2/4.2 MB | 0.9/1.6 MB | 211 kB | 155/586 kB
+Progress (4): 2.2/4.2 MB | 0.9/1.6 MB | 211 kB | 155/586 kB
+Progress (4): 2.2/4.2 MB | 1.0/1.6 MB | 211 kB | 155/586 kB
+                                                           
+Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/jupiter/junit-jupiter-api/5.10.3/junit-jupiter-api-5.10.3.jar (211 kB at 165 kB/s)
+Downloading from central: https://repo.maven.apache.org/maven2/org/junit/vintage/junit-vintage-engine/5.10.3/junit-vintage-engine-5.10.3.jar
+Progress (3): 2.2/4.2 MB | 1.0/1.6 MB | 155/586 kB
+Progress (3): 2.2/4.2 MB | 1.0/1.6 MB | 155/586 kB
+Progress (3): 2.2/4.2 MB | 1.0/1.6 MB | 155/586 kB
+Progress (3): 2.2/4.2 MB | 1.0/1.6 MB | 155/586 kB
+Progress (3): 2.2/4.2 MB | 1.0/1.6 MB | 155/586 kB
+Progress (3): 2.2/4.2 MB | 1.0/1.6 MB | 172/586 kB
+Progress (3): 2.2/4.2 MB | 1.0/1.6 MB | 188/586 kB
+Progress (3): 2.2/4.2 MB | 1.0/1.6 MB | 204/586 kB
+Progress (3): 2.2/4.2 MB | 1.0/1.6 MB | 221/586 kB
+Progress (3): 2.2/4.2 MB | 1.0/1.6 MB | 237/586 kB
+Progress (3): 2.2/4.2 MB | 1.0/1.6 MB | 237/586 kB
+Progress (3): 2.2/4.2 MB | 1.0/1.6 MB | 253/586 kB
+Progress (3): 2.2/4.2 MB | 1.0/1.6 MB | 270/586 kB
+Progress (3): 2.2/4.2 MB | 1.0/1.6 MB | 270/586 kB
+Progress (3): 2.2/4.2 MB | 1.0/1.6 MB | 270/586 kB
+Progress (3): 2.2/4.2 MB | 1.1/1.6 MB | 270/586 kB
+Progress (3): 2.3/4.2 MB | 1.1/1.6 MB | 270/586 kB
+Progress (3): 2.3/4.2 MB | 1.1/1.6 MB | 270/586 kB
+Progress (3): 2.3/4.2 MB | 1.1/1.6 MB | 270/586 kB
+Progress (3): 2.3/4.2 MB | 1.1/1.6 MB | 270/586 kB
+Progress (3): 2.3/4.2 MB | 1.1/1.6 MB | 270/586 kB
+Progress (3): 2.3/4.2 MB | 1.1/1.6 MB | 270/586 kB
+Progress (3): 2.3/4.2 MB | 1.1/1.6 MB | 270/586 kB
+Progress (4): 2.3/4.2 MB | 1.1/1.6 MB | 270/586 kB | 7.7/245 kB
+Progress (4): 2.3/4.2 MB | 1.1/1.6 MB | 270/586 kB | 7.7/245 kB
+Progress (4): 2.3/4.2 MB | 1.1/1.6 MB | 270/586 kB | 7.7/245 kB
+Progress (4): 2.3/4.2 MB | 1.1/1.6 MB | 270/586 kB | 7.7/245 kB
+Progress (4): 2.3/4.2 MB | 1.1/1.6 MB | 270/586 kB | 24/245 kB 
+Progress (4): 2.3/4.2 MB | 1.2/1.6 MB | 270/586 kB | 24/245 kB
+Progress (4): 2.3/4.2 MB | 1.2/1.6 MB | 270/586 kB | 40/245 kB
+Progress (4): 2.3/4.2 MB | 1.2/1.6 MB | 270/586 kB | 40/245 kB
+Progress (4): 2.3/4.2 MB | 1.2/1.6 MB | 270/586 kB | 40/245 kB
+Progress (4): 2.3/4.2 MB | 1.2/1.6 MB | 270/586 kB | 57/245 kB
+Progress (4): 2.3/4.2 MB | 1.2/1.6 MB | 270/586 kB | 73/245 kB
+Progress (4): 2.3/4.2 MB | 1.2/1.6 MB | 270/586 kB | 73/245 kB
+Progress (4): 2.3/4.2 MB | 1.2/1.6 MB | 270/586 kB | 73/245 kB
+Progress (4): 2.3/4.2 MB | 1.2/1.6 MB | 270/586 kB | 90/245 kB
+Progress (4): 2.4/4.2 MB | 1.2/1.6 MB | 270/586 kB | 90/245 kB
+Progress (4): 2.4/4.2 MB | 1.2/1.6 MB | 270/586 kB | 90/245 kB
+Progress (4): 2.4/4.2 MB | 1.2/1.6 MB | 270/586 kB | 106/245 kB
+Progress (4): 2.4/4.2 MB | 1.2/1.6 MB | 270/586 kB | 122/245 kB
+Progress (4): 2.4/4.2 MB | 1.2/1.6 MB | 270/586 kB | 139/245 kB
+Progress (4): 2.4/4.2 MB | 1.2/1.6 MB | 270/586 kB | 155/245 kB
+Progress (4): 2.4/4.2 MB | 1.2/1.6 MB | 270/586 kB | 172/245 kB
+Progress (4): 2.4/4.2 MB | 1.2/1.6 MB | 270/586 kB | 172/245 kB
+Progress (4): 2.4/4.2 MB | 1.2/1.6 MB | 270/586 kB | 188/245 kB
+Progress (4): 2.4/4.2 MB | 1.2/1.6 MB | 270/586 kB | 204/245 kB
+Progress (4): 2.4/4.2 MB | 1.2/1.6 MB | 270/586 kB | 221/245 kB
+Progress (4): 2.4/4.2 MB | 1.2/1.6 MB | 270/586 kB | 237/245 kB
+Progress (4): 2.4/4.2 MB | 1.2/1.6 MB | 270/586 kB | 245 kB    
+                                                           
+Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/jupiter/junit-jupiter-engine/5.10.3/junit-jupiter-engine-5.10.3.jar (245 kB at 184 kB/s)
+Downloading from central: https://repo.maven.apache.org/maven2/org/junit/platform/junit-platform-engine/1.10.3/junit-platform-engine-1.10.3.jar
+Progress (3): 2.4/4.2 MB | 1.2/1.6 MB | 286/586 kB
+Progress (3): 2.4/4.2 MB | 1.2/1.6 MB | 286/586 kB
+Progress (3): 2.4/4.2 MB | 1.2/1.6 MB | 286/586 kB
+Progress (3): 2.4/4.2 MB | 1.3/1.6 MB | 286/586 kB
+Progress (3): 2.4/4.2 MB | 1.3/1.6 MB | 303/586 kB
+Progress (3): 2.4/4.2 MB | 1.3/1.6 MB | 303/586 kB
+Progress (3): 2.4/4.2 MB | 1.3/1.6 MB | 319/586 kB
+Progress (3): 2.4/4.2 MB | 1.3/1.6 MB | 335/586 kB
+Progress (3): 2.4/4.2 MB | 1.3/1.6 MB | 352/586 kB
+Progress (3): 2.4/4.2 MB | 1.3/1.6 MB | 368/586 kB
+Progress (3): 2.4/4.2 MB | 1.3/1.6 MB | 385/586 kB
+Progress (3): 2.4/4.2 MB | 1.3/1.6 MB | 401/586 kB
+Progress (3): 2.4/4.2 MB | 1.3/1.6 MB | 417/586 kB
+Progress (3): 2.4/4.2 MB | 1.3/1.6 MB | 417/586 kB
+Progress (3): 2.4/4.2 MB | 1.3/1.6 MB | 417/586 kB
+Progress (3): 2.4/4.2 MB | 1.3/1.6 MB | 434/586 kB
+Progress (3): 2.4/4.2 MB | 1.3/1.6 MB | 434/586 kB
+Progress (3): 2.4/4.2 MB | 1.3/1.6 MB | 434/586 kB
+Progress (3): 2.4/4.2 MB | 1.3/1.6 MB | 434/586 kB
+Progress (3): 2.4/4.2 MB | 1.3/1.6 MB | 434/586 kB
+Progress (3): 2.4/4.2 MB | 1.4/1.6 MB | 434/586 kB
+Progress (3): 2.4/4.2 MB | 1.4/1.6 MB | 434/586 kB
+Progress (3): 2.4/4.2 MB | 1.4/1.6 MB | 434/586 kB
+Progress (3): 2.4/4.2 MB | 1.4/1.6 MB | 434/586 kB
+Progress (3): 2.4/4.2 MB | 1.4/1.6 MB | 434/586 kB
+Progress (3): 2.5/4.2 MB | 1.4/1.6 MB | 434/586 kB
+Progress (3): 2.5/4.2 MB | 1.4/1.6 MB | 434/586 kB
+Progress (3): 2.5/4.2 MB | 1.4/1.6 MB | 434/586 kB
+Progress (3): 2.5/4.2 MB | 1.4/1.6 MB | 434/586 kB
+Progress (3): 2.5/4.2 MB | 1.4/1.6 MB | 434/586 kB
+Progress (3): 2.5/4.2 MB | 1.5/1.6 MB | 434/586 kB
+Progress (3): 2.5/4.2 MB | 1.5/1.6 MB | 434/586 kB
+Progress (3): 2.5/4.2 MB | 1.5/1.6 MB | 434/586 kB
+Progress (3): 2.5/4.2 MB | 1.5/1.6 MB | 450/586 kB
+Progress (3): 2.5/4.2 MB | 1.5/1.6 MB | 466/586 kB
+Progress (3): 2.5/4.2 MB | 1.5/1.6 MB | 483/586 kB
+Progress (3): 2.5/4.2 MB | 1.5/1.6 MB | 499/586 kB
+Progress (3): 2.5/4.2 MB | 1.5/1.6 MB | 499/586 kB
+Progress (3): 2.5/4.2 MB | 1.5/1.6 MB | 516/586 kB
+Progress (3): 2.5/4.2 MB | 1.5/1.6 MB | 516/586 kB
+Progress (3): 2.5/4.2 MB | 1.5/1.6 MB | 516/586 kB
+Progress (3): 2.5/4.2 MB | 1.5/1.6 MB | 516/586 kB
+Progress (3): 2.5/4.2 MB | 1.5/1.6 MB | 532/586 kB
+Progress (3): 2.5/4.2 MB | 1.5/1.6 MB | 548/586 kB
+Progress (3): 2.5/4.2 MB | 1.5/1.6 MB | 565/586 kB
+Progress (3): 2.5/4.2 MB | 1.5/1.6 MB | 581/586 kB
+Progress (3): 2.5/4.2 MB | 1.5/1.6 MB | 586 kB    
+Progress (3): 2.5/4.2 MB | 1.5/1.6 MB | 586 kB
+Progress (3): 2.5/4.2 MB | 1.5/1.6 MB | 586 kB
+Progress (3): 2.5/4.2 MB | 1.5/1.6 MB | 586 kB
+Progress (3): 2.5/4.2 MB | 1.6/1.6 MB | 586 kB
+Progress (3): 2.6/4.2 MB | 1.6/1.6 MB | 586 kB
+Progress (3): 2.6/4.2 MB | 1.6/1.6 MB | 586 kB
+Progress (3): 2.6/4.2 MB | 1.6/1.6 MB | 586 kB
+Progress (4): 2.6/4.2 MB | 1.6/1.6 MB | 586 kB | 7.7/205 kB
+Progress (4): 2.6/4.2 MB | 1.6/1.6 MB | 586 kB | 16/205 kB 
+                                                          
+Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/jupiter/junit-jupiter-params/5.10.3/junit-jupiter-params-5.10.3.jar (586 kB at 431 kB/s)
+Downloading from central: https://repo.maven.apache.org/maven2/org/junit/platform/junit-platform-commons/1.10.2/junit-platform-commons-1.10.2.jar
+Progress (3): 2.6/4.2 MB | 1.6/1.6 MB | 16/205 kB
+Progress (3): 2.6/4.2 MB | 1.6/1.6 MB | 16/205 kB
+Progress (3): 2.6/4.2 MB | 1.6/1.6 MB | 32/205 kB
+Progress (3): 2.6/4.2 MB | 1.6/1.6 MB | 49/205 kB
+Progress (3): 2.6/4.2 MB | 1.6/1.6 MB | 49/205 kB
+Progress (3): 2.6/4.2 MB | 1.6/1.6 MB | 61/205 kB
+Progress (3): 2.6/4.2 MB | 1.6/1.6 MB | 61/205 kB
+Progress (3): 2.6/4.2 MB | 1.6/1.6 MB | 61/205 kB
+Progress (3): 2.6/4.2 MB | 1.6/1.6 MB | 78/205 kB
+Progress (3): 2.6/4.2 MB | 1.6/1.6 MB | 94/205 kB
+Progress (3): 2.6/4.2 MB | 1.6/1.6 MB | 94/205 kB
+Progress (3): 2.6/4.2 MB | 1.6 MB | 94/205 kB    
+Progress (3): 2.6/4.2 MB | 1.6 MB | 111/205 kB
+Progress (3): 2.6/4.2 MB | 1.6 MB | 111/205 kB
+Progress (3): 2.6/4.2 MB | 1.6 MB | 127/205 kB
+Progress (3): 2.6/4.2 MB | 1.6 MB | 127/205 kB
+Progress (3): 2.6/4.2 MB | 1.6 MB | 143/205 kB
+Progress (3): 2.6/4.2 MB | 1.6 MB | 160/205 kB
+Progress (3): 2.7/4.2 MB | 1.6 MB | 160/205 kB
+Progress (3): 2.7/4.2 MB | 1.6 MB | 176/205 kB
+Progress (3): 2.7/4.2 MB | 1.6 MB | 176/205 kB
+Progress (3): 2.7/4.2 MB | 1.6 MB | 193/205 kB
+Progress (3): 2.7/4.2 MB | 1.6 MB | 193/205 kB
+Progress (3): 2.7/4.2 MB | 1.6 MB | 205 kB    
+                                          
+Downloaded from central: https://repo.maven.apache.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.17.2/jackson-databind-2.17.2.jar (1.6 MB at 1.2 MB/s)
+Downloading from central: https://repo.maven.apache.org/maven2/org/mockito/mockito-core/5.13.0/mockito-core-5.13.0.jar
+Progress (2): 2.7/4.2 MB | 205 kB
+Progress (2): 2.7/4.2 MB | 205 kB
+Progress (2): 2.7/4.2 MB | 205 kB
+Progress (2): 2.7/4.2 MB | 205 kB
+                                 
+Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/platform/junit-platform-engine/1.10.3/junit-platform-engine-1.10.3.jar (205 kB at 147 kB/s)
+Downloading from central: https://repo.maven.apache.org/maven2/net/bytebuddy/byte-buddy-agent/1.15.0/byte-buddy-agent-1.15.0.jar
+Progress (1): 2.8/4.2 MB
+Progress (2): 2.8/4.2 MB | 7.7/67 kB
+Progress (2): 2.8/4.2 MB | 11/67 kB 
+Progress (2): 2.8/4.2 MB | 28/67 kB
+Progress (2): 2.8/4.2 MB | 44/67 kB
+Progress (2): 2.8/4.2 MB | 44/67 kB
+Progress (2): 2.8/4.2 MB | 61/67 kB
+Progress (2): 2.8/4.2 MB | 67 kB   
+Progress (2): 2.8/4.2 MB | 67 kB
+Progress (2): 2.8/4.2 MB | 67 kB
+                                
+Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/vintage/junit-vintage-engine/5.10.3/junit-vintage-engine-5.10.3.jar (67 kB at 48 kB/s)
+Downloading from central: https://repo.maven.apache.org/maven2/io/crate/crate-libs-dex/5.9.10/crate-libs-dex-5.9.10-tests.jar
+Progress (1): 2.8/4.2 MB
+Progress (2): 2.8/4.2 MB | 7.7/106 kB
+Progress (2): 2.8/4.2 MB | 12/106 kB 
+Progress (2): 2.8/4.2 MB | 29/106 kB
+Progress (2): 2.8/4.2 MB | 45/106 kB
+Progress (2): 2.8/4.2 MB | 61/106 kB
+Progress (2): 2.8/4.2 MB | 78/106 kB
+Progress (2): 2.8/4.2 MB | 94/106 kB
+Progress (2): 2.8/4.2 MB | 94/106 kB
+Progress (2): 2.8/4.2 MB | 106 kB   
+Progress (2): 2.9/4.2 MB | 106 kB
+Progress (3): 2.9/4.2 MB | 106 kB | 7.7/704 kB
+Progress (3): 2.9/4.2 MB | 106 kB | 12/704 kB 
+Progress (3): 2.9/4.2 MB | 106 kB | 29/704 kB
+Progress (3): 2.9/4.2 MB | 106 kB | 29/704 kB
+Progress (3): 2.9/4.2 MB | 106 kB | 45/704 kB
+Progress (3): 2.9/4.2 MB | 106 kB | 61/704 kB
+Progress (3): 2.9/4.2 MB | 106 kB | 61/704 kB
+Progress (3): 2.9/4.2 MB | 106 kB | 78/704 kB
+                                             
+Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/platform/junit-platform-commons/1.10.2/junit-platform-commons-1.10.2.jar (106 kB at 75 kB/s)
+Downloading from central: https://repo.maven.apache.org/maven2/org/apache/lucene/lucene-test-framework/9.11.1/lucene-test-framework-9.11.1.jar
+Progress (2): 2.9/4.2 MB | 78/704 kB
+Progress (2): 2.9/4.2 MB | 94/704 kB
+Progress (3): 2.9/4.2 MB | 94/704 kB | 7.7/263 kB
+Progress (3): 2.9/4.2 MB | 94/704 kB | 11/263 kB 
+Progress (3): 2.9/4.2 MB | 94/704 kB | 28/263 kB
+Progress (3): 2.9/4.2 MB | 111/704 kB | 28/263 kB
+Progress (3): 2.9/4.2 MB | 111/704 kB | 28/263 kB
+Progress (3): 2.9/4.2 MB | 111/704 kB | 44/263 kB
+Progress (3): 2.9/4.2 MB | 127/704 kB | 44/263 kB
+Progress (3): 2.9/4.2 MB | 127/704 kB | 61/263 kB
+Progress (3): 2.9/4.2 MB | 127/704 kB | 61/263 kB
+Progress (3): 2.9/4.2 MB | 143/704 kB | 61/263 kB
+Progress (3): 2.9/4.2 MB | 143/704 kB | 77/263 kB
+Progress (3): 2.9/4.2 MB | 160/704 kB | 77/263 kB
+Progress (3): 2.9/4.2 MB | 160/704 kB | 93/263 kB
+Progress (3): 3.0/4.2 MB | 160/704 kB | 93/263 kB
+Progress (3): 3.0/4.2 MB | 160/704 kB | 110/263 kB
+Progress (3): 3.0/4.2 MB | 176/704 kB | 110/263 kB
+Progress (3): 3.0/4.2 MB | 193/704 kB | 110/263 kB
+Progress (3): 3.0/4.2 MB | 193/704 kB | 126/263 kB
+Progress (3): 3.0/4.2 MB | 193/704 kB | 126/263 kB
+Progress (3): 3.0/4.2 MB | 193/704 kB | 142/263 kB
+Progress (3): 3.0/4.2 MB | 193/704 kB | 142/263 kB
+Progress (3): 3.0/4.2 MB | 209/704 kB | 142/263 kB
+Progress (3): 3.0/4.2 MB | 225/704 kB | 142/263 kB
+Progress (3): 3.0/4.2 MB | 225/704 kB | 159/263 kB
+Progress (3): 3.0/4.2 MB | 225/704 kB | 159/263 kB
+Progress (3): 3.0/4.2 MB | 242/704 kB | 159/263 kB
+Progress (3): 3.0/4.2 MB | 242/704 kB | 175/263 kB
+Progress (3): 3.0/4.2 MB | 242/704 kB | 192/263 kB
+Progress (3): 3.0/4.2 MB | 242/704 kB | 192/263 kB
+Progress (3): 3.0/4.2 MB | 258/704 kB | 192/263 kB
+Progress (3): 3.0/4.2 MB | 274/704 kB | 192/263 kB
+Progress (3): 3.0/4.2 MB | 274/704 kB | 208/263 kB
+Progress (3): 3.0/4.2 MB | 274/704 kB | 224/263 kB
+Progress (3): 3.0/4.2 MB | 274/704 kB | 224/263 kB
+Progress (3): 3.0/4.2 MB | 291/704 kB | 224/263 kB
+Progress (3): 3.0/4.2 MB | 291/704 kB | 241/263 kB
+Progress (3): 3.0/4.2 MB | 291/704 kB | 257/263 kB
+Progress (3): 3.0/4.2 MB | 307/704 kB | 257/263 kB
+Progress (3): 3.0/4.2 MB | 307/704 kB | 263 kB    
+Progress (4): 3.0/4.2 MB | 307/704 kB | 263 kB | 0/11 MB
+Progress (4): 3.0/4.2 MB | 307/704 kB | 263 kB | 0/11 MB
+Progress (4): 3.0/4.2 MB | 307/704 kB | 263 kB | 0/11 MB
+Progress (4): 3.0/4.2 MB | 307/704 kB | 263 kB | 0/11 MB
+Progress (4): 3.0/4.2 MB | 307/704 kB | 263 kB | 0.1/11 MB
+Progress (4): 3.0/4.2 MB | 324/704 kB | 263 kB | 0.1/11 MB
+Progress (4): 3.0/4.2 MB | 324/704 kB | 263 kB | 0.1/11 MB
+Progress (4): 3.0/4.2 MB | 324/704 kB | 263 kB | 0.1/11 MB
+Progress (4): 3.1/4.2 MB | 324/704 kB | 263 kB | 0.1/11 MB
+Progress (4): 3.1/4.2 MB | 324/704 kB | 263 kB | 0.1/11 MB
+Progress (4): 3.1/4.2 MB | 324/704 kB | 263 kB | 0.1/11 MB
+Progress (4): 3.1/4.2 MB | 340/704 kB | 263 kB | 0.1/11 MB
+Progress (4): 3.1/4.2 MB | 340/704 kB | 263 kB | 0.1/11 MB
+Progress (4): 3.1/4.2 MB | 340/704 kB | 263 kB | 0.2/11 MB
+                                                          
+Downloaded from central: https://repo.maven.apache.org/maven2/net/bytebuddy/byte-buddy-agent/1.15.0/byte-buddy-agent-1.15.0.jar (263 kB at 183 kB/s)
+Downloading from central: https://repo.maven.apache.org/maven2/org/apache/lucene/lucene-codecs/9.11.1/lucene-codecs-9.11.1.jar
+Progress (3): 3.1/4.2 MB | 340/704 kB | 0.2/11 MB
+Progress (3): 3.1/4.2 MB | 340/704 kB | 0.2/11 MB
+Progress (3): 3.1/4.2 MB | 356/704 kB | 0.2/11 MB
+Progress (3): 3.1/4.2 MB | 356/704 kB | 0.2/11 MB
+Progress (3): 3.1/4.2 MB | 356/704 kB | 0.2/11 MB
+Progress (3): 3.1/4.2 MB | 356/704 kB | 0.2/11 MB
+Progress (3): 3.1/4.2 MB | 356/704 kB | 0.2/11 MB
+Progress (3): 3.1/4.2 MB | 373/704 kB | 0.2/11 MB
+Progress (3): 3.1/4.2 MB | 389/704 kB | 0.2/11 MB
+Progress (3): 3.1/4.2 MB | 389/704 kB | 0.2/11 MB
+Progress (3): 3.1/4.2 MB | 406/704 kB | 0.2/11 MB
+Progress (3): 3.1/4.2 MB | 422/704 kB | 0.2/11 MB
+Progress (3): 3.1/4.2 MB | 438/704 kB | 0.2/11 MB
+Progress (3): 3.1/4.2 MB | 438/704 kB | 0.2/11 MB
+Progress (3): 3.1/4.2 MB | 455/704 kB | 0.2/11 MB
+Progress (3): 3.1/4.2 MB | 471/704 kB | 0.2/11 MB
+Progress (3): 3.1/4.2 MB | 471/704 kB | 0.2/11 MB
+Progress (3): 3.1/4.2 MB | 487/704 kB | 0.2/11 MB
+Progress (3): 3.1/4.2 MB | 504/704 kB | 0.2/11 MB
+Progress (3): 3.1/4.2 MB | 504/704 kB | 0.2/11 MB
+Progress (3): 3.1/4.2 MB | 520/704 kB | 0.2/11 MB
+Progress (3): 3.1/4.2 MB | 537/704 kB | 0.2/11 MB
+Progress (3): 3.1/4.2 MB | 537/704 kB | 0.2/11 MB
+Progress (3): 3.2/4.2 MB | 537/704 kB | 0.2/11 MB
+Progress (3): 3.2/4.2 MB | 537/704 kB | 0.2/11 MB
+Progress (3): 3.2/4.2 MB | 537/704 kB | 0.3/11 MB
+Progress (3): 3.2/4.2 MB | 537/704 kB | 0.3/11 MB
+Progress (3): 3.2/4.2 MB | 553/704 kB | 0.3/11 MB
+Progress (3): 3.2/4.2 MB | 553/704 kB | 0.3/11 MB
+Progress (3): 3.2/4.2 MB | 553/704 kB | 0.3/11 MB
+Progress (3): 3.2/4.2 MB | 553/704 kB | 0.3/11 MB
+Progress (3): 3.2/4.2 MB | 569/704 kB | 0.3/11 MB
+Progress (3): 3.2/4.2 MB | 569/704 kB | 0.3/11 MB
+Progress (3): 3.2/4.2 MB | 569/704 kB | 0.3/11 MB
+Progress (3): 3.2/4.2 MB | 569/704 kB | 0.3/11 MB
+Progress (3): 3.2/4.2 MB | 569/704 kB | 0.4/11 MB
+Progress (3): 3.2/4.2 MB | 586/704 kB | 0.4/11 MB
+Progress (3): 3.2/4.2 MB | 586/704 kB | 0.4/11 MB
+Progress (3): 3.2/4.2 MB | 586/704 kB | 0.4/11 MB
+Progress (3): 3.2/4.2 MB | 586/704 kB | 0.4/11 MB
+Progress (3): 3.2/4.2 MB | 602/704 kB | 0.4/11 MB
+Progress (3): 3.2/4.2 MB | 602/704 kB | 0.4/11 MB
+Progress (3): 3.2/4.2 MB | 602/704 kB | 0.4/11 MB
+Progress (3): 3.2/4.2 MB | 618/704 kB | 0.4/11 MB
+Progress (3): 3.2/4.2 MB | 618/704 kB | 0.4/11 MB
+Progress (3): 3.2/4.2 MB | 635/704 kB | 0.4/11 MB
+Progress (3): 3.2/4.2 MB | 635/704 kB | 0.4/11 MB
+Progress (3): 3.2/4.2 MB | 651/704 kB | 0.4/11 MB
+Progress (3): 3.2/4.2 MB | 668/704 kB | 0.4/11 MB
+Progress (3): 3.2/4.2 MB | 668/704 kB | 0.4/11 MB
+Progress (3): 3.2/4.2 MB | 684/704 kB | 0.4/11 MB
+Progress (3): 3.2/4.2 MB | 684/704 kB | 0.4/11 MB
+Progress (4): 3.2/4.2 MB | 684/704 kB | 0.4/11 MB | 7.7/468 kB
+Progress (4): 3.2/4.2 MB | 684/704 kB | 0.4/11 MB | 16/468 kB 
+Progress (4): 3.2/4.2 MB | 684/704 kB | 0.4/11 MB | 25/468 kB
+Progress (4): 3.2/4.2 MB | 700/704 kB | 0.4/11 MB | 25/468 kB
+Progress (4): 3.3/4.2 MB | 700/704 kB | 0.4/11 MB | 25/468 kB
+Progress (4): 3.3/4.2 MB | 704 kB | 0.4/11 MB | 25/468 kB    
+Progress (4): 3.3/4.2 MB | 704 kB | 0.4/11 MB | 25/468 kB
+Progress (4): 3.3/4.2 MB | 704 kB | 0.4/11 MB | 41/468 kB
+Progress (4): 3.3/4.2 MB | 704 kB | 0.4/11 MB | 57/468 kB
+Progress (4): 3.3/4.2 MB | 704 kB | 0.4/11 MB | 74/468 kB
+Progress (4): 3.3/4.2 MB | 704 kB | 0.4/11 MB | 74/468 kB
+Progress (4): 3.3/4.2 MB | 704 kB | 0.4/11 MB | 90/468 kB
+Progress (4): 3.3/4.2 MB | 704 kB | 0.4/11 MB | 90/468 kB
+Progress (4): 3.3/4.2 MB | 704 kB | 0.4/11 MB | 106/468 kB
+Progress (4): 3.3/4.2 MB | 704 kB | 0.4/11 MB | 106/468 kB
+Progress (4): 3.3/4.2 MB | 704 kB | 0.4/11 MB | 106/468 kB
+Progress (4): 3.3/4.2 MB | 704 kB | 0.4/11 MB | 123/468 kB
+Progress (4): 3.3/4.2 MB | 704 kB | 0.4/11 MB | 131/468 kB
+Progress (4): 3.3/4.2 MB | 704 kB | 0.4/11 MB | 147/468 kB
+                                                          
+Downloaded from central: https://repo.maven.apache.org/maven2/org/mockito/mockito-core/5.13.0/mockito-core-5.13.0.jar (704 kB at 473 kB/s)
+Progress (3): 3.3/4.2 MB | 0.4/11 MB | 164/468 kB
+Progress (3): 3.3/4.2 MB | 0.4/11 MB | 164/468 kB
+Progress (3): 3.3/4.2 MB | 0.4/11 MB | 180/468 kB
+Progress (3): 3.4/4.2 MB | 0.4/11 MB | 180/468 kB
+Progress (3): 3.4/4.2 MB | 0.4/11 MB | 197/468 kB
+Progress (3): 3.4/4.2 MB | 0.4/11 MB | 197/468 kB
+Progress (3): 3.4/4.2 MB | 0.5/11 MB | 197/468 kB
+Progress (3): 3.4/4.2 MB | 0.5/11 MB | 197/468 kB
+Progress (3): 3.4/4.2 MB | 0.5/11 MB | 197/468 kB
+Progress (3): 3.4/4.2 MB | 0.5/11 MB | 213/468 kB
+Progress (3): 3.4/4.2 MB | 0.5/11 MB | 213/468 kB
+Progress (3): 3.4/4.2 MB | 0.5/11 MB | 213/468 kB
+Progress (3): 3.4/4.2 MB | 0.5/11 MB | 213/468 kB
+Progress (3): 3.4/4.2 MB | 0.5/11 MB | 213/468 kB
+Progress (3): 3.4/4.2 MB | 0.6/11 MB | 213/468 kB
+Progress (3): 3.4/4.2 MB | 0.6/11 MB | 229/468 kB
+Progress (3): 3.4/4.2 MB | 0.6/11 MB | 229/468 kB
+Progress (3): 3.4/4.2 MB | 0.6/11 MB | 229/468 kB
+Progress (3): 3.4/4.2 MB | 0.6/11 MB | 229/468 kB
+Progress (3): 3.4/4.2 MB | 0.6/11 MB | 229/468 kB
+Progress (3): 3.4/4.2 MB | 0.6/11 MB | 246/468 kB
+Progress (3): 3.4/4.2 MB | 0.6/11 MB | 246/468 kB
+Progress (3): 3.4/4.2 MB | 0.6/11 MB | 246/468 kB
+Progress (3): 3.4/4.2 MB | 0.6/11 MB | 262/468 kB
+Progress (3): 3.4/4.2 MB | 0.6/11 MB | 262/468 kB
+Progress (3): 3.4/4.2 MB | 0.6/11 MB | 279/468 kB
+Progress (3): 3.4/4.2 MB | 0.6/11 MB | 279/468 kB
+Progress (3): 3.4/4.2 MB | 0.6/11 MB | 295/468 kB
+Progress (3): 3.4/4.2 MB | 0.6/11 MB | 311/468 kB
+Progress (3): 3.4/4.2 MB | 0.7/11 MB | 311/468 kB
+Progress (3): 3.4/4.2 MB | 0.7/11 MB | 311/468 kB
+Progress (3): 3.4/4.2 MB | 0.7/11 MB | 311/468 kB
+Progress (3): 3.4/4.2 MB | 0.7/11 MB | 311/468 kB
+Progress (3): 3.4/4.2 MB | 0.7/11 MB | 311/468 kB
+Progress (3): 3.4/4.2 MB | 0.7/11 MB | 328/468 kB
+Progress (3): 3.4/4.2 MB | 0.7/11 MB | 328/468 kB
+Progress (3): 3.5/4.2 MB | 0.7/11 MB | 328/468 kB
+Progress (3): 3.5/4.2 MB | 0.7/11 MB | 344/468 kB
+Progress (3): 3.5/4.2 MB | 0.7/11 MB | 344/468 kB
+Progress (3): 3.5/4.2 MB | 0.8/11 MB | 344/468 kB
+Progress (3): 3.5/4.2 MB | 0.8/11 MB | 344/468 kB
+Progress (3): 3.5/4.2 MB | 0.8/11 MB | 344/468 kB
+Progress (3): 3.5/4.2 MB | 0.8/11 MB | 360/468 kB
+Progress (3): 3.5/4.2 MB | 0.8/11 MB | 360/468 kB
+Progress (3): 3.5/4.2 MB | 0.8/11 MB | 377/468 kB
+Progress (3): 3.5/4.2 MB | 0.8/11 MB | 377/468 kB
+Progress (3): 3.5/4.2 MB | 0.8/11 MB | 393/468 kB
+Progress (3): 3.5/4.2 MB | 0.8/11 MB | 410/468 kB
+Progress (3): 3.5/4.2 MB | 0.8/11 MB | 410/468 kB
+Progress (3): 3.5/4.2 MB | 0.8/11 MB | 410/468 kB
+Progress (3): 3.5/4.2 MB | 0.8/11 MB | 410/468 kB
+Progress (3): 3.5/4.2 MB | 0.8/11 MB | 426/468 kB
+Progress (3): 3.5/4.2 MB | 0.8/11 MB | 426/468 kB
+Progress (3): 3.5/4.2 MB | 0.8/11 MB | 426/468 kB
+Progress (3): 3.5/4.2 MB | 0.9/11 MB | 426/468 kB
+Progress (3): 3.5/4.2 MB | 0.9/11 MB | 442/468 kB
+Progress (3): 3.5/4.2 MB | 0.9/11 MB | 442/468 kB
+Progress (3): 3.5/4.2 MB | 0.9/11 MB | 459/468 kB
+Progress (3): 3.5/4.2 MB | 0.9/11 MB | 459/468 kB
+Progress (3): 3.5/4.2 MB | 0.9/11 MB | 459/468 kB
+Progress (3): 3.5/4.2 MB | 0.9/11 MB | 468 kB    
+Progress (3): 3.5/4.2 MB | 0.9/11 MB | 468 kB
+Progress (3): 3.5/4.2 MB | 0.9/11 MB | 468 kB
+Progress (3): 3.5/4.2 MB | 0.9/11 MB | 468 kB
+Progress (3): 3.5/4.2 MB | 0.9/11 MB | 468 kB
+Progress (3): 3.5/4.2 MB | 1.0/11 MB | 468 kB
+Progress (3): 3.6/4.2 MB | 1.0/11 MB | 468 kB
+Progress (3): 3.6/4.2 MB | 1.0/11 MB | 468 kB
+Progress (3): 3.6/4.2 MB | 1.0/11 MB | 468 kB
+Progress (3): 3.6/4.2 MB | 1.0/11 MB | 468 kB
+Progress (3): 3.6/4.2 MB | 1.0/11 MB | 468 kB
+Progress (3): 3.6/4.2 MB | 1.0/11 MB | 468 kB
+Progress (3): 3.6/4.2 MB | 1.0/11 MB | 468 kB
+Progress (3): 3.6/4.2 MB | 1.1/11 MB | 468 kB
+                                             
+Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/lucene/lucene-codecs/9.11.1/lucene-codecs-9.11.1.jar (468 kB at 304 kB/s)
+Progress (2): 3.6/4.2 MB | 1.1/11 MB
+Progress (2): 3.6/4.2 MB | 1.1/11 MB
+Progress (2): 3.6/4.2 MB | 1.1/11 MB
+Progress (2): 3.6/4.2 MB | 1.1/11 MB
+Progress (2): 3.6/4.2 MB | 1.1/11 MB
+Progress (2): 3.6/4.2 MB | 1.1/11 MB
+Progress (2): 3.6/4.2 MB | 1.1/11 MB
+Progress (2): 3.7/4.2 MB | 1.1/11 MB
+Progress (2): 3.7/4.2 MB | 1.1/11 MB
+Progress (2): 3.7/4.2 MB | 1.1/11 MB
+Progress (2): 3.7/4.2 MB | 1.1/11 MB
+Progress (2): 3.7/4.2 MB | 1.1/11 MB
+Progress (2): 3.7/4.2 MB | 1.1/11 MB
+Progress (2): 3.7/4.2 MB | 1.2/11 MB
+Progress (2): 3.7/4.2 MB | 1.2/11 MB
+Progress (2): 3.7/4.2 MB | 1.2/11 MB
+Progress (2): 3.7/4.2 MB | 1.2/11 MB
+Progress (2): 3.7/4.2 MB | 1.2/11 MB
+Progress (2): 3.7/4.2 MB | 1.2/11 MB
+Progress (2): 3.7/4.2 MB | 1.2/11 MB
+Progress (2): 3.7/4.2 MB | 1.3/11 MB
+Progress (2): 3.7/4.2 MB | 1.3/11 MB
+Progress (2): 3.7/4.2 MB | 1.3/11 MB
+Progress (2): 3.7/4.2 MB | 1.3/11 MB
+Progress (2): 3.7/4.2 MB | 1.3/11 MB
+Progress (2): 3.7/4.2 MB | 1.3/11 MB
+Progress (2): 3.7/4.2 MB | 1.3/11 MB
+Progress (2): 3.7/4.2 MB | 1.4/11 MB
+Progress (2): 3.8/4.2 MB | 1.4/11 MB
+Progress (2): 3.8/4.2 MB | 1.4/11 MB
+Progress (2): 3.8/4.2 MB | 1.4/11 MB
+Progress (2): 3.8/4.2 MB | 1.4/11 MB
+Progress (2): 3.8/4.2 MB | 1.4/11 MB
+Progress (2): 3.8/4.2 MB | 1.4/11 MB
+Progress (2): 3.8/4.2 MB | 1.4/11 MB
+Progress (2): 3.8/4.2 MB | 1.4/11 MB
+Progress (2): 3.8/4.2 MB | 1.4/11 MB
+Progress (2): 3.8/4.2 MB | 1.4/11 MB
+Progress (2): 3.8/4.2 MB | 1.4/11 MB
+Progress (2): 3.8/4.2 MB | 1.4/11 MB
+Progress (2): 3.8/4.2 MB | 1.5/11 MB
+Progress (2): 3.8/4.2 MB | 1.5/11 MB
+Progress (2): 3.8/4.2 MB | 1.5/11 MB
+Progress (2): 3.9/4.2 MB | 1.5/11 MB
+Progress (2): 3.9/4.2 MB | 1.5/11 MB
+Progress (2): 3.9/4.2 MB | 1.5/11 MB
+Progress (2): 3.9/4.2 MB | 1.5/11 MB
+Progress (2): 3.9/4.2 MB | 1.6/11 MB
+Progress (2): 3.9/4.2 MB | 1.6/11 MB
+Progress (2): 3.9/4.2 MB | 1.6/11 MB
+Progress (2): 3.9/4.2 MB | 1.6/11 MB
+Progress (2): 3.9/4.2 MB | 1.6/11 MB
+Progress (2): 3.9/4.2 MB | 1.6/11 MB
+Progress (2): 3.9/4.2 MB | 1.7/11 MB
+Progress (2): 3.9/4.2 MB | 1.7/11 MB
+Progress (2): 3.9/4.2 MB | 1.7/11 MB
+Progress (2): 3.9/4.2 MB | 1.7/11 MB
+Progress (2): 3.9/4.2 MB | 1.7/11 MB
+Progress (2): 3.9/4.2 MB | 1.7/11 MB
+Progress (2): 3.9/4.2 MB | 1.7/11 MB
+Progress (2): 3.9/4.2 MB | 1.7/11 MB
+Progress (2): 3.9/4.2 MB | 1.8/11 MB
+Progress (2): 3.9/4.2 MB | 1.8/11 MB
+Progress (2): 3.9/4.2 MB | 1.8/11 MB
+Progress (2): 3.9/4.2 MB | 1.8/11 MB
+Progress (2): 3.9/4.2 MB | 1.8/11 MB
+Progress (2): 3.9/4.2 MB | 1.8/11 MB
+Progress (2): 3.9/4.2 MB | 1.8/11 MB
+Progress (2): 3.9/4.2 MB | 1.8/11 MB
+Progress (2): 3.9/4.2 MB | 1.8/11 MB
+Progress (2): 3.9/4.2 MB | 1.9/11 MB
+Progress (2): 3.9/4.2 MB | 1.9/11 MB
+Progress (2): 3.9/4.2 MB | 1.9/11 MB
+Progress (2): 3.9/4.2 MB | 1.9/11 MB
+Progress (2): 4.0/4.2 MB | 1.9/11 MB
+Progress (2): 4.0/4.2 MB | 1.9/11 MB
+Progress (2): 4.0/4.2 MB | 1.9/11 MB
+Progress (2): 4.0/4.2 MB | 1.9/11 MB
+Progress (2): 4.0/4.2 MB | 1.9/11 MB
+Progress (2): 4.0/4.2 MB | 1.9/11 MB
+Progress (2): 4.0/4.2 MB | 1.9/11 MB
+Progress (2): 4.0/4.2 MB | 2.0/11 MB
+Progress (2): 4.0/4.2 MB | 2.0/11 MB
+Progress (2): 4.0/4.2 MB | 2.0/11 MB
+Progress (2): 4.0/4.2 MB | 2.0/11 MB
+Progress (2): 4.0/4.2 MB | 2.0/11 MB
+Progress (2): 4.0/4.2 MB | 2.0/11 MB
+Progress (2): 4.0/4.2 MB | 2.0/11 MB
+Progress (2): 4.0/4.2 MB | 2.0/11 MB
+Progress (2): 4.0/4.2 MB | 2.1/11 MB
+Progress (2): 4.0/4.2 MB | 2.1/11 MB
+Progress (2): 4.0/4.2 MB | 2.1/11 MB
+Progress (2): 4.0/4.2 MB | 2.1/11 MB
+Progress (2): 4.0/4.2 MB | 2.1/11 MB
+Progress (2): 4.1/4.2 MB | 2.1/11 MB
+Progress (2): 4.1/4.2 MB | 2.1/11 MB
+Progress (2): 4.1/4.2 MB | 2.1/11 MB
+Progress (2): 4.1/4.2 MB | 2.1/11 MB
+Progress (2): 4.1/4.2 MB | 2.1/11 MB
+Progress (2): 4.1/4.2 MB | 2.1/11 MB
+Progress (2): 4.1/4.2 MB | 2.2/11 MB
+Progress (2): 4.1/4.2 MB | 2.2/11 MB
+Progress (2): 4.1/4.2 MB | 2.2/11 MB
+Progress (2): 4.1/4.2 MB | 2.2/11 MB
+Progress (2): 4.1/4.2 MB | 2.2/11 MB
+Progress (2): 4.1/4.2 MB | 2.2/11 MB
+Progress (2): 4.1/4.2 MB | 2.2/11 MB
+Progress (2): 4.1/4.2 MB | 2.3/11 MB
+Progress (2): 4.1/4.2 MB | 2.3/11 MB
+Progress (2): 4.1/4.2 MB | 2.3/11 MB
+Progress (2): 4.1/4.2 MB | 2.3/11 MB
+Progress (2): 4.1/4.2 MB | 2.3/11 MB
+Progress (2): 4.1/4.2 MB | 2.3/11 MB
+Progress (2): 4.1/4.2 MB | 2.3/11 MB
+Progress (2): 4.1/4.2 MB | 2.4/11 MB
+Progress (2): 4.1/4.2 MB | 2.4/11 MB
+Progress (2): 4.1/4.2 MB | 2.4/11 MB
+Progress (2): 4.1/4.2 MB | 2.4/11 MB
+Progress (2): 4.1/4.2 MB | 2.4/11 MB
+Progress (2): 4.1/4.2 MB | 2.4/11 MB
+Progress (2): 4.1/4.2 MB | 2.4/11 MB
+Progress (2): 4.1/4.2 MB | 2.5/11 MB
+Progress (2): 4.2/4.2 MB | 2.5/11 MB
+Progress (2): 4.2/4.2 MB | 2.5/11 MB
+Progress (2): 4.2/4.2 MB | 2.5/11 MB
+Progress (2): 4.2/4.2 MB | 2.5/11 MB
+Progress (2): 4.2/4.2 MB | 2.5/11 MB
+Progress (2): 4.2 MB | 2.5/11 MB    
+Progress (2): 4.2 MB | 2.5/11 MB
+Progress (2): 4.2 MB | 2.5/11 MB
+Progress (2): 4.2 MB | 2.5/11 MB
+Progress (2): 4.2 MB | 2.5/11 MB
+Progress (2): 4.2 MB | 2.6/11 MB
+Progress (2): 4.2 MB | 2.6/11 MB
+Progress (2): 4.2 MB | 2.6/11 MB
+Progress (2): 4.2 MB | 2.6/11 MB
+Progress (2): 4.2 MB | 2.6/11 MB
+Progress (2): 4.2 MB | 2.6/11 MB
+Progress (2): 4.2 MB | 2.6/11 MB
+Progress (2): 4.2 MB | 2.7/11 MB
+Progress (2): 4.2 MB | 2.7/11 MB
+                                
+Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/lucene/lucene-core/9.11.1/lucene-core-9.11.1.jar (4.2 MB at 2.6 MB/s)
+Progress (1): 2.7/11 MB
+Progress (1): 2.7/11 MB
+Progress (1): 2.7/11 MB
+Progress (1): 2.7/11 MB
+Progress (1): 2.8/11 MB
+Progress (1): 2.8/11 MB
+Progress (1): 2.8/11 MB
+Progress (1): 2.8/11 MB
+Progress (1): 2.8/11 MB
+Progress (1): 2.8/11 MB
+Progress (1): 2.9/11 MB
+Progress (1): 2.9/11 MB
+Progress (1): 2.9/11 MB
+Progress (1): 2.9/11 MB
+Progress (1): 2.9/11 MB
+Progress (1): 2.9/11 MB
+Progress (1): 3.0/11 MB
+Progress (1): 3.0/11 MB
+Progress (1): 3.0/11 MB
+Progress (1): 3.0/11 MB
+Progress (1): 3.0/11 MB
+Progress (1): 3.0/11 MB
+Progress (1): 3.1/11 MB
+Progress (1): 3.1/11 MB
+Progress (1): 3.1/11 MB
+Progress (1): 3.1/11 MB
+Progress (1): 3.1/11 MB
+Progress (1): 3.1/11 MB
+Progress (1): 3.1/11 MB
+Progress (1): 3.2/11 MB
+Progress (1): 3.2/11 MB
+Progress (1): 3.2/11 MB
+Progress (1): 3.2/11 MB
+Progress (1): 3.2/11 MB
+Progress (1): 3.2/11 MB
+Progress (1): 3.3/11 MB
+Progress (1): 3.3/11 MB
+Progress (1): 3.3/11 MB
+Progress (1): 3.3/11 MB
+                       
+Progress (1): 3.3/11 MB
+Progress (1): 3.3/11 MB
+Progress (1): 3.4/11 MB
+Progress (1): 3.4/11 MB
+Progress (1): 3.4/11 MB
+Progress (1): 3.4/11 MB
+Progress (1): 3.4/11 MB
+Progress (1): 3.4/11 MB
+Progress (1): 3.5/11 MB
+Progress (1): 3.5/11 MB
+Progress (1): 3.5/11 MB
+Progress (1): 3.5/11 MB
+Progress (1): 3.5/11 MB
+Progress (1): 3.5/11 MB
+Progress (1): 3.5/11 MB
+Progress (1): 3.6/11 MB
+Progress (1): 3.6/11 MB
+Progress (1): 3.6/11 MB
+Progress (1): 3.6/11 MB
+Progress (1): 3.6/11 MB
+Progress (1): 3.6/11 MB
+Progress (1): 3.7/11 MB
+Progress (1): 3.7/11 MB
+Progress (1): 3.7/11 MB
+Progress (1): 3.7/11 MB
+Progress (1): 3.7/11 MB
+Progress (1): 3.7/11 MB
+Progress (1): 3.8/11 MB
+Progress (1): 3.8/11 MB
+Progress (1): 3.8/11 MB
+Progress (1): 3.8/11 MB
+Progress (1): 3.8/11 MB
+Progress (1): 3.8/11 MB
+Progress (1): 3.9/11 MB
+Progress (1): 3.9/11 MB
+Progress (1): 3.9/11 MB
+Progress (1): 3.9/11 MB
+Progress (1): 3.9/11 MB
+Progress (1): 3.9/11 MB
+Progress (1): 4.0/11 MB
+Progress (1): 4.0/11 MB
+Progress (1): 4.0/11 MB
+Progress (1): 4.0/11 MB
+Progress (1): 4.0/11 MB
+Progress (1): 4.0/11 MB
+Progress (1): 4.1/11 MB
+Progress (1): 4.1/11 MB
+Progress (1): 4.1/11 MB
+Progress (1): 4.1/11 MB
+Progress (1): 4.1/11 MB
+Progress (1): 4.1/11 MB
+Progress (1): 4.1/11 MB
+Progress (1): 4.2/11 MB
+Progress (1): 4.2/11 MB
+Progress (1): 4.2/11 MB
+Progress (1): 4.2/11 MB
+Progress (1): 4.2/11 MB
+Progress (1): 4.2/11 MB
+Progress (1): 4.3/11 MB
+Progress (1): 4.3/11 MB
+Progress (1): 4.3/11 MB
+Progress (1): 4.3/11 MB
+Progress (1): 4.3/11 MB
+Progress (1): 4.3/11 MB
+Progress (1): 4.4/11 MB
+Progress (1): 4.4/11 MB
+Progress (1): 4.4/11 MB
+Progress (1): 4.4/11 MB
+Progress (1): 4.4/11 MB
+Progress (1): 4.4/11 MB
+Progress (1): 4.5/11 MB
+Progress (1): 4.5/11 MB
+Progress (1): 4.5/11 MB
+Progress (1): 4.5/11 MB
+Progress (1): 4.5/11 MB
+Progress (1): 4.5/11 MB
+Progress (1): 4.6/11 MB
+Progress (1): 4.6/11 MB
+Progress (1): 4.6/11 MB
+Progress (1): 4.6/11 MB
+Progress (1): 4.6/11 MB
+Progress (1): 4.6/11 MB
+Progress (1): 4.7/11 MB
+Progress (1): 4.7/11 MB
+Progress (1): 4.7/11 MB
+Progress (1): 4.7/11 MB
+Progress (1): 4.7/11 MB
+Progress (1): 4.7/11 MB
+Progress (1): 4.8/11 MB
+Progress (1): 4.8/11 MB
+Progress (1): 4.8/11 MB
+Progress (1): 4.8/11 MB
+Progress (1): 4.8/11 MB
+Progress (1): 4.8/11 MB
+Progress (1): 4.9/11 MB
+Progress (1): 4.9/11 MB
+Progress (1): 4.9/11 MB
+Progress (1): 4.9/11 MB
+Progress (1): 4.9/11 MB
+Progress (1): 4.9/11 MB
+Progress (1): 5.0/11 MB
+Progress (1): 5.0/11 MB
+Progress (1): 5.0/11 MB
+Progress (1): 5.0/11 MB
+Progress (1): 5.0/11 MB
+Progress (1): 5.0/11 MB
+Progress (1): 5.1/11 MB
+Progress (1): 5.1/11 MB
+Progress (1): 5.1/11 MB
+Progress (1): 5.1/11 MB
+Progress (1): 5.1/11 MB
+Progress (1): 5.1/11 MB
+Progress (1): 5.1/11 MB
+Progress (1): 5.2/11 MB
+Progress (1): 5.2/11 MB
+Progress (1): 5.2/11 MB
+Progress (1): 5.2/11 MB
+Progress (1): 5.2/11 MB
+Progress (1): 5.2/11 MB
+Progress (1): 5.3/11 MB
+Progress (1): 5.3/11 MB
+Progress (1): 5.3/11 MB
+Progress (1): 5.3/11 MB
+Progress (1): 5.3/11 MB
+Progress (1): 5.3/11 MB
+Progress (1): 5.4/11 MB
+Progress (1): 5.4/11 MB
+Progress (1): 5.4/11 MB
+Progress (1): 5.4/11 MB
+Progress (1): 5.4/11 MB
+Progress (1): 5.4/11 MB
+Progress (1): 5.5/11 MB
+Progress (1): 5.5/11 MB
+Progress (1): 5.5/11 MB
+Progress (1): 5.5/11 MB
+Progress (1): 5.5/11 MB
+Progress (1): 5.5/11 MB
+Progress (1): 5.6/11 MB
+Progress (1): 5.6/11 MB
+Progress (1): 5.6/11 MB
+Progress (1): 5.6/11 MB
+Progress (1): 5.6/11 MB
+Progress (1): 5.6/11 MB
+Progress (1): 5.7/11 MB
+Progress (1): 5.7/11 MB
+Progress (1): 5.7/11 MB
+Progress (1): 5.7/11 MB
+Progress (1): 5.7/11 MB
+Progress (1): 5.7/11 MB
+Progress (1): 5.8/11 MB
+Progress (1): 5.8/11 MB
+Progress (1): 5.8/11 MB
+Progress (1): 5.8/11 MB
+Progress (1): 5.8/11 MB
+Progress (1): 5.8/11 MB
+Progress (1): 5.9/11 MB
+Progress (1): 5.9/11 MB
+Progress (1): 5.9/11 MB
+Progress (1): 5.9/11 MB
+Progress (1): 5.9/11 MB
+Progress (1): 5.9/11 MB
+Progress (1): 6.0/11 MB
+Progress (1): 6.0/11 MB
+Progress (1): 6.0/11 MB
+Progress (1): 6.0/11 MB
+Progress (1): 6.0/11 MB
+Progress (1): 6.0/11 MB
+Progress (1): 6.0/11 MB
+Progress (1): 6.1/11 MB
+Progress (1): 6.1/11 MB
+Progress (1): 6.1/11 MB
+Progress (1): 6.1/11 MB
+Progress (1): 6.1/11 MB
+Progress (1): 6.1/11 MB
+Progress (1): 6.1/11 MB
+Progress (1): 6.2/11 MB
+Progress (1): 6.2/11 MB
+Progress (1): 6.2/11 MB
+Progress (1): 6.2/11 MB
+Progress (1): 6.2/11 MB
+Progress (1): 6.2/11 MB
+Progress (1): 6.3/11 MB
+Progress (1): 6.3/11 MB
+Progress (1): 6.3/11 MB
+Progress (1): 6.3/11 MB
+Progress (1): 6.3/11 MB
+Progress (1): 6.3/11 MB
+Progress (1): 6.4/11 MB
+Progress (1): 6.4/11 MB
+Progress (1): 6.4/11 MB
+Progress (1): 6.4/11 MB
+Progress (1): 6.4/11 MB
+Progress (1): 6.4/11 MB
+Progress (1): 6.5/11 MB
+Progress (1): 6.5/11 MB
+Progress (1): 6.5/11 MB
+Progress (1): 6.5/11 MB
+Progress (1): 6.5/11 MB
+Progress (1): 6.5/11 MB
+Progress (1): 6.6/11 MB
+Progress (1): 6.6/11 MB
+Progress (1): 6.6/11 MB
+Progress (1): 6.6/11 MB
+Progress (1): 6.6/11 MB
+Progress (1): 6.6/11 MB
+Progress (1): 6.6/11 MB
+Progress (1): 6.7/11 MB
+Progress (1): 6.7/11 MB
+Progress (1): 6.7/11 MB
+Progress (1): 6.7/11 MB
+Progress (1): 6.7/11 MB
+Progress (1): 6.7/11 MB
+Progress (1): 6.8/11 MB
+Progress (1): 6.8/11 MB
+Progress (1): 6.8/11 MB
+Progress (1): 6.8/11 MB
+Progress (1): 6.8/11 MB
+Progress (1): 6.8/11 MB
+Progress (1): 6.9/11 MB
+Progress (1): 6.9/11 MB
+Progress (1): 6.9/11 MB
+Progress (1): 6.9/11 MB
+Progress (1): 6.9/11 MB
+Progress (1): 6.9/11 MB
+Progress (1): 7.0/11 MB
+Progress (1): 7.0/11 MB
+Progress (1): 7.0/11 MB
+Progress (1): 7.0/11 MB
+Progress (1): 7.0/11 MB
+Progress (1): 7.0/11 MB
+Progress (1): 7.1/11 MB
+Progress (1): 7.1/11 MB
+Progress (1): 7.1/11 MB
+Progress (1): 7.1/11 MB
+Progress (1): 7.1/11 MB
+Progress (1): 7.1/11 MB
+Progress (1): 7.2/11 MB
+Progress (1): 7.2/11 MB
+Progress (1): 7.2/11 MB
+Progress (1): 7.2/11 MB
+Progress (1): 7.2/11 MB
+Progress (1): 7.2/11 MB
+Progress (1): 7.3/11 MB
+Progress (1): 7.3/11 MB
+Progress (1): 7.3/11 MB
+Progress (1): 7.3/11 MB
+Progress (1): 7.3/11 MB
+Progress (1): 7.3/11 MB
+Progress (1): 7.4/11 MB
+Progress (1): 7.4/11 MB
+Progress (1): 7.4/11 MB
+Progress (1): 7.4/11 MB
+Progress (1): 7.4/11 MB
+Progress (1): 7.4/11 MB
+Progress (1): 7.5/11 MB
+Progress (1): 7.5/11 MB
+Progress (1): 7.5/11 MB
+Progress (1): 7.5/11 MB
+Progress (1): 7.5/11 MB
+Progress (1): 7.5/11 MB
+Progress (1): 7.6/11 MB
+Progress (1): 7.6/11 MB
+Progress (1): 7.6/11 MB
+Progress (1): 7.6/11 MB
+Progress (1): 7.6/11 MB
+Progress (1): 7.6/11 MB
+Progress (1): 7.6/11 MB
+Progress (1): 7.7/11 MB
+Progress (1): 7.7/11 MB
+Progress (1): 7.7/11 MB
+Progress (1): 7.7/11 MB
+Progress (1): 7.7/11 MB
+Progress (1): 7.7/11 MB
+Progress (1): 7.8/11 MB
+Progress (1): 7.8/11 MB
+Progress (1): 7.8/11 MB
+Progress (1): 7.8/11 MB
+Progress (1): 7.8/11 MB
+Progress (1): 7.8/11 MB
+Progress (1): 7.9/11 MB
+Progress (1): 7.9/11 MB
+Progress (1): 7.9/11 MB
+Progress (1): 7.9/11 MB
+Progress (1): 7.9/11 MB
+Progress (1): 7.9/11 MB
+Progress (1): 8.0/11 MB
+Progress (1): 8.0/11 MB
+Progress (1): 8.0/11 MB
+Progress (1): 8.0/11 MB
+Progress (1): 8.0/11 MB
+Progress (1): 8.0/11 MB
+Progress (1): 8.1/11 MB
+Progress (1): 8.1/11 MB
+Progress (1): 8.1/11 MB
+Progress (1): 8.1/11 MB
+Progress (1): 8.1/11 MB
+Progress (1): 8.1/11 MB
+Progress (1): 8.2/11 MB
+Progress (1): 8.2/11 MB
+Progress (1): 8.2/11 MB
+Progress (1): 8.2/11 MB
+Progress (1): 8.2/11 MB
+Progress (1): 8.2/11 MB
+Progress (1): 8.3/11 MB
+Progress (1): 8.3/11 MB
+Progress (1): 8.3/11 MB
+Progress (1): 8.3/11 MB
+Progress (1): 8.3/11 MB
+Progress (1): 8.3/11 MB
+Progress (1): 8.4/11 MB
+Progress (1): 8.4/11 MB
+Progress (1): 8.4/11 MB
+Progress (1): 8.4/11 MB
+Progress (1): 8.4/11 MB
+Progress (1): 8.4/11 MB
+Progress (1): 8.5/11 MB
+Progress (1): 8.5/11 MB
+Progress (1): 8.5/11 MB
+Progress (1): 8.5/11 MB
+Progress (1): 8.5/11 MB
+Progress (1): 8.5/11 MB
+Progress (1): 8.6/11 MB
+Progress (1): 8.6/11 MB
+Progress (1): 8.6/11 MB
+Progress (1): 8.6/11 MB
+Progress (1): 8.6/11 MB
+Progress (1): 8.6/11 MB
+Progress (1): 8.6/11 MB
+Progress (1): 8.7/11 MB
+Progress (1): 8.7/11 MB
+Progress (1): 8.7/11 MB
+Progress (1): 8.7/11 MB
+Progress (1): 8.7/11 MB
+Progress (1): 8.7/11 MB
+Progress (1): 8.7/11 MB
+Progress (1): 8.8/11 MB
+Progress (1): 8.8/11 MB
+Progress (1): 8.8/11 MB
+Progress (1): 8.8/11 MB
+Progress (1): 8.8/11 MB
+Progress (1): 8.8/11 MB
+Progress (1): 8.9/11 MB
+Progress (1): 8.9/11 MB
+Progress (1): 8.9/11 MB
+Progress (1): 8.9/11 MB
+Progress (1): 8.9/11 MB
+Progress (1): 8.9/11 MB
+Progress (1): 9.0/11 MB
+Progress (1): 9.0/11 MB
+Progress (1): 9.0/11 MB
+Progress (1): 9.0/11 MB
+Progress (1): 9.0/11 MB
+Progress (1): 9.0/11 MB
+Progress (1): 9.1/11 MB
+Progress (1): 9.1/11 MB
+Progress (1): 9.1/11 MB
+Progress (1): 9.1/11 MB
+Progress (1): 9.1/11 MB
+Progress (1): 9.1/11 MB
+Progress (1): 9.2/11 MB
+Progress (1): 9.2/11 MB
+Progress (1): 9.2/11 MB
+Progress (1): 9.2/11 MB
+Progress (1): 9.2/11 MB
+Progress (1): 9.2/11 MB
+Progress (1): 9.3/11 MB
+Progress (1): 9.3/11 MB
+Progress (1): 9.3/11 MB
+Progress (1): 9.3/11 MB
+Progress (1): 9.3/11 MB
+Progress (1): 9.3/11 MB
+Progress (1): 9.4/11 MB
+Progress (1): 9.4/11 MB
+Progress (1): 9.4/11 MB
+Progress (1): 9.4/11 MB
+Progress (1): 9.4/11 MB
+Progress (1): 9.4/11 MB
+Progress (1): 9.5/11 MB
+Progress (1): 9.5/11 MB
+Progress (1): 9.5/11 MB
+Progress (1): 9.5/11 MB
+Progress (1): 9.5/11 MB
+Progress (1): 9.5/11 MB
+Progress (1): 9.6/11 MB
+Progress (1): 9.6/11 MB
+Progress (1): 9.6/11 MB
+Progress (1): 9.6/11 MB
+Progress (1): 9.6/11 MB
+Progress (1): 9.6/11 MB
+Progress (1): 9.7/11 MB
+Progress (1): 9.7/11 MB
+Progress (1): 9.7/11 MB
+Progress (1): 9.7/11 MB
+Progress (1): 9.7/11 MB
+Progress (1): 9.7/11 MB
+Progress (1): 9.7/11 MB
+Progress (1): 9.8/11 MB
+Progress (1): 9.8/11 MB
+Progress (1): 9.8/11 MB
+Progress (1): 9.8/11 MB
+Progress (1): 9.8/11 MB
+Progress (1): 9.8/11 MB
+Progress (1): 9.9/11 MB
+Progress (1): 9.9/11 MB
+Progress (1): 9.9/11 MB
+Progress (1): 9.9/11 MB
+Progress (1): 9.9/11 MB
+Progress (1): 9.9/11 MB
+Progress (1): 10.0/11 MB
+Progress (1): 10.0/11 MB
+Progress (1): 10.0/11 MB
+Progress (1): 10/11 MB  
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 10/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11/11 MB
+Progress (1): 11 MB   
+                   
+Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/lucene/lucene-test-framework/9.11.1/lucene-test-framework-9.11.1.jar (11 MB at 5.5 MB/s)
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  10.600 s (Wall Clock)
+[INFO] Finished at: 2026-07-18T23:45:47+05:30
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal on project crate-server: Could not resolve dependencies for project io.crate:crate-server:jar:5.9.10
+[ERROR] dependency: io.crate:crate-libs-shared:jar:5.9.10 (compile)
+[ERROR] 	Could not find artifact io.crate:crate-libs-shared:jar:5.9.10 in central (https://repo.maven.apache.org/maven2)
+[ERROR] dependency: io.crate:crate-libs-dex:jar:5.9.10 (compile)
+[ERROR] 	Could not find artifact io.crate:crate-libs-dex:jar:5.9.10 in central (https://repo.maven.apache.org/maven2)
+[ERROR] dependency: io.crate:crate-libs-es-x-content:jar:5.9.10 (compile)
+[ERROR] 	Could not find artifact io.crate:crate-libs-es-x-content:jar:5.9.10 in central (https://repo.maven.apache.org/maven2)
+[ERROR] dependency: io.crate:crate-libs-cli:jar:5.9.10 (compile)
+[ERROR] 	Could not find artifact io.crate:crate-libs-cli:jar:5.9.10 in central (https://repo.maven.apache.org/maven2)
+[ERROR] dependency: io.crate:crate-libs-guice:jar:5.9.10 (compile)
+[ERROR] 	Could not find artifact io.crate:crate-libs-guice:jar:5.9.10 in central (https://repo.maven.apache.org/maven2)
+[ERROR] dependency: io.crate:crate-libs-sql-parser:jar:5.9.10 (compile)
+[ERROR] 	Could not find artifact io.crate:crate-libs-sql-parser:jar:5.9.10 in central (https://repo.maven.apache.org/maven2)
+[ERROR] dependency: io.crate:crate-libs-pgwire:jar:5.9.10 (compile)
+[ERROR] 	Could not find artifact io.crate:crate-libs-pgwire:jar:5.9.10 in central (https://repo.maven.apache.org/maven2)
+[ERROR] dependency: io.crate:crate-libs-dex:jar:tests:5.9.10 (test)
+[ERROR] 	Could not find artifact io.crate:crate-libs-dex:jar:tests:5.9.10 in central (https://repo.maven.apache.org/maven2)
+[ERROR] 
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/DependencyResolutionException
+[0m
+[0m$ [0mgit status --short
+?? tags
+[0m
+[0m$ [0mgit diff a4b9f2fe0ed07aea68ae3fb7de5e9d7ad8aae48e HEAD --stat
+docs/appendices/release-notes/5.9.5.rst            | 13 +++++
+ .../crate/planner/operators/SubQueryResults.java   | 26 ++++++----
+ .../integrationtests/CorrelatedSubqueryITest.java  | 19 ++++++-
+ .../planner/operators/SubQueryResultsTest.java     | 58 ++++++++++++++++++++++
+ 4 files changed, 106 insertions(+), 10 deletions(-)
+[0m
+[0m# [0mTodos
+[✓] Study original commit metadata and target context
+[✓] Construct unified backport patch for 5.9
+[✓] Validate hunks and apply patch
+[✓] Commit changes and run full validation
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/docs/appendices/release-notes/5.9.5.rst b/docs/appendices/release-notes/5.9.5.rst
+    index e72ed8d043..cc77ee6ebb 100644
+    --- a/docs/appendices/release-notes/5.9.5.rst
+    +++ b/docs/appendices/release-notes/5.9.5.rst
+    @@ -56,3 +56,16 @@ Fixes
+       :ref:`sql-create-repo-azure-endpoint` or
+       :ref:`sql-create-repo-azure-secondary_endpoint` URI for defining an
+       :ref:`azure repository <sql-create-repo-azure>`.
+    +
+    +- Fixed an issue that caused an error when using a correlated sub-query and
+    +  a normal subquery on the same level together with an additional sub-query on
+    +  an outer level. Example::
+    +
+    +    WITH tbl AS (SELECT 1 as x)
+    +    SELECT (
+    +      SELECT x FROM tbl
+    +      WHERE t.x = tbl.x
+    +        AND tbl.x IN (SELECT x FROM unnest([1]))
+    +    ),
+    +    (SELECT y FROM unnest([2]) as t2(y))
+    +    FROM tbl t
+    diff --git a/server/src/main/java/io/crate/planner/operators/SubQueryResults.java b/server/src/main/java/io/crate/planner/operators/SubQueryResults.java
+    index 57077b2404..832eee0345 100644
+    --- a/server/src/main/java/io/crate/planner/operators/SubQueryResults.java
+    +++ b/server/src/main/java/io/crate/planner/operators/SubQueryResults.java
+    @@ -22,6 +22,7 @@
+     package io.crate.planner.operators;
+     
+     import java.util.Collections;
+    +import java.util.HashMap;
+     import java.util.List;
+     import java.util.Map;
+     
+    @@ -46,11 +47,10 @@ public class SubQueryResults {
+         private Row inputRow = Row.EMPTY;
+     
+         public SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery) {
+    -        this.valuesBySubQuery = valuesBySubQuery;
+    -        this.boundOuterColumns = EMPTY_OUTER_COLUMNS;
+    +        this(valuesBySubQuery, EMPTY_OUTER_COLUMNS);
+         }
+     
+    -    public SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery,
+    +    private SubQueryResults(Map<SelectSymbol, Object> valuesBySubQuery,
+                                ObjectIntMap<OuterColumn> boundOuterColumns) {
+             this.valuesBySubQuery = valuesBySubQuery;
+             this.boundOuterColumns = boundOuterColumns;
+    @@ -90,7 +90,15 @@ public class SubQueryResults {
+         }
+     
+         public static SubQueryResults merge(SubQueryResults subQueryResults1, SubQueryResults subQueryResults2) {
+    -        // Correlated subquery related fields.
+    +        // Correlated subquery related fields, expect only one of them to contain correlated subquery fields.
+    +        assert subQueryResults1.boundOuterColumns.isEmpty()
+    +            || subQueryResults2.boundOuterColumns.isEmpty()
+    +            : "Can't merge two SubQueryResults with non-empty boundOuterColumns";
+    +
+    +        assert subQueryResults1.inputRow.equals(Row.EMPTY)
+    +            || subQueryResults2.inputRow.equals(Row.EMPTY)
+    +            : "Can't merge two SubQueryResults with non-empty inputRow";
+    +
+             Row mergedRow = subQueryResults1.inputRow;
+             ObjectIntMap<OuterColumn> mergedBoundOuterColumns = subQueryResults1.boundOuterColumns;
+             if (mergedRow.equals(Row.EMPTY)) {
+    @@ -100,11 +108,11 @@ public class SubQueryResults {
+                 mergedBoundOuterColumns = subQueryResults2.boundOuterColumns;
+             }
+     
+    -        // Regular sub-select field.
+    -        Map<SelectSymbol, Object> mergedValuesBySubQuery = subQueryResults1.valuesBySubQuery;
+    -        if (mergedValuesBySubQuery.isEmpty()) {
+    -            mergedValuesBySubQuery = subQueryResults2.valuesBySubQuery;
+    -        }
+    +        // Fully merge regular sub-select field.
+    +        Map<SelectSymbol, Object> mergedValuesBySubQuery = new HashMap<>();
+    +        mergedValuesBySubQuery.putAll(subQueryResults1.valuesBySubQuery);
+    +        mergedValuesBySubQuery.putAll(subQueryResults2.valuesBySubQuery);
+    +
+     
+             SubQueryResults combinedSubQueryResults = new SubQueryResults(mergedValuesBySubQuery, mergedBoundOuterColumns);
+             combinedSubQueryResults.bindOuterColumnInputRow(mergedRow);
+    diff --git a/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java b/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java
+    index 91ddb1fb56..f7eb7485e0 100644
+    --- a/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java
+    +++ b/server/src/test/java/io/crate/integrationtests/CorrelatedSubqueryITest.java
+    @@ -452,7 +452,7 @@ public class CorrelatedSubqueryITest extends IntegTestCase {
+          * Tests a bug https://github.com/crate/crate/issues/15398.
+          */
+         @Test
+    -    public void test_can_mix_correlated_qubquery_and_sub_select() {
+    +    public void test_can_mix_correlated_subquery_and_sub_select() {
+             execute("CREATE TABLE tbl(x int)");
+             execute("INSERT INTO tbl(x) VALUES (1)");
+             execute("refresh table tbl");
+    @@ -468,6 +468,23 @@ public class CorrelatedSubqueryITest extends IntegTestCase {
+             assertThat(response).hasRows("1");
+         }
+     
+    +    /*
+    +     * https://github.com/crate/crate/issues/17307
+    +     */
+    +    @Test
+    +    public void test_can_mix_correlated_subquery_and_sub_selects_with_sub_select() {
+    +        execute("""
+    +            WITH tbl AS (SELECT 1 as x)
+    +            SELECT (
+    +              SELECT x FROM tbl
+    +              WHERE t.x = tbl.x
+    +                AND
+    +                tbl.x IN (SELECT x FROM unnest([1]))
+    +            ), (SELECT y FROM unnest([2]) as t2(y))
+    +            FROM tbl t
+    +            """);
+    +        assertThat(response).hasRows("1| 2");
+    +    }
+     
+         /*
+          * https://github.com/crate/crate/issues/16124
+    diff --git a/server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java b/server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java
+    new file mode 100644
+    index 0000000000..1ae115df2c
+    --- /dev/null
+    +++ b/server/src/test/java/io/crate/planner/operators/SubQueryResultsTest.java
+    @@ -0,0 +1,58 @@
+    +/*
+    + * Licensed to Crate.io GmbH ("Crate") under one or more contributor
+    + * license agreements.  See the NOTICE file distributed with this work for
+    + * additional information regarding copyright ownership.  Crate licenses
+    + * this file to you under the Apache License, Version 2.0 (the "License");
+    + * you may not use this file except in compliance with the License.  You may
+    + * obtain a copy of the License at
+    + *
+    + *   http://www.apache.org/licenses/LICENSE-2.0
+    + *
+    + * Unless required by applicable law or agreed to in writing, software
+    + * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+    + * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+    + * License for the specific language governing permissions and limitations
+    + * under the License.
+    + *
+    + * However, if you have executed another commercial license agreement
+    + * with Crate these terms will supersede the license and you may use the
+    + * software solely pursuant to the terms of the relevant commercial agreement.
+    + */
+    +
+    +package io.crate.planner.operators;
+    +
+    +import static org.assertj.core.api.Assertions.assertThat;
+    +
+    +import java.util.Map;
+    +
+    +import org.elasticsearch.test.ESTestCase;
+    +import org.junit.Test;
+    +
+    +import io.crate.expression.symbol.SelectSymbol;
+    +import io.crate.testing.DummyRelation;
+    +import io.crate.types.DataTypes;
+    +
+    +public class SubQueryResultsTest extends ESTestCase {
+    +
+    +    @Test
+    +    public void test_merges_values_of_both_sides() {
+    +        SelectSymbol selectSymbol1 = new SelectSymbol(
+    +            new DummyRelation("x"),
+    +            DataTypes.STRING_ARRAY,
+    +            SelectSymbol.ResultType.SINGLE_COLUMN_SINGLE_VALUE,
+    +            false);
+    +        SelectSymbol selectSymbol2 = new SelectSymbol(
+    +            new DummyRelation("y"),
+    +            DataTypes.STRING_ARRAY,
+    +            SelectSymbol.ResultType.SINGLE_COLUMN_SINGLE_VALUE,
+    +            false);
+    +
+    +        SubQueryResults subQueryResults1 = new SubQueryResults(Map.of(selectSymbol1, "foo"));
+    +        SubQueryResults subQueryResults2 = new SubQueryResults(Map.of(selectSymbol2, "bar"));
+    +
+    +        SubQueryResults merged = SubQueryResults.merge(subQueryResults1, subQueryResults2);
+    +
+    +        assertThat(merged.getSafe(selectSymbol1)).isEqualTo("foo");
+    +        assertThat(merged.getSafe(selectSymbol2)).isEqualTo("bar");
+    +    }
+    +}
+  notes: >
+    Backported the SubQueryResults.merge fix, regression tests, and 5.9 release note; committed as 7cee268a16, with targeted Maven test blocked by unresolved local module dependencies.
+```
+
+--- END CLI OUTPUT ---
+[23:46:44]   Done in 523.5s | status=success

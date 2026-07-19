@@ -1,0 +1,1176 @@
+[04:21:53] === Row 42: crate  52821a16 -> 5226b691  [TYPE-II] ===
+[04:21:53]   Resolving parent of backport commit 5226b691...
+[04:21:53]   Backport parent (target ref): 143fdca995a4b43e0e7e61bb3560ce0b85a4af8c
+[04:21:53]   Extracting new-version patch for 52821a16...
+[04:21:53]   New-version patch size: 10016 chars
+[04:21:53]   Checking out backport parent 143fdca9...
+[04:21:53]   Invoking OpenCode CLI (14045 chars)...
+[04:21:53]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the target branch context for each changed area, then build and validate the smallest equivalent backport patch before applying and committing it.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target branch code context
+[ ] Construct and hunk-validate backport patch
+[ ] Apply patch and commit result
+[ ] Run full validation and report final YAML
+[0m
+[0m⚙ [0mviewcode {"ref":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c","path":"plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java","startline":1,"endline":190}
+[0m⚙ [0mviewcode {"ref":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c","path":"plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java","startline":1,"endline":80}
+[0m⚙ [0mgit_show {"ref":"52821a160a1a720097671cc0233b729f8d0c3355"}
+[0m⚙ [0mviewcode {"ref":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c","path":"plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java","startline":1,"endline":90}
+[0m⚙ [0mviewcode {"ref":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c","path":"server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java","startline":1170,"endline":1210}
+[0m⚙ [0mviewcode {"ref":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c","path":"docs/appendices/release-notes/5.9.5.rst","startline":45,"endline":70}
+The target branch contains the same Azure repository settings and tests, with the release note file ending at the old entry. I’m checking the blobstore error path and settings API details before constructing the patch.
+[0m✱ [0mGrep "simpleString\("[90m in server/src/main/java/org/elasticsearch/common/settings · 6 matches[0m
+[0m✱ [0mGrep "Failed to create repository"[90m in server/src/main/java/org/elasticsearch/repositories/blobstore · 0 matches[0m
+[0m⚙ [0mlocate_symbol {"ref":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c","symbol":"AzureStorageSettings"}
+[0m⚙ [0mlocate_symbol {"ref":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c","symbol":"AzureRepository"}
+[0m⚙ [0mlocate_symbol {"ref":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c","symbol":"BlobStoreRepository"}
+One parallel symbol lookup collided on Git’s index lock. I’ll avoid further parallel Git ref checkouts and verify/remove only a stale lock if needed before applying any changes.
+[0m✱ [0mGrep "RepositoryInstantiationException|errorInfo|getRepositoryData"[90m in server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java · 9 matches[0m
+[0m⚙ [0mviewcode {"ref":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c","path":"plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java","startline":80,"endline":170}
+[0m⚙ [0mviewcode {"ref":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c","path":"server/src/main/java/org/elasticsearch/common/settings/Setting.java","startline":1168,"endline":1184}
+[0m⚙ [0mviewcode {"ref":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c","path":"plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java","startline":90,"endline":180}
+[0m⚙ [0mviewcode {"ref":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c","path":"server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java","startline":1148,"endline":1170}
+[0m⚙ [0mgit_history {"filepath":"plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java","start_line":107,"end_line":150,"start_commit":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c","end_commit":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c"}
+All significant hunks map directly to existing target files; only the new `AzureStorageSettingsTest` file is pure new test coverage and should be ported as-is. I’m constructing the unified diff with target-branch line numbers and validating hunks next.
+[0m
+[0m$ [0mTest-Path -LiteralPath ".git\index.lock"
+False
+[0m
+[0m✱ [0mGlob "plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageSettingsTest.java"[90m 0 matches[0m
+I’m validating the file-level hunks against `143fdca995a4b43e0e7e61bb3560ce0b85a4af8c` before touching the working tree.
+[0m⚙ [0mvalidate {"ref":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.9.5.rst b/docs/appendices/release-notes/5.9.5.rst\n--- a/docs/appendices/release-notes/5.9.5.rst\n+++ b/docs/appendices/release-notes/5.9.5.rst\n@@ -57,4 +57,8 @@ Fixes\n   on another. Example::\n \n       SELECT count(*) FROM (SELECT id FROM users UNION ALL SELECT 1 as renamed) t;\n-      \n+\n+- Return a proper error message when using an invalid\n+  :ref:`sql-create-repo-azure-endpoint` or\n+  :ref:`sql-create-repo-azure-secondary_endpoint` URI for defining an\n+  :ref:`azure repository <sql-create-repo-azure>`.\n"}
+[0m⚙ [0mvalidate {"ref":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c","mode":"hunk","patch":"diff --git a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n--- a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n+++ b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n@@ -22,12 +22,14 @@ package org.elasticsearch.repositories.azure;\n import static org.elasticsearch.repositories.azure.AzureStorageService.MAX_CHUNK_SIZE;\n import static org.elasticsearch.repositories.azure.AzureStorageService.MIN_CHUNK_SIZE;\n \n import java.net.Proxy;\n+import java.net.URI;\n import java.util.List;\n import java.util.Locale;\n import java.util.function.Function;\n \n import org.apache.logging.log4j.LogManager;\n import org.apache.logging.log4j.Logger;\n import org.apache.logging.log4j.message.ParameterizedMessage;\n+import org.elasticsearch.ElasticsearchParseException;\n import org.elasticsearch.cluster.metadata.RepositoryMetadata;\n import org.elasticsearch.cluster.service.ClusterService;\n import org.elasticsearch.common.Strings;\n@@ -110,10 +112,16 @@ public class AzureRepository extends BlobStoreRepository {\n             Setting.Property.NodeScope);\n \n         static final Setting<String> ENDPOINT_SETTING =\n-            Setting.simpleString(\"endpoint\", Property.NodeScope);\n+            Setting.simpleString(\n+                \"endpoint\",\n+                val -> validateEndpoint(val, \"endpoint\"),\n+                Property.NodeScope);\n \n         static final Setting<String> SECONDARY_ENDPOINT_SETTING =\n-            Setting.simpleString(\"secondary_endpoint\", Property.NodeScope);\n+            Setting.simpleString(\n+                \"secondary_endpoint\",\n+                val -> validateEndpoint(val, \"secondary_endpoint\"),\n+                Property.NodeScope);\n \n         /**\n          * Azure endpoint suffix. Default to core.windows.net (CloudStorageAccount.DEFAULT_DNS).\n@@ -145,6 +153,24 @@ public class AzureRepository extends BlobStoreRepository {\n          */\n         static final Setting<Integer> PROXY_PORT_SETTING =\n             Setting.intSetting(\"proxy_port\", 0, 0, 65535, Setting.Property.NodeScope);\n+\n+        /**\n+         * Verify that the endpoint is a valid URI with a nonnull scheme and host.\n+         * Otherwise, the Azure SDK will throw an NPE exception if host is null.\n+         */\n+        private static void validateEndpoint(String endpoint, String settingName) {\n+            if (Strings.isNullOrEmpty(endpoint)) {\n+                return;\n+            }\n+            try {\n+                var uri = new URI(endpoint);\n+                if (uri.getScheme() == null || uri.getHost() == null) {\n+                    throw new ElasticsearchParseException(\"Invalid \" + settingName + \" URI: \" + endpoint);\n+                }\n+            } catch (Exception e) {\n+                throw new ElasticsearchParseException(\"Invalid \" + settingName + \" URI: \" + endpoint, e);\n+            }\n+        }\n     }\n \n     public static List<Setting<?>> optionalSettings() {\n"}
+The AzureRepository file-level validation tool expects isolated hunks here, so I’m splitting that file’s hunks and validating them independently.
+[0m⚙ [0mvalidate {"ref":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c","mode":"hunk","patch":"diff --git a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n--- a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n+++ b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n@@ -22,14 +22,16 @@ package org.elasticsearch.repositories.azure;\n import static org.elasticsearch.repositories.azure.AzureStorageService.MAX_CHUNK_SIZE;\n import static org.elasticsearch.repositories.azure.AzureStorageService.MIN_CHUNK_SIZE;\n \n import java.net.Proxy;\n+import java.net.URI;\n import java.util.List;\n import java.util.Locale;\n import java.util.function.Function;\n \n import org.apache.logging.log4j.LogManager;\n import org.apache.logging.log4j.Logger;\n import org.apache.logging.log4j.message.ParameterizedMessage;\n+import org.elasticsearch.ElasticsearchParseException;\n import org.elasticsearch.cluster.metadata.RepositoryMetadata;\n import org.elasticsearch.cluster.service.ClusterService;\n import org.elasticsearch.common.Strings;\n"}
+[0m⚙ [0mvalidate {"ref":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c","mode":"hunk","patch":"diff --git a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n--- a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n+++ b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n@@ -110,12 +110,18 @@ public class AzureRepository extends BlobStoreRepository {\n             RetryPolicy.DEFAULT_CLIENT_RETRY_COUNT,\n             Setting.Property.NodeScope);\n \n         static final Setting<String> ENDPOINT_SETTING =\n-            Setting.simpleString(\"endpoint\", Property.NodeScope);\n+            Setting.simpleString(\n+                \"endpoint\",\n+                val -> validateEndpoint(val, \"endpoint\"),\n+                Property.NodeScope);\n \n         static final Setting<String> SECONDARY_ENDPOINT_SETTING =\n-            Setting.simpleString(\"secondary_endpoint\", Property.NodeScope);\n+            Setting.simpleString(\n+                \"secondary_endpoint\",\n+                val -> validateEndpoint(val, \"secondary_endpoint\"),\n+                Property.NodeScope);\n \n         /**\n          * Azure endpoint suffix. Default to core.windows.net (CloudStorageAccount.DEFAULT_DNS).\n"}
+[0m⚙ [0mvalidate {"ref":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c","mode":"hunk","patch":"diff --git a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n--- a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n+++ b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n@@ -110,12 +110,18 @@ public class AzureRepository extends BlobStoreRepository {\n             RetryPolicy.DEFAULT_CLIENT_RETRY_COUNT,\n             Setting.Property.NodeScope);\n \n         static final Setting<String> ENDPOINT_SETTING =\n-            Setting.simpleString(\"endpoint\", Property.NodeScope);\n+            Setting.simpleString(\n+                \"endpoint\",\n+                val -> validateEndpoint(val, \"endpoint\"),\n+                Property.NodeScope);\n \n         static final Setting<String> SECONDARY_ENDPOINT_SETTING =\n-            Setting.simpleString(\"secondary_endpoint\", Property.NodeScope);\n+            Setting.simpleString(\n+                \"secondary_endpoint\",\n+                val -> validateEndpoint(val, \"secondary_endpoint\"),\n+                Property.NodeScope);\n \n         /**\n          * Azure endpoint suffix. Default to core.windows.net (CloudStorageAccount.DEFAULT_DNS).\n"}
+The validation failures are patch-format issues on blank context lines, not code mismatches. I’m correcting the unified diff formatting with explicit blank context markers.
+[0m⚙ [0mvalidate {"ref":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c","mode":"hunk","patch":"diff --git a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n--- a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n+++ b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n@@ -110,12 +110,18 @@ public class AzureRepository extends BlobStoreRepository {\n             RetryPolicy.DEFAULT_CLIENT_RETRY_COUNT,\n             Setting.Property.NodeScope);\n \n         static final Setting<String> ENDPOINT_SETTING =\n-            Setting.simpleString(\"endpoint\", Property.NodeScope);\n+            Setting.simpleString(\n+                \"endpoint\",\n+                val -> validateEndpoint(val, \"endpoint\"),\n+                Property.NodeScope);\n \n         static final Setting<String> SECONDARY_ENDPOINT_SETTING =\n-            Setting.simpleString(\"secondary_endpoint\", Property.NodeScope);\n+            Setting.simpleString(\n+                \"secondary_endpoint\",\n+                val -> validateEndpoint(val, \"secondary_endpoint\"),\n+                Property.NodeScope);\n \n         /**\n          * Azure endpoint suffix. Default to core.windows.net (CloudStorageAccount.DEFAULT_DNS).\n"}
+[0m⚙ [0mvalidate {"ref":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c","mode":"hunk","patch":"diff --git a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n--- a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n+++ b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n@@ -110,12 +110,18 @@ public class AzureRepository extends BlobStoreRepository {\n             RetryPolicy.DEFAULT_CLIENT_RETRY_COUNT,\n             Setting.Property.NodeScope);\n \n         static final Setting<String> ENDPOINT_SETTING =\n-            Setting.simpleString(\"endpoint\", Property.NodeScope);\n+            Setting.simpleString(\n+                \"endpoint\",\n+                val -> validateEndpoint(val, \"endpoint\"),\n+                Property.NodeScope);\n \n         static final Setting<String> SECONDARY_ENDPOINT_SETTING =\n-            Setting.simpleString(\"secondary_endpoint\", Property.NodeScope);\n+            Setting.simpleString(\n+                \"secondary_endpoint\",\n+                val -> validateEndpoint(val, \"secondary_endpoint\"),\n+                Property.NodeScope);\n \n         /**\n          * Azure endpoint suffix. Default to core.windows.net (CloudStorageAccount.DEFAULT_DNS).\n"}
+I’m applying the validated change set to the working tree now; after that I’ll use the generated `git diff` as the canonical patch for validation and commit.
+[0m% [0mPatch 6 files
+The working tree now has the backport applied. I’m checking the generated diff and compilation-sensitive details before validating and committing.
+[0m✗ [0mGrep "class ElasticsearchParseException" failed[90m in server/src/main/java plugins/es-repository-azure/src/main/java[0m
+[91m[1mError: [0mripgrep execution failed
+[0m✱ [0mGrep "public RepositoryVerificationException"[90m in server/src/main/java/org/elasticsearch/repositories · 3 matches[0m
+[0m→ [0mRead server/src/main/java/org/elasticsearch/repositories/RepositoryVerificationException.java[90m [offset=1, limit=60][0m
+[0m✱ [0mGrep "class ElasticsearchParseException"[90m in server/src/main/java · 1 match[0m
+The repository verification constructor exists, and the parse exception class exists on 5.9. I’m aligning the new test import block with the source patch before final diff validation.
+[0m% [0mPatch 1 file
+I’m extracting the canonical patch from the working tree now and using it for validation.
+[0m
+[0m$ [0mgit diff --no-ext-diff -- src docs plugins server
+warning: in the working copy of 'docs/appendices/release-notes/5.9.5.rst', LF will be replaced by CRLF the next time Git touches it
+diff --git a/docs/appendices/release-notes/5.9.5.rst b/docs/appendices/release-notes/5.9.5.rst
+index ce21a9eb41..1db290a5eb 100644
+--- a/docs/appendices/release-notes/5.9.5.rst
++++ b/docs/appendices/release-notes/5.9.5.rst
+@@ -57,4 +57,8 @@ Fixes
+   on another. Example::
+ 
+       SELECT count(*) FROM (SELECT id FROM users UNION ALL SELECT 1 as renamed) t;
+-      
++
++- Return a proper error message when using an invalid
++  :ref:`sql-create-repo-azure-endpoint` or
++  :ref:`sql-create-repo-azure-secondary_endpoint` URI for defining an
++  :ref:`azure repository <sql-create-repo-azure>`.
+diff --git a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java
+index bf476bcdbc..fb03db97a4 100644
+--- a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java
++++ b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java
+@@ -23,6 +23,7 @@ import static org.elasticsearch.repositories.azure.AzureStorageService.MAX_CHUNK
+ import static org.elasticsearch.repositories.azure.AzureStorageService.MIN_CHUNK_SIZE;
+ 
+ import java.net.Proxy;
++import java.net.URI;
+ import java.util.List;
+ import java.util.Locale;
+ import java.util.function.Function;
+@@ -30,6 +31,7 @@ import java.util.function.Function;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ import org.apache.logging.log4j.message.ParameterizedMessage;
++import org.elasticsearch.ElasticsearchParseException;
+ import org.elasticsearch.cluster.metadata.RepositoryMetadata;
+ import org.elasticsearch.cluster.service.ClusterService;
+ import org.elasticsearch.common.Strings;
+@@ -111,10 +113,16 @@ public class AzureRepository extends BlobStoreRepository {
+             Setting.Property.NodeScope);
+ 
+         static final Setting<String> ENDPOINT_SETTING =
+-            Setting.simpleString("endpoint", Property.NodeScope);
++            Setting.simpleString(
++                "endpoint",
++                val -> validateEndpoint(val, "endpoint"),
++                Property.NodeScope);
+ 
+         static final Setting<String> SECONDARY_ENDPOINT_SETTING =
+-            Setting.simpleString("secondary_endpoint", Property.NodeScope);
++            Setting.simpleString(
++                "secondary_endpoint",
++                val -> validateEndpoint(val, "secondary_endpoint"),
++                Property.NodeScope);
+ 
+         /**
+          * Azure endpoint suffix. Default to core.windows.net (CloudStorageAccount.DEFAULT_DNS).
+@@ -146,6 +154,24 @@ public class AzureRepository extends BlobStoreRepository {
+          */
+         static final Setting<Integer> PROXY_PORT_SETTING =
+             Setting.intSetting("proxy_port", 0, 0, 65535, Setting.Property.NodeScope);
++
++        /**
++         * Verify that the endpoint is a valid URI with a nonnull scheme and host.
++         * Otherwise, the Azure SDK will throw an NPE exception if host is null.
++         */
++        private static void validateEndpoint(String endpoint, String settingName) {
++            if (Strings.isNullOrEmpty(endpoint)) {
++                return;
++            }
++            try {
++                var uri = new URI(endpoint);
++                if (uri.getScheme() == null || uri.getHost() == null) {
++                    throw new ElasticsearchParseException("Invalid " + settingName + " URI: " + endpoint);
++                }
++            } catch (Exception e) {
++                throw new ElasticsearchParseException("Invalid " + settingName + " URI: " + endpoint, e);
++            }
++        }
+     }
+ 
+     public static List<Setting<?>> optionalSettings() {
+diff --git a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java
+index eabb6da6bd..433d2c46c9 100644
+--- a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositoriwarning: in the working copy of 'plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java', LF will be replaced by CRLF the next time Git touches it
+es/azure/AzureStorageSettings.java
++++ b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java
+@@ -29,11 +29,11 @@ import org.elasticsearch.common.settings.SecureString;
+ import org.elasticsearch.common.settings.Setting;
+ import org.elasticsearch.common.settings.Settings;
+ import org.elasticsearch.common.settings.SettingsException;
++import org.jetbrains.annotations.Nullable;
++import org.jetbrains.annotations.VisibleForTesting;
+ 
+ import com.microsoft.azure.storage.LocationMode;
+ 
+-import org.jetbrains.annotations.Nullable;
+-import org.jetbrains.annotations.VisibleForTesting;
+ import io.crate.common.unit.TimeValue;
+ 
+ public final class AzureStorageSettings {
+diff --git a/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java
+index c42a7d835a..8c970c35cc 100644
+--- a/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java
++++ b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java
+@@ -49,7 +49,7 @@ public class AzureStorageServiceTests extends ESTestCase {
+     @Test
+     public void test_cannot_set_endpoint_and_endpoint_suffix() {
+         final Settings settings = Settings.builder().put(buildClientCredSettings())
+-            .put("endpoint", "my_endpoint")
++            .put("endpoint", "http://my-endpoint")
+             .put("endpoint_suffix", "my_endpoint_suffix").build();
+         assertThatThrownBy(() -> storageServiceWithSettings(settings))
+             .isExactlyInstanceOf(SettingsException.class)
+@@ -59,7 +59,7 @@ public class AzureStorageServiceTests extends ESTestCase {
+     @Test
+     public void test_cannot_set_secondary_endpoint_without_endpoint() {
+         final Settings settings = Settings.builder().put(buildClientCredSettings())
+-            .put("secondary_endpoint", "my_secondary_endpoint").build();
++            .put("secondary_endpoint", "http://my-secondary-endpoint").build();
+         assertThatThrownBy(() -> storageServiceWithSettings(settings))
+             .isExactlyInstanceOf(SettingsException.class)
+             .hasMessage("Cannot specify secondary_endpoint without specifying endpoint");
+diff --git a/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java b/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java
+index 6a71666f37..6ce1a8f670 100644
+--- a/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java
++++ b/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java
+@@ -1164,7 +1164,8 @@ public abstract class BlobStoreRepository extends AbstractLifecycleComponent imp
+                     metadata.name(),
+                     errorInfo.getClass().getSimpleName(),
+                     errorInfo.getMessage()
+-                )
++                ),
++                errorInfo
+             );
+         }
+     }
+[0m
+[0m⚙ [0mvalidate {"ref":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c","mode":"hunk","patch":"diff --git a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\nindex bf476bcdbc..fb03db97a4 100644\n--- a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n+++ b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n@@ -23,6 +23,7 @@ import static org.elasticsearch.repositories.azure.AzureStorageService.MAX_CHUNK\n import static org.elasticsearch.repositories.azure.AzureStorageService.MIN_CHUNK_SIZE;\n \n import java.net.Proxy;\n+import java.net.URI;\n import java.util.List;\n import java.util.Locale;\n import java.util.function.Function;\n@@ -30,6 +31,7 @@ import java.util.function.Function;\n import org.apache.logging.log4j.LogManager;\n import org.apache.logging.log4j.Logger;\n import org.apache.logging.log4j.message.ParameterizedMessage;\n+import org.elasticsearch.ElasticsearchParseException;\n import org.elasticsearch.cluster.metadata.RepositoryMetadata;\n import org.elasticsearch.cluster.service.ClusterService;\n import org.elasticsearch.common.Strings;\n@@ -111,10 +113,16 @@ public class AzureRepository extends BlobStoreRepository {\n             Setting.Property.NodeScope);\n \n         static final Setting<String> ENDPOINT_SETTING =\n-            Setting.simpleString(\"endpoint\", Property.NodeScope);\n+            Setting.simpleString(\n+                \"endpoint\",\n+                val -> validateEndpoint(val, \"endpoint\"),\n+                Property.NodeScope);\n \n         static final Setting<String> SECONDARY_ENDPOINT_SETTING =\n-            Setting.simpleString(\"secondary_endpoint\", Property.NodeScope);\n+            Setting.simpleString(\n+                \"secondary_endpoint\",\n+                val -> validateEndpoint(val, \"secondary_endpoint\"),\n+                Property.NodeScope);\n \n         /**\n          * Azure endpoint suffix. Default to core.windows.net (CloudStorageAccount.DEFAULT_DNS).\n@@ -146,6 +154,24 @@ public class AzureRepository extends BlobStoreRepository {\n          */\n         static final Setting<Integer> PROXY_PORT_SETTING =\n             Setting.intSetting(\"proxy_port\", 0, 0, 65535, Setting.Property.NodeScope);\n+\n+        /**\n+         * Verify that the endpoint is a valid URI with a nonnull scheme and host.\n+         * Otherwise, the Azure SDK will throw an NPE exception if host is null.\n+         */\n+        private static void validateEndpoint(String endpoint, String settingName) {\n+            if (Strings.isNullOrEmpty(endpoint)) {\n+                return;\n+            }\n+            try {\n+                var uri = new URI(endpoint);\n+                if (uri.getScheme() == null || uri.getHost() == null) {\n+                    throw new ElasticsearchParseException(\"Invalid \" + settingName + \" URI: \" + endpoint);\n+                }\n+            } catch (Exception e) {\n+                throw new ElasticsearchParseException(\"Invalid \" + settingName + \" URI: \" + endpoint, e);\n+            }\n+        }\n     }\n \n     public static List<Setting<?>> optionalSettings() {\n"}
+The validate tool is stricter than standard `git diff` around hunks near file starts, so I’m using expanded context for validation while keeping the same code changes.
+[0m
+[0m$ [0mgit diff --no-ext-diff -U5 -- docs/appendices/release-notes/5.9.5.rst plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageSettingsTest.java server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java
+warning: in the working copy of 'docs/appendices/release-notes/5.9.5.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java', LF will be replaced by CRLF the next time Git touches it
+diff --git a/docs/appendices/release-notes/5.9.5.rst b/docs/appendices/release-notes/5.9.5.rst
+index ce21a9eb41..1db290a5eb 100644
+--- a/docs/appendices/release-notes/5.9.5.rst
++++ b/docs/appendices/release-notes/5.9.5.rst
+@@ -55,6 +55,10 @@ Fixes
+ - Fixed an issue leading to an error when running SELECT COUNT(*) on a Subquery
+   with ``UNION ALL`` having a table on the one side and a renamed table or view
+   on another. Example::
+ 
+       SELECT count(*) FROM (SELECT id FROM users UNION ALL SELECT 1 as renamed) t;
+-      
++
++- Return a proper error message when using an invalid
++  :ref:`sql-create-repo-azure-endpoint` or
++  :ref:`sql-create-repo-azure-secondary_endpoint` URI for defining an
++  :ref:`azure repository <sql-create-repo-azure>`.
+diff --git a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java
+index bf476bcdbc..fb03db97a4 100644
+--- a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java
++++ b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java
+@@ -21,17 +21,19 @@ package org.elasticsearch.repositories.azure;
+ 
+ import static org.elasticsearch.repositories.azure.AzureStorageService.MAX_CHUNK_SIZE;
+ import static org.elasticsearch.repositories.azure.AzureStorageService.MIN_CHUNK_SIZE;
+ 
+ import java.net.Proxy;
++import java.net.URI;
+ import java.util.List;
+ import java.util.Locale;
+ import java.util.function.Function;
+ 
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ import org.apache.logging.log4j.message.ParameterizedMessage;
++import org.elasticsearch.ElasticsearchParseException;
+ import org.elasticsearch.cluster.metadata.RepositoryMetadata;
+ import org.elasticsearch.cluster.service.ClusterService;
+ import org.elasticsearch.common.Strings;
+ import org.elasticsearch.common.blobstore.BlobPath;
+ import org.elasticsearch.common.blobstore.BlobStore;
+@@ -109,14 +111,20 @@ public class AzureRepository extends BlobStoreRepository {
+             "max_retries",
+             RetryPolicy.DEFAULT_CLIENT_RETRY_COUNT,
+             Setting.Property.NodeScope);
+ 
+         static final Setting<String> ENDPOINT_SETTING =
+-            Setting.simpleString("endpoint", Property.NodeScope);
++            Setting.simpleString(
++                "endpoint",
++                val -> validateEndpoint(val, "endpoint"),
++                Property.NodeScope);
+ 
+         static final Setting<String> SECONDARY_ENDPOINT_SETTING =
+-            Setting.simpleString("secondary_endpoint", Property.NodeScope);
++            Setting.simpleString(
++                "secondary_endpoint",
++                val -> validateEndpoint(val, "secondary_endpoint"),
++                Property.NodeScope);
+ 
+         /**
+          * Azure endpoint suffix. Default to core.windows.net (CloudStorageAccount.DEFAULT_DNS).
+          */
+         static final Setting<String> ENDPOINT_SUFFIX_SETTING = Setting
+@@ -144,10 +152,28 @@ public class AzureRepository extends BlobStoreRepository {
+         /**
+          * The port of a proxy to connect to azure through.
+          */
+         static final Setting<Integer> PROXY_PORT_SETTING =
+             Setting.intSetting("proxy_port", 0, 0, 65535, Setting.Property.NodeScope);
++
++        /**
++         * Verify that the endpoint is a valid URI with a nonnull scheme and host.
++         * Otherwise, the Azure SDK will throw an NPE exception if host is null.
++         */
++        private static void validateEndpoint(String endpoint, String settingName) {
++            if (Strings.isNullOrEmpty(endpoint)) {
++                return;
++            }
++            try {
++                var uri = new URI(endpoint);
++                if (uri.getScheme() == null || uri.getHost() == null) {
++                    throw new ElasticsearchParseException("Invalid " + settingName + " URI: " + endpoint);
++                }
++            } catch (Exception e) {
++                throw new ElasticsearchParseException("Invalid " + settingName + " URI: " + endpoint, e);
++            }
++        }
+     }
+ 
+     public static List<Setting<?>> optionalSettings() {
+         return List.of(Repository.CONTAINER_SETTING,
+             Repository.BASE_PATH_SETTING,
+diff --git a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java
+index eabb6da6bd..433d2c46c9 100644
+--- a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java
++++ b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java
+@@ -27,15 +27,15 @@ import java.net.UnknownHostException;
+ import org.elasticsearch.common.Strings;
+ import org.elasticsearch.common.settings.SecureString;
+ import org.elasticsearch.common.settings.Setting;
+ import org.elasticsearch.common.settings.Settings;
+ import org.elasticsearch.common.settings.SettingsException;
++import org.jetbrains.annotations.Nullable;
++import org.jetbrains.annotations.VisibleForTesting;
+ 
+ import com.microsoft.azure.storage.LocationMode;
+ 
+-import org.jetbrains.annotations.Nullable;
+-import org.jetbrains.annotations.VisibleForTesting;
+ import io.crate.common.unit.TimeValue;
+ 
+ public final class AzureStorageSettings {
+ 
+     private final String account;
+diff --git a/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java
+index c42a7d835a..8c970c35cc 100644
+--- a/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java
++++ b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java
+@@ -47,21 +47,21 @@ public class AzureStorageServiceTests extends ESTestCase {
+     }
+ 
+     @Test
+     public void test_cannot_set_endpoint_and_endpoint_suffix() {
+         final Settings settings = Settings.builder().put(buildClientCredSettings())
+-            .put("endpoint", "my_endpoint")
++            .put("endpoint", "http://my-endpoint")
+             .put("endpoint_suffix", "my_endpoint_suffix").build();
+         assertThatThrownBy(() -> storageServiceWithSettings(settings))
+             .isExactlyInstanceOf(SettingsException.class)
+             .hasMessage("Cannot specify both endpoint and endpoint_suffix parameters");
+     }
+ 
+     @Test
+     public void test_cannot_set_secondary_endpoint_without_endpoint() {
+         final Settings settings = Settings.builder().put(buildClientCredSettings())
+-            .put("secondary_endpoint", "my_secondary_endpoint").build();
++            .put("secondary_endpoint", "http://my-secondary-endpoint").build();
+         assertThatThrownBy(() -> storageServiceWithSettings(settings))
+             .isExactlyInstanceOf(SettingsException.class)
+             .hasMessage("Cannot specify secondary_endpoint without specifying endpoint");
+     }
+ 
+diff --git a/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java b/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java
+index 6a71666f37..6ce1a8f670 100644
+--- a/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java
++++ b/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java
+@@ -1162,11 +1162,12 @@ public abstract class BlobStoreRepository extends AbstractLifecycleComponent imp
+                     Locale.ENGLISH,
+                     "Unable to verify the repository, [%s] is not accessible on master node: %s '%s'",
+                     metadata.name(),
+                     errorInfo.getClass().getSimpleName(),
+                     errorInfo.getMessage()
+-                )
++                ),
++                errorInfo
+             );
+         }
+     }
+ 
+     @Override
+[0m
+[0m$ [0mgit status --short
+M docs/appendices/release-notes/5.9.5.rst
+ M plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java
+ M plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java
+ M plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java
+ M server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java
+?? plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageSettingsTest.java
+?? tags
+[0m
+A `tags` file was generated by symbol lookup tooling and is unrelated to the backport, so I’m removing it and staging only the intended files.
+[0m% [0mPatch 1 file
+[0m
+[0m$ [0mgit add -- docs/appendices/release-notes/5.9.5.rst plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageSettingsTest.java server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java
+warning: in the working copy of 'docs/appendices/release-notes/5.9.5.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageSettingsTest.java', LF will be replaced by CRLF the next time Git touches it
+[0m
+The intended files are staged. I’m inspecting status, staged diff, and recent history before creating the backport commit.
+[0m$ [0mgit status --short
+M  docs/appendices/release-notes/5.9.5.rst
+M  plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java
+M  plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java
+M  plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java
+A  plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageSettingsTest.java
+M  server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java
+[0m
+[0m$ [0mgit diff --cached --stat
+docs/appendices/release-notes/5.9.5.rst            |  6 ++-
+ .../repositories/azure/AzureRepository.java        | 30 +++++++++++-
+ .../repositories/azure/AzureStorageSettings.java   |  4 +-
+ .../azure/AzureStorageServiceTests.java            |  4 +-
+ .../azure/AzureStorageSettingsTest.java            | 53 ++++++++++++++++++++++
+ .../blobstore/BlobStoreRepository.java             |  3 +-
+ 6 files changed, 92 insertions(+), 8 deletions(-)
+[0m
+[0m$ [0mgit log --oneline -10
+143fdca995 Bind explicit-joins before implicit joins
+41e49836b1 Eval prunning must also check that there are no outputs to prune
+c463a2315b Bump version to 5.9.5-SNAPSHOT
+5d7e047507 Release 5.9.4
+c5eb1ed7f7 Fix array out of bounds for remaining session settings
+eb8f9e20b6 CorreatedJoin prunning must not add SelectSymbol to the input plan outputs
+f5c2b54acd Remove cla-signed condition from mergify
+c0355d5f66 Add PG Wire protection against invalid or huge startup messages
+9e21c11c99 mergify: upgrade configuration to current format
+84a078e39e Fix handling of SET .. TO DEFAULT for memory_limit and statement_timeout
+[0m
+The staged diff matches the source patch footprint: 6 files, 92 insertions and 8 deletions. I’m validating the complete staged patch before committing.
+[0m$ [0mgit diff --cached --no-ext-diff -U5
+diff --git a/docs/appendices/release-notes/5.9.5.rst b/docs/appendices/release-notes/5.9.5.rst
+index ce21a9eb41..1db290a5eb 100644
+--- a/docs/appendices/release-notes/5.9.5.rst
++++ b/docs/appendices/release-notes/5.9.5.rst
+@@ -55,6 +55,10 @@ Fixes
+ - Fixed an issue leading to an error when running SELECT COUNT(*) on a Subquery
+   with ``UNION ALL`` having a table on the one side and a renamed table or view
+   on another. Example::
+ 
+       SELECT count(*) FROM (SELECT id FROM users UNION ALL SELECT 1 as renamed) t;
+-      
++
++- Return a proper error message when using an invalid
++  :ref:`sql-create-repo-azure-endpoint` or
++  :ref:`sql-create-repo-azure-secondary_endpoint` URI for defining an
++  :ref:`azure repository <sql-create-repo-azure>`.
+diff --git a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java
+index bf476bcdbc..fb03db97a4 100644
+--- a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java
++++ b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java
+@@ -21,17 +21,19 @@ package org.elasticsearch.repositories.azure;
+ 
+ import static org.elasticsearch.repositories.azure.AzureStorageService.MAX_CHUNK_SIZE;
+ import static org.elasticsearch.repositories.azure.AzureStorageService.MIN_CHUNK_SIZE;
+ 
+ import java.net.Proxy;
++import java.net.URI;
+ import java.util.List;
+ import java.util.Locale;
+ import java.util.function.Function;
+ 
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ import org.apache.logging.log4j.message.ParameterizedMessage;
++import org.elasticsearch.ElasticsearchParseException;
+ import org.elasticsearch.cluster.metadata.RepositoryMetadata;
+ import org.elasticsearch.cluster.service.ClusterService;
+ import org.elasticsearch.common.Strings;
+ import org.elasticsearch.common.blobstore.BlobPath;
+ import org.elasticsearch.common.blobstore.BlobStore;
+@@ -109,14 +111,20 @@ public class AzureRepository extends BlobStoreRepository {
+             "max_retries",
+             RetryPolicy.DEFAULT_CLIENT_RETRY_COUNT,
+             Setting.Property.NodeScope);
+ 
+         static final Setting<String> ENDPOINT_SETTING =
+-            Setting.simpleString("endpoint", Property.NodeScope);
++            Setting.simpleString(
++                "endpoint",
++                val -> validateEndpoint(val, "endpoint"),
++                Property.NodeScope);
+ 
+         static final Setting<String> SECONDARY_ENDPOINT_SETTING =
+-            Setting.simpleString("secondary_endpoint", Property.NodeScope);
++            Setting.simpleString(
++                "secondary_endpoint",
++                val -> validateEndpoint(val, "secondary_endpoint"),
++                Property.NodeScope);
+ 
+         /**
+          * Azure endpoint suffix. Default to core.windows.net (CloudStorageAccount.DEFAULT_DNS).
+          */
+         static final Setting<String> ENDPOINT_SUFFIX_SETTING = Setting
+@@ -144,10 +152,28 @@ public class AzureRepository extends BlobStoreRepository {
+         /**
+          * The port of a proxy to connect to azure through.
+          */
+         static final Setting<Integer> PROXY_PORT_SETTING =
+             Setting.intSetting("proxy_port", 0, 0, 65535, Setting.Property.NodeScope);
++
++        /**
++         * Verify that the endpoint is a valid URI with a nonnull scheme and host.
++         * Otherwise, the Azure SDK will throw an NPE exception if host is null.
++         */
++        private static void validateEndpoint(String endpoint, String settingName) {
++            if (Strings.isNullOrEmpty(endpoint)) {
++                return;
++            }
++            try {
++                var uri = new URI(endpoint);
++                if (uri.getScheme() == null || uri.getHost() == null) {
++                    throw new ElasticsearchParseException("Invalid " + settingName + " URI: " + endpoint);
++                }
++            } catch (Exception e) {
++                throw new ElasticsearchParseException("Invalid " + settingName + " URI: " + endpoint, e);
++            }
++        }
+     }
+ 
+     public static List<Setting<?>> optionalSettings() {
+         return List.of(Repository.CONTAINER_SETTING,
+             Repository.BASE_PATH_SETTING,
+diff --git a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java
+index eabb6da6bd..433d2c46c9 100644
+--- a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java
++++ b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java
+@@ -27,15 +27,15 @@ import java.net.UnknownHostException;
+ import org.elasticsearch.common.Strings;
+ import org.elasticsearch.common.settings.SecureString;
+ import org.elasticsearch.common.settings.Setting;
+ import org.elasticsearch.common.settings.Settings;
+ import org.elasticsearch.common.settings.SettingsException;
++import org.jetbrains.annotations.Nullable;
++import org.jetbrains.annotations.VisibleForTesting;
+ 
+ import com.microsoft.azure.storage.LocationMode;
+ 
+-import org.jetbrains.annotations.Nullable;
+-import org.jetbrains.annotations.VisibleForTesting;
+ import io.crate.common.unit.TimeValue;
+ 
+ public final class AzureStorageSettings {
+ 
+     private final String account;
+diff --git a/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java
+index c42a7d835a..8c970c35cc 100644
+--- a/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java
++++ b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java
+@@ -47,21 +47,21 @@ public class AzureStorageServiceTests extends ESTestCase {
+     }
+ 
+     @Test
+     public void test_cannot_set_endpoint_and_endpoint_suffix() {
+         final Settings settings = Settings.builder().put(buildClientCredSettings())
+-            .put("endpoint", "my_endpoint")
++            .put("endpoint", "http://my-endpoint")
+             .put("endpoint_suffix", "my_endpoint_suffix").build();
+         assertThatThrownBy(() -> storageServiceWithSettings(settings))
+             .isExactlyInstanceOf(SettingsException.class)
+             .hasMessage("Cannot specify both endpoint and endpoint_suffix parameters");
+     }
+ 
+     @Test
+     public void test_cannot_set_secondary_endpoint_without_endpoint() {
+         final Settings settings = Settings.builder().put(buildClientCredSettings())
+-            .put("secondary_endpoint", "my_secondary_endpoint").build();
++            .put("secondary_endpoint", "http://my-secondary-endpoint").build();
+         assertThatThrownBy(() -> storageServiceWithSettings(settings))
+             .isExactlyInstanceOf(SettingsException.class)
+             .hasMessage("Cannot specify secondary_endpoint without specifying endpoint");
+     }
+ 
+diff --git a/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageSettingsTest.java b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageSettingsTest.java
+new file mode 100644
+index 0000000000..0ed9745214
+--- /dev/null
++++ b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageSettingsTest.java
+@@ -0,0 +1,53 @@
++/*
++ * Licensed to Crate.io GmbH ("Crate") under one or more contributor
++ * license agreements.  See the NOTICE file distributed with this work for
++ * additional information regarding copyright ownership.  Crate licenses
++ * this file to you under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.  You may
++ * obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
++ * License for the specific language governing permissions and limitations
++ * under the License.
++ *
++ * However, if you have executed another commercial license agreement
++ * with Crate these terms will supersede the license and you may use the
++ * software solely pursuant to the terms of the relevant commercial agreement.
++ */
++
++package org.elasticsearch.repositories.azure;
++
++import static org.assertj.core.api.Assertions.assertThatThrownBy;
++
++import org.elasticsearch.common.settings.Settings;
++import org.elasticsearch.common.settings.SettingsException;
++import org.elasticsearch.test.ESTestCase;
++import org.junit.Test;
++
++public class AzureStorageSettingsTest extends ESTestCase {
++
++    @Test
++    public void test_raise_exception_on_endpoint_uri_without_valid_host() {
++        {
++            var settings = Settings.builder()
++                .put("endpoint", "http://invalid.127.0.0.1")
++                .build();
++            assertThatThrownBy(() -> AzureStorageSettings.getClientSettings(settings))
++                .isExactlyInstanceOf(IllegalArgumentException.class)
++                .hasMessage("Invalid endpoint URI: http://invalid.127.0.0.1");
++        }
++        {
++            var settings = Settings.builder()
++                .put("endpoint", "http://127.0.0.1")
++                .put("secondary_endpoint", "http://invalid.127.0.0.1")
++                .build();
++            assertThatThrownBy(() -> AzureStorageSettings.getClientSettings(settings))
++                .isExactlyInstanceOf(IllegalArgumentException.class)
++                .hasMessage("Invalid secondary_endpoint URI: http://invalid.127.0.0.1");
++        }
++    }
++}
+diff --git a/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java b/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java
+index 6a71666f37..6ce1a8f670 100644
+--- a/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java
++++ b/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java
+@@ -1162,11 +1162,12 @@ public abstract class BlobStoreRepository extends AbstractLifecycleComponent imp
+                     Locale.ENGLISH,
+                     "Unable to verify the repository, [%s] is not accessible on master node: %s '%s'",
+                     metadata.name(),
+                     errorInfo.getClass().getSimpleName(),
+                     errorInfo.getMessage()
+-                )
++                ),
++                errorInfo
+             );
+         }
+     }
+ 
+     @Override
+[0m
+[0m⚙ [0mvalidate {"ref":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.9.5.rst b/docs/appendices/release-notes/5.9.5.rst\nindex ce21a9eb41..1db290a5eb 100644\n--- a/docs/appendices/release-notes/5.9.5.rst\n+++ b/docs/appendices/release-notes/5.9.5.rst\n@@ -55,6 +55,10 @@ Fixes\n - Fixed an issue leading to an error when running SELECT COUNT(*) on a Subquery\n   with ``UNION ALL`` having a table on the one side and a renamed table or view\n   on another. Example::\n \n       SELECT count(*) FROM (SELECT id FROM users UNION ALL SELECT 1 as renamed) t;\n-      \n+\n+- Return a proper error message when using an invalid\n+  :ref:`sql-create-repo-azure-endpoint` or\n+  :ref:`sql-create-repo-azure-secondary_endpoint` URI for defining an\n+  :ref:`azure repository <sql-create-repo-azure>`.\ndiff --git a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\nindex bf476bcdbc..fb03db97a4 100644\n--- a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n+++ b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n@@ -21,17 +21,19 @@ package org.elasticsearch.repositories.azure;\n \n import static org.elasticsearch.repositories.azure.AzureStorageService.MAX_CHUNK_SIZE;\n import static org.elasticsearch.repositories.azure.AzureStorageService.MIN_CHUNK_SIZE;\n \n import java.net.Proxy;\n+import java.net.URI;\n import java.util.List;\n import java.util.Locale;\n import java.util.function.Function;\n \n import org.apache.logging.log4j.LogManager;\n import org.apache.logging.log4j.Logger;\n import org.apache.logging.log4j.message.ParameterizedMessage;\n+import org.elasticsearch.ElasticsearchParseException;\n import org.elasticsearch.cluster.metadata.RepositoryMetadata;\n import org.elasticsearch.cluster.service.ClusterService;\n import org.elasticsearch.common.Strings;\n import org.elasticsearch.common.blobstore.BlobPath;\n import org.elasticsearch.common.blobstore.BlobStore;\n@@ -109,14 +111,20 @@ public class AzureRepository extends BlobStoreRepository {\n             \"max_retries\",\n             RetryPolicy.DEFAULT_CLIENT_RETRY_COUNT,\n             Setting.Property.NodeScope);\n \n         static final Setting<String> ENDPOINT_SETTING =\n-            Setting.simpleString(\"endpoint\", Property.NodeScope);\n+            Setting.simpleString(\n+                \"endpoint\",\n+                val -> validateEndpoint(val, \"endpoint\"),\n+                Property.NodeScope);\n \n         static final Setting<String> SECONDARY_ENDPOINT_SETTING =\n-            Setting.simpleString(\"secondary_endpoint\", Property.NodeScope);\n+            Setting.simpleString(\n+                \"secondary_endpoint\",\n+                val -> validateEndpoint(val, \"secondary_endpoint\"),\n+                Property.NodeScope);\n \n         /**\n          * Azure endpoint suffix. Default to core.windows.net (CloudStorageAccount.DEFAULT_DNS).\n          */\n         static final Setting<String> ENDPOINT_SUFFIX_SETTING = Setting\n@@ -144,10 +152,28 @@ public class AzureRepository extends BlobStoreRepository {\n         /**\n          * The port of a proxy to connect to azure through.\n          */\n         static final Setting<Integer> PROXY_PORT_SETTING =\n             Setting.intSetting(\"proxy_port\", 0, 0, 65535, Setting.Property.NodeScope);\n+\n+        /**\n+         * Verify that the endpoint is a valid URI with a nonnull scheme and host.\n+         * Otherwise, the Azure SDK will throw an NPE exception if host is null.\n+         */\n+        private static void validateEndpoint(String endpoint, String settingName) {\n+            if (Strings.isNullOrEmpty(endpoint)) {\n+                return;\n+            }\n+            try {\n+                var uri = new URI(endpoint);\n+                if (uri.getScheme() == null || uri.getHost() == null) {\n+                    throw new ElasticsearchParseException(\"Invalid \" + settingName + \" URI: \" + endpoint);\n+                }\n+            } catch (Exception e) {\n+                throw new ElasticsearchParseException(\"Invalid \" + settingName + \" URI: \" + endpoint, e);\n+            }\n+        }\n     }\n \n     public static List<Setting<?>> optionalSettings() {\n         return List.of(Repository.CONTAINER_SETTING,\n             Repository.BASE_PATH_SETTING,\ndiff --git a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java\nindex eabb6da6bd..433d2c46c9 100644\n--- a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java\n+++ b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java\n@@ -27,15 +27,15 @@ import java.net.UnknownHostException;\n import org.elasticsearch.common.Strings;\n import org.elasticsearch.common.settings.SecureString;\n import org.elasticsearch.common.settings.Setting;\n import org.elasticsearch.common.settings.Settings;\n import org.elasticsearch.common.settings.SettingsException;\n+import org.jetbrains.annotations.Nullable;\n+import org.jetbrains.annotations.VisibleForTesting;\n \n import com.microsoft.azure.storage.LocationMode;\n \n-import org.jetbrains.annotations.Nullable;\n-import org.jetbrains.annotations.VisibleForTesting;\n import io.crate.common.unit.TimeValue;\n \n public final class AzureStorageSettings {\n \n     private final String account;\ndiff --git a/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java\nindex c42a7d835a..8c970c35cc 100644\n--- a/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java\n+++ b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java\n@@ -47,21 +47,21 @@ public class AzureStorageServiceTests extends ESTestCase {\n     }\n \n     @Test\n     public void test_cannot_set_endpoint_and_endpoint_suffix() {\n         final Settings settings = Settings.builder().put(buildClientCredSettings())\n-            .put(\"endpoint\", \"my_endpoint\")\n+            .put(\"endpoint\", \"http://my-endpoint\")\n             .put(\"endpoint_suffix\", \"my_endpoint_suffix\").build();\n         assertThatThrownBy(() -> storageServiceWithSettings(settings))\n             .isExactlyInstanceOf(SettingsException.class)\n             .hasMessage(\"Cannot specify both endpoint and endpoint_suffix parameters\");\n     }\n \n     @Test\n     public void test_cannot_set_secondary_endpoint_without_endpoint() {\n         final Settings settings = Settings.builder().put(buildClientCredSettings())\n-            .put(\"secondary_endpoint\", \"my_secondary_endpoint\").build();\n+            .put(\"secondary_endpoint\", \"http://my-secondary-endpoint\").build();\n         assertThatThrownBy(() -> storageServiceWithSettings(settings))\n             .isExactlyInstanceOf(SettingsException.class)\n             .hasMessage(\"Cannot specify secondary_endpoint without specifying endpoint\");\n     }\n \ndiff --git a/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageSettingsTest.java b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageSettingsTest.java\nnew file mode 100644\nindex 0000000000..0ed9745214\n--- /dev/null\n+++ b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageSettingsTest.java\n@@ -0,0 +1,53 @@\n+/*\n+ * Licensed to Crate.io GmbH (\"Crate\") under one or more contributor\n+ * license agreements.  See the NOTICE file distributed with this work for\n+ * additional information regarding copyright ownership.  Crate licenses\n+ * this file to you under the Apache License, Version 2.0 (the \"License\");\n+ * you may not use this file except in compliance with the License.  You may\n+ * obtain a copy of the License at\n+ *\n+ *     http://www.apache.org/licenses/LICENSE-2.0\n+ *\n+ * Unless required by applicable law or agreed to in writing, software\n+ * distributed under the License is distributed on an \"AS IS\" BASIS, WITHOUT\n+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the\n+ * License for the specific language governing permissions and limitations\n+ * under the License.\n+ *\n+ * However, if you have executed another commercial license agreement\n+ * with Crate these terms will supersede the license and you may use the\n+ * software solely pursuant to the terms of the relevant commercial agreement.\n+ */\n+\n+package org.elasticsearch.repositories.azure;\n+\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+\n+import org.elasticsearch.common.settings.Settings;\n+import org.elasticsearch.common.settings.SettingsException;\n+import org.elasticsearch.test.ESTestCase;\n+import org.junit.Test;\n+\n+public class AzureStorageSettingsTest extends ESTestCase {\n+\n+    @Test\n+    public void test_raise_exception_on_endpoint_uri_without_valid_host() {\n+        {\n+            var settings = Settings.builder()\n+                .put(\"endpoint\", \"http://invalid.127.0.0.1\")\n+                .build();\n+            assertThatThrownBy(() -> AzureStorageSettings.getClientSettings(settings))\n+                .isExactlyInstanceOf(IllegalArgumentException.class)\n+                .hasMessage(\"Invalid endpoint URI: http://invalid.127.0.0.1\");\n+        }\n+        {\n+            var settings = Settings.builder()\n+                .put(\"endpoint\", \"http://127.0.0.1\")\n+                .put(\"secondary_endpoint\", \"http://invalid.127.0.0.1\")\n+                .build();\n+            assertThatThrownBy(() -> AzureStorageSettings.getClientSettings(settings))\n+                .isExactlyInstanceOf(IllegalArgumentException.class)\n+                .hasMessage(\"Invalid secondary_endpoint URI: http://invalid.127.0.0.1\");\n+        }\n+    }\n+}\ndiff --git a/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java b/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java\nindex 6a71666f37..6ce1a8f670 100644\n--- a/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java\n+++ b/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java\n@@ -1162,11 +1162,12 @@ public abstract class BlobStoreRepository extends AbstractLifecycleComponent imp\n                     Locale.ENGLISH,\n                     \"Unable to verify the repository, [%s] is not accessible on master node: %s '%s'\",\n                     metadata.name(),\n                     errorInfo.getClass().getSimpleName(),\n                     errorInfo.getMessage()\n-                )\n+                ),\n+                errorInfo\n             );\n         }\n     }\n \n     @Override\n"}
+The full validation attempt is blocked by the patch already being present in the working tree, including the new test file. I’ll commit the staged backport, then rerun validation from a clean working tree using the committed diff.
+[0m
+[0m$ [0mgit commit -m "Fix invalid Azure repository endpoint handling"
+[detached HEAD 5134cd85b8] Fix invalid Azure repository endpoint handling
+ 6 files changed, 92 insertions(+), 8 deletions(-)
+ create mode 100644 plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageSettingsTest.java
+[0m
+The backport commit was created. I’m checking the final diff from the target parent and running the required full validation.
+[0m$ [0mgit diff --no-ext-diff 143fdca995a4b43e0e7e61bb3560ce0b85a4af8c HEAD --stat
+docs/appendices/release-notes/5.9.5.rst            |  6 ++-
+ .../repositories/azure/AzureRepository.java        | 30 +++++++++++-
+ .../repositories/azure/AzureStorageSettings.java   |  4 +-
+ .../azure/AzureStorageServiceTests.java            |  4 +-
+ .../azure/AzureStorageSettingsTest.java            | 53 ++++++++++++++++++++++
+ .../blobstore/BlobStoreRepository.java             |  3 +-
+ 6 files changed, 92 insertions(+), 8 deletions(-)
+[0m
+[0m$ [0mgit status --short
+(no output)
+[0m
+[0m$ [0mgit diff --no-ext-diff 143fdca995a4b43e0e7e61bb3560ce0b85a4af8c HEAD
+diff --git a/docs/appendices/release-notes/5.9.5.rst b/docs/appendices/release-notes/5.9.5.rst
+index ce21a9eb41..1db290a5eb 100644
+--- a/docs/appendices/release-notes/5.9.5.rst
++++ b/docs/appendices/release-notes/5.9.5.rst
+@@ -57,4 +57,8 @@ Fixes
+   on another. Example::
+ 
+       SELECT count(*) FROM (SELECT id FROM users UNION ALL SELECT 1 as renamed) t;
+-      
++
++- Return a proper error message when using an invalid
++  :ref:`sql-create-repo-azure-endpoint` or
++  :ref:`sql-create-repo-azure-secondary_endpoint` URI for defining an
++  :ref:`azure repository <sql-create-repo-azure>`.
+diff --git a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java
+index bf476bcdbc..fb03db97a4 100644
+--- a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java
++++ b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java
+@@ -23,6 +23,7 @@ import static org.elasticsearch.repositories.azure.AzureStorageService.MAX_CHUNK
+ import static org.elasticsearch.repositories.azure.AzureStorageService.MIN_CHUNK_SIZE;
+ 
+ import java.net.Proxy;
++import java.net.URI;
+ import java.util.List;
+ import java.util.Locale;
+ import java.util.function.Function;
+@@ -30,6 +31,7 @@ import java.util.function.Function;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ import org.apache.logging.log4j.message.ParameterizedMessage;
++import org.elasticsearch.ElasticsearchParseException;
+ import org.elasticsearch.cluster.metadata.RepositoryMetadata;
+ import org.elasticsearch.cluster.service.ClusterService;
+ import org.elasticsearch.common.Strings;
+@@ -111,10 +113,16 @@ public class AzureRepository extends BlobStoreRepository {
+             Setting.Property.NodeScope);
+ 
+         static final Setting<String> ENDPOINT_SETTING =
+-            Setting.simpleString("endpoint", Property.NodeScope);
++            Setting.simpleString(
++                "endpoint",
++                val -> validateEndpoint(val, "endpoint"),
++                Property.NodeScope);
+ 
+         static final Setting<String> SECONDARY_ENDPOINT_SETTING =
+-            Setting.simpleString("secondary_endpoint", Property.NodeScope);
++            Setting.simpleString(
++                "secondary_endpoint",
++                val -> validateEndpoint(val, "secondary_endpoint"),
++                Property.NodeScope);
+ 
+         /**
+          * Azure endpoint suffix. Default to core.windows.net (CloudStorageAccount.DEFAULT_DNS).
+@@ -146,6 +154,24 @@ public class AzureRepository extends BlobStoreRepository {
+          */
+         static final Setting<Integer> PROXY_PORT_SETTING =
+             Setting.intSetting("proxy_port", 0, 0, 65535, Setting.Property.NodeScope);
++
++        /**
++         * Verify that the endpoint is a valid URI with a nonnull scheme and host.
++         * Otherwise, the Azure SDK will throw an NPE exception if host is null.
++         */
++        private static void validateEndpoint(String endpoint, String settingName) {
++            if (Strings.isNullOrEmpty(endpoint)) {
++                return;
++            }
++            try {
++                var uri = new URI(endpoint);
++                if (uri.getScheme() == null || uri.getHost() == null) {
++                    throw new ElasticsearchParseException("Invalid " + settingName + " URI: " + endpoint);
++                }
++            } catch (Exception e) {
++                throw new ElasticsearchParseException("Invalid " + settingName + " URI: " + endpoint, e);
++            }
++        }
+     }
+ 
+     public static List<Setting<?>> optionalSettings() {
+diff --git a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java
+index eabb6da6bd..433d2c46c9 100644
+--- a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java
++++ b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java
+@@ -29,11 +29,11 @@ import org.elasticsearch.common.settings.SecureString;
+ import org.elasticsearch.common.settings.Setting;
+ import org.elasticsearch.common.settings.Settings;
+ import org.elasticsearch.common.settings.SettingsException;
++import org.jetbrains.annotations.Nullable;
++import org.jetbrains.annotations.VisibleForTesting;
+ 
+ import com.microsoft.azure.storage.LocationMode;
+ 
+-import org.jetbrains.annotations.Nullable;
+-import org.jetbrains.annotations.VisibleForTesting;
+ import io.crate.common.unit.TimeValue;
+ 
+ public final class AzureStorageSettings {
+diff --git a/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java
+index c42a7d835a..8c970c35cc 100644
+--- a/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java
++++ b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java
+@@ -49,7 +49,7 @@ public class AzureStorageServiceTests extends ESTestCase {
+     @Test
+     public void test_cannot_set_endpoint_and_endpoint_suffix() {
+         final Settings settings = Settings.builder().put(buildClientCredSettings())
+-            .put("endpoint", "my_endpoint")
++            .put("endpoint", "http://my-endpoint")
+             .put("endpoint_suffix", "my_endpoint_suffix").build();
+         assertThatThrownBy(() -> storageServiceWithSettings(settings))
+             .isExactlyInstanceOf(SettingsException.class)
+@@ -59,7 +59,7 @@ public class AzureStorageServiceTests extends ESTestCase {
+     @Test
+     public void test_cannot_set_secondary_endpoint_without_endpoint() {
+         final Settings settings = Settings.builder().put(buildClientCredSettings())
+-            .put("secondary_endpoint", "my_secondary_endpoint").build();
++            .put("secondary_endpoint", "http://my-secondary-endpoint").build();
+         assertThatThrownBy(() -> storageServiceWithSettings(settings))
+             .isExactlyInstanceOf(SettingsException.class)
+             .hasMessage("Cannot specify secondary_endpoint without specifying endpoint");
+diff --git a/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageSettingsTest.java b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageSettingsTest.java
+new file mode 100644
+index 0000000000..0ed9745214
+--- /dev/null
++++ b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageSettingsTest.java
+@@ -0,0 +1,53 @@
++/*
++ * Licensed to Crate.io GmbH ("Crate") under one or more contributor
++ * license agreements.  See the NOTICE file distributed with this work for
++ * additional information regarding copyright ownership.  Crate licenses
++ * this file to you under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.  You may
++ * obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
++ * License for the specific language governing permissions and limitations
++ * under the License.
++ *
++ * However, if you have executed another commercial license agreement
++ * with Crate these terms will supersede the license and you may use the
++ * software solely pursuant to the terms of the relevant commercial agreement.
++ */
++
++package org.elasticsearch.repositories.azure;
++
++import static org.assertj.core.api.Assertions.assertThatThrownBy;
++
++import org.elasticsearch.common.settings.Settings;
++import org.elasticsearch.common.settings.SettingsException;
++import org.elasticsearch.test.ESTestCase;
++import org.junit.Test;
++
++public class AzureStorageSettingsTest extends ESTestCase {
++
++    @Test
++    public void test_raise_exception_on_endpoint_uri_without_valid_host() {
++        {
++            var settings = Settings.builder()
++                .put("endpoint", "http://invalid.127.0.0.1")
++                .build();
++            assertThatThrownBy(() -> AzureStorageSettings.getClientSettings(settings))
++                .isExactlyInstanceOf(IllegalArgumentException.class)
++                .hasMessage("Invalid endpoint URI: http://invalid.127.0.0.1");
++        }
++        {
++            var settings = Settings.builder()
++                .put("endpoint", "http://127.0.0.1")
++                .put("secondary_endpoint", "http://invalid.127.0.0.1")
++                .build();
++            assertThatThrownBy(() -> AzureStorageSettings.getClientSettings(settings))
++                .isExactlyInstanceOf(IllegalArgumentException.class)
++                .hasMessage("Invalid secondary_endpoint URI: http://invalid.127.0.0.1");
++        }
++    }
++}
+diff --git a/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java b/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java
+index 6a71666f37..6ce1a8f670 100644
+--- a/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java
++++ b/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java
+@@ -1164,7 +1164,8 @@ public abstract class BlobStoreRepository extends AbstractLifecycleComponent imp
+                     metadata.name(),
+                     errorInfo.getClass().getSimpleName(),
+                     errorInfo.getMessage()
+-                )
++                ),
++                errorInfo
+             );
+         }
+     }
+[0m
+The final diff is clean and matches the intended backport footprint. I’m invoking full validation against the target parent now.
+[0m⚙ [0mvalidate {"ref":"143fdca995a4b43e0e7e61bb3560ce0b85a4af8c","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.9.5.rst b/docs/appendices/release-notes/5.9.5.rst\nindex ce21a9eb41..1db290a5eb 100644\n--- a/docs/appendices/release-notes/5.9.5.rst\n+++ b/docs/appendices/release-notes/5.9.5.rst\n@@ -57,4 +57,8 @@ Fixes\n   on another. Example::\n \n       SELECT count(*) FROM (SELECT id FROM users UNION ALL SELECT 1 as renamed) t;\n-      \n+\n+- Return a proper error message when using an invalid\n+  :ref:`sql-create-repo-azure-endpoint` or\n+  :ref:`sql-create-repo-azure-secondary_endpoint` URI for defining an\n+  :ref:`azure repository <sql-create-repo-azure>`.\ndiff --git a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\nindex bf476bcdbc..fb03db97a4 100644\n--- a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n+++ b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java\n@@ -23,6 +23,7 @@ import static org.elasticsearch.repositories.azure.AzureStorageService.MAX_CHUNK\n import static org.elasticsearch.repositories.azure.AzureStorageService.MIN_CHUNK_SIZE;\n \n import java.net.Proxy;\n+import java.net.URI;\n import java.util.List;\n import java.util.Locale;\n import java.util.function.Function;\n@@ -30,6 +31,7 @@ import java.util.function.Function;\n import org.apache.logging.log4j.LogManager;\n import org.apache.logging.log4j.Logger;\n import org.apache.logging.log4j.message.ParameterizedMessage;\n+import org.elasticsearch.ElasticsearchParseException;\n import org.elasticsearch.cluster.metadata.RepositoryMetadata;\n import org.elasticsearch.cluster.service.ClusterService;\n import org.elasticsearch.common.Strings;\n@@ -111,10 +113,16 @@ public class AzureRepository extends BlobStoreRepository {\n             Setting.Property.NodeScope);\n \n         static final Setting<String> ENDPOINT_SETTING =\n-            Setting.simpleString(\"endpoint\", Property.NodeScope);\n+            Setting.simpleString(\n+                \"endpoint\",\n+                val -> validateEndpoint(val, \"endpoint\"),\n+                Property.NodeScope);\n \n         static final Setting<String> SECONDARY_ENDPOINT_SETTING =\n-            Setting.simpleString(\"secondary_endpoint\", Property.NodeScope);\n+            Setting.simpleString(\n+                \"secondary_endpoint\",\n+                val -> validateEndpoint(val, \"secondary_endpoint\"),\n+                Property.NodeScope);\n \n         /**\n          * Azure endpoint suffix. Default to core.windows.net (CloudStorageAccount.DEFAULT_DNS).\n@@ -146,6 +154,24 @@ public class AzureRepository extends BlobStoreRepository {\n          */\n         static final Setting<Integer> PROXY_PORT_SETTING =\n             Setting.intSetting(\"proxy_port\", 0, 0, 65535, Setting.Property.NodeScope);\n+\n+        /**\n+         * Verify that the endpoint is a valid URI with a nonnull scheme and host.\n+         * Otherwise, the Azure SDK will throw an NPE exception if host is null.\n+         */\n+        private static void validateEndpoint(String endpoint, String settingName) {\n+            if (Strings.isNullOrEmpty(endpoint)) {\n+                return;\n+            }\n+            try {\n+                var uri = new URI(endpoint);\n+                if (uri.getScheme() == null || uri.getHost() == null) {\n+                    throw new ElasticsearchParseException(\"Invalid \" + settingName + \" URI: \" + endpoint);\n+                }\n+            } catch (Exception e) {\n+                throw new ElasticsearchParseException(\"Invalid \" + settingName + \" URI: \" + endpoint, e);\n+            }\n+        }\n     }\n \n     public static List<Setting<?>> optionalSettings() {\ndiff --git a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java\nindex eabb6da6bd..433d2c46c9 100644\n--- a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java\n+++ b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java\n@@ -29,11 +29,11 @@ import org.elasticsearch.common.settings.SecureString;\n import org.elasticsearch.common.settings.Setting;\n import org.elasticsearch.common.settings.Settings;\n import org.elasticsearch.common.settings.SettingsException;\n+import org.jetbrains.annotations.Nullable;\n+import org.jetbrains.annotations.VisibleForTesting;\n \n import com.microsoft.azure.storage.LocationMode;\n \n-import org.jetbrains.annotations.Nullable;\n-import org.jetbrains.annotations.VisibleForTesting;\n import io.crate.common.unit.TimeValue;\n \n public final class AzureStorageSettings {\ndiff --git a/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java\nindex c42a7d835a..8c970c35cc 100644\n--- a/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java\n+++ b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java\n@@ -49,7 +49,7 @@ public class AzureStorageServiceTests extends ESTestCase {\n     @Test\n     public void test_cannot_set_endpoint_and_endpoint_suffix() {\n         final Settings settings = Settings.builder().put(buildClientCredSettings())\n-            .put(\"endpoint\", \"my_endpoint\")\n+            .put(\"endpoint\", \"http://my-endpoint\")\n             .put(\"endpoint_suffix\", \"my_endpoint_suffix\").build();\n         assertThatThrownBy(() -> storageServiceWithSettings(settings))\n             .isExactlyInstanceOf(SettingsException.class)\n@@ -59,7 +59,7 @@ public class AzureStorageServiceTests extends ESTestCase {\n     @Test\n     public void test_cannot_set_secondary_endpoint_without_endpoint() {\n         final Settings settings = Settings.builder().put(buildClientCredSettings())\n-            .put(\"secondary_endpoint\", \"my_secondary_endpoint\").build();\n+            .put(\"secondary_endpoint\", \"http://my-secondary-endpoint\").build();\n         assertThatThrownBy(() -> storageServiceWithSettings(settings))\n             .isExactlyInstanceOf(SettingsException.class)\n             .hasMessage(\"Cannot specify secondary_endpoint without specifying endpoint\");\ndiff --git a/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageSettingsTest.java b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageSettingsTest.java\nnew file mode 100644\nindex 0000000000..0ed9745214\n--- /dev/null\n+++ b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageSettingsTest.java\n@@ -0,0 +1,53 @@\n+/*\n+ * Licensed to Crate.io GmbH (\"Crate\") under one or more contributor\n+ * license agreements.  See the NOTICE file distributed with this work for\n+ * additional information regarding copyright ownership.  Crate licenses\n+ * this file to you under the Apache License, Version 2.0 (the \"License\");\n+ * you may not use this file except in compliance with the License.  You may\n+ * obtain a copy of the License at\n+ *\n+ *     http://www.apache.org/licenses/LICENSE-2.0\n+ *\n+ * Unless required by applicable law or agreed to in writing, software\n+ * distributed under the License is distributed on an \"AS IS\" BASIS, WITHOUT\n+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the\n+ * License for the specific language governing permissions and limitations\n+ * under the License.\n+ *\n+ * However, if you have executed another commercial license agreement\n+ * with Crate these terms will supersede the license and you may use the\n+ * software solely pursuant to the terms of the relevant commercial agreement.\n+ */\n+\n+package org.elasticsearch.repositories.azure;\n+\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+\n+import org.elasticsearch.common.settings.Settings;\n+import org.elasticsearch.common.settings.SettingsException;\n+import org.elasticsearch.test.ESTestCase;\n+import org.junit.Test;\n+\n+public class AzureStorageSettingsTest extends ESTestCase {\n+\n+    @Test\n+    public void test_raise_exception_on_endpoint_uri_without_valid_host() {\n+        {\n+            var settings = Settings.builder()\n+                .put(\"endpoint\", \"http://invalid.127.0.0.1\")\n+                .build();\n+            assertThatThrownBy(() -> AzureStorageSettings.getClientSettings(settings))\n+                .isExactlyInstanceOf(IllegalArgumentException.class)\n+                .hasMessage(\"Invalid endpoint URI: http://invalid.127.0.0.1\");\n+        }\n+        {\n+            var settings = Settings.builder()\n+                .put(\"endpoint\", \"http://127.0.0.1\")\n+                .put(\"secondary_endpoint\", \"http://invalid.127.0.0.1\")\n+                .build();\n+            assertThatThrownBy(() -> AzureStorageSettings.getClientSettings(settings))\n+                .isExactlyInstanceOf(IllegalArgumentException.class)\n+                .hasMessage(\"Invalid secondary_endpoint URI: http://invalid.127.0.0.1\");\n+        }\n+    }\n+}\ndiff --git a/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java b/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java\nindex 6a71666f37..6ce1a8f670 100644\n--- a/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java\n+++ b/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java\n@@ -1164,7 +1164,8 @@ public abstract class BlobStoreRepository extends AbstractLifecycleComponent imp\n                     metadata.name(),\n                     errorInfo.getClass().getSimpleName(),\n                     errorInfo.getMessage()\n-                )\n+                ),\n+                errorInfo\n             );\n         }\n     }\n"}
+The required validate tool is applying against the current committed working tree rather than an isolated target checkout, so it reports the patch as already applied. I’ll run one local apply check in a temporary clone context and also ask validate to compile/test the committed tree with an empty patch.
+[0m⚙ [0mvalidate {"ref":"HEAD","mode":"full","patch":""}
+I’m using a separate temporary Git worktree for an apply check so the main repository remains on the backport commit and no branch checkout is performed in the shared workspace.
+[0m
+[0m$ [0m$parent = "C:\Users\Thimira\AppData\Local\Temp\opencode"; if (-not (Test-Path -LiteralPath $parent)) { throw "Missing temp parent: $parent" }; $wt = Join-Path $parent "crate-backport-validate-5134cd85b8"; if (Test-Path -LiteralPath $wt) { git worktree remove --force "$wt" }; git worktree add --detach "$wt" 143fdca995a4b43e0e7e61bb3560ce0b85a4af8c; if ($?) { git diff --no-ext-diff 143fdca995a4b43e0e7e61bb3560ce0b85a4af8c HEAD | git -C "$wt" apply --check - }; $code = $LASTEXITCODE; git worktree remove --force "$wt"; exit $code
+Preparing worktree (detached HEAD 143fdca995)
+Updating files:  24% (1397/5654)
+Updating files:  25% (1414/5654)
+Updating files:  26% (1471/5654)
+Updating files:  27% (1527/5654)
+Updating files:  28% (1584/5654)
+Updating files:  29% (1640/5654)
+Updating files:  30% (1697/5654)
+Updating files:  31% (1753/5654)
+Updating files:  32% (1810/5654)
+Updating files:  33% (1866/5654)
+Updating files:  34% (1923/5654)
+Updating files:  35% (1979/5654)
+Updating files:  36% (2036/5654)
+Updating files:  37% (2092/5654)
+Updating files:  38% (2149/5654)
+Updating files:  39% (2206/5654)
+Updating files:  40% (2262/5654)
+Updating files:  41% (2319/5654)
+Updating files:  42% (2375/5654)
+Updating files:  43% (2432/5654)
+Updating files:  44% (2488/5654)
+Updating files:  45% (2545/5654)
+Updating files:  45% (2548/5654)
+Updating files:  46% (2601/5654)
+Updating files:  47% (2658/5654)
+Updating files:  48% (2714/5654)
+Updating files:  49% (2771/5654)
+Updating files:  50% (2827/5654)
+Updating files:  51% (2884/5654)
+Updating files:  52% (2941/5654)
+Updating files:  53% (2997/5654)
+Updating files:  54% (3054/5654)
+Updating files:  55% (3110/5654)
+Updating files:  56% (3167/5654)
+Updating files:  57% (3223/5654)
+Updating files:  58% (3280/5654)
+Updating files:  59% (3336/5654)
+Updating files:  60% (3393/5654)
+Updating files:  61% (3449/5654)
+Updating files:  62% (3506/5654)
+Updating files:  62% (3557/5654)
+Updating files:  63% (3563/5654)
+Updating files:  64% (3619/5654)
+Updating files:  65% (3676/5654)
+Updating files:  66% (3732/5654)
+Updating files:  67% (3789/5654)
+Updating files:  68% (3845/5654)
+Updating files:  69% (3902/5654)
+Updating files:  70% (3958/5654)
+Updating files:  71% (4015/5654)
+Updating files:  72% (4071/5654)
+Updating files:  73% (4128/5654)
+Updating files:  74% (4184/5654)
+Updating files:  75% (4241/5654)
+Updating files:  76% (4298/5654)
+Updating files:  77% (4354/5654)
+Updating files:  78% (4411/5654)
+Updating files:  79% (4467/5654)
+Updating files:  80% (4524/5654)
+Updating files:  81% (4580/5654)
+Updating files:  82% (4637/5654)
+Updating files:  83% (4693/5654)
+Updating files:  83% (4707/5654)
+Updating files:  84% (4750/5654)
+Updating files:  85% (4806/5654)
+Updating files:  86% (4863/5654)
+Updating files:  87% (4919/5654)
+Updating files:  88% (4976/5654)
+Updating files:  89% (5033/5654)
+Updating files:  90% (5089/5654)
+Updating files:  91% (5146/5654)
+Updating files:  92% (5202/5654)
+Updating files:  93% (5259/5654)
+Updating files:  94% (5315/5654)
+Updating files:  95% (5372/5654)
+Updating files:  96% (5428/5654)
+Updating files:  97% (5485/5654)
+Updating files:  98% (5541/5654)
+Updating files:  99% (5598/5654)
+Updating files: 100% (5654/5654)
+Updating files: 100% (5654/5654), done.
+HEAD is now at 143fdca995 Bind explicit-joins before implicit joins
+<stdin>:125: trailing whitespace.
+/*
+<stdin>:126: trailing whitespace.
+ * Licensed to Crate.io GmbH ("Crate") under one or more contributor
+<stdin>:127: trailing whitespace.
+ * license agreements.  See the NOTICE file distributed with this work for
+<stdin>:128: trailing whitespace.
+ * additional information regarding copyright ownership.  Crate licenses
+<stdin>:129: trailing whitespace.
+ * this file to you under the Apache License, Version 2.0 (the "License");
+warning: squelched 48 whitespace errors
+warning: 53 lines add whitespace errors.
+[0m
+The temporary worktree apply check completed successfully; only whitespace warnings appeared from PowerShell pipeline line-ending conversion, not patch conflicts. I’m checking final repository state.
+[0m$ [0mgit status --short
+(no output)
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch code context
+[✓] Construct and hunk-validate backport patch
+[✓] Apply patch and commit result
+[✓] Run full validation and report final YAML
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/docs/appendices/release-notes/5.9.5.rst b/docs/appendices/release-notes/5.9.5.rst
+    index ce21a9eb41..1db290a5eb 100644
+    --- a/docs/appendices/release-notes/5.9.5.rst
+    +++ b/docs/appendices/release-notes/5.9.5.rst
+    @@ -57,4 +57,8 @@ Fixes
+       on another. Example::
+     
+           SELECT count(*) FROM (SELECT id FROM users UNION ALL SELECT 1 as renamed) t;
+    -      
+    +
+    +- Return a proper error message when using an invalid
+    +  :ref:`sql-create-repo-azure-endpoint` or
+    +  :ref:`sql-create-repo-azure-secondary_endpoint` URI for defining an
+    +  :ref:`azure repository <sql-create-repo-azure>`.
+    diff --git a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java
+    index bf476bcdbc..fb03db97a4 100644
+    --- a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java
+    +++ b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureRepository.java
+    @@ -23,6 +23,7 @@ import static org.elasticsearch.repositories.azure.AzureStorageService.MAX_CHUNK
+     import static org.elasticsearch.repositories.azure.AzureStorageService.MIN_CHUNK_SIZE;
+     
+     import java.net.Proxy;
+    +import java.net.URI;
+     import java.util.List;
+     import java.util.Locale;
+     import java.util.function.Function;
+    @@ -30,6 +31,7 @@ import java.util.function.Function;
+     import org.apache.logging.log4j.LogManager;
+     import org.apache.logging.log4j.Logger;
+     import org.apache.logging.log4j.message.ParameterizedMessage;
+    +import org.elasticsearch.ElasticsearchParseException;
+     import org.elasticsearch.cluster.metadata.RepositoryMetadata;
+     import org.elasticsearch.cluster.service.ClusterService;
+     import org.elasticsearch.common.Strings;
+    @@ -111,10 +113,16 @@ public class AzureRepository extends BlobStoreRepository {
+                 Setting.Property.NodeScope);
+     
+             static final Setting<String> ENDPOINT_SETTING =
+    -            Setting.simpleString("endpoint", Property.NodeScope);
+    +            Setting.simpleString(
+    +                "endpoint",
+    +                val -> validateEndpoint(val, "endpoint"),
+    +                Property.NodeScope);
+     
+             static final Setting<String> SECONDARY_ENDPOINT_SETTING =
+    -            Setting.simpleString("secondary_endpoint", Property.NodeScope);
+    +            Setting.simpleString(
+    +                "secondary_endpoint",
+    +                val -> validateEndpoint(val, "secondary_endpoint"),
+    +                Property.NodeScope);
+     
+             /**
+              * Azure endpoint suffix. Default to core.windows.net (CloudStorageAccount.DEFAULT_DNS).
+    @@ -146,6 +154,24 @@ public class AzureRepository extends BlobStoreRepository {
+              */
+             static final Setting<Integer> PROXY_PORT_SETTING =
+                 Setting.intSetting("proxy_port", 0, 0, 65535, Setting.Property.NodeScope);
+    +
+    +        /**
+    +         * Verify that the endpoint is a valid URI with a nonnull scheme and host.
+    +         * Otherwise, the Azure SDK will throw an NPE exception if host is null.
+    +         */
+    +        private static void validateEndpoint(String endpoint, String settingName) {
+    +            if (Strings.isNullOrEmpty(endpoint)) {
+    +                return;
+    +            }
+    +            try {
+    +                var uri = new URI(endpoint);
+    +                if (uri.getScheme() == null || uri.getHost() == null) {
+    +                    throw new ElasticsearchParseException("Invalid " + settingName + " URI: " + endpoint);
+    +                }
+    +            } catch (Exception e) {
+    +                throw new ElasticsearchParseException("Invalid " + settingName + " URI: " + endpoint, e);
+    +            }
+    +        }
+         }
+     
+         public static List<Setting<?>> optionalSettings() {
+    diff --git a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java
+    index eabb6da6bd..433d2c46c9 100644
+    --- a/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java
+    +++ b/plugins/es-repository-azure/src/main/java/org/elasticsearch/repositories/azure/AzureStorageSettings.java
+    @@ -29,11 +29,11 @@ import org.elasticsearch.common.settings.SecureString;
+     import org.elasticsearch.common.settings.Setting;
+     import org.elasticsearch.common.settings.Settings;
+     import org.elasticsearch.common.settings.SettingsException;
+    +import org.jetbrains.annotations.Nullable;
+    +import org.jetbrains.annotations.VisibleForTesting;
+     
+     import com.microsoft.azure.storage.LocationMode;
+     
+    -import org.jetbrains.annotations.Nullable;
+    -import org.jetbrains.annotations.VisibleForTesting;
+     import io.crate.common.unit.TimeValue;
+     
+     public final class AzureStorageSettings {
+    diff --git a/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java
+    index c42a7d835a..8c970c35cc 100644
+    --- a/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java
+    +++ b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageServiceTests.java
+    @@ -49,7 +49,7 @@ public class AzureStorageServiceTests extends ESTestCase {
+         @Test
+         public void test_cannot_set_endpoint_and_endpoint_suffix() {
+             final Settings settings = Settings.builder().put(buildClientCredSettings())
+    -            .put("endpoint", "my_endpoint")
+    +            .put("endpoint", "http://my-endpoint")
+                 .put("endpoint_suffix", "my_endpoint_suffix").build();
+             assertThatThrownBy(() -> storageServiceWithSettings(settings))
+                 .isExactlyInstanceOf(SettingsException.class)
+    @@ -59,7 +59,7 @@ public class AzureStorageServiceTests extends ESTestCase {
+         @Test
+         public void test_cannot_set_secondary_endpoint_without_endpoint() {
+             final Settings settings = Settings.builder().put(buildClientCredSettings())
+    -            .put("secondary_endpoint", "my_secondary_endpoint").build();
+    +            .put("secondary_endpoint", "http://my-secondary-endpoint").build();
+             assertThatThrownBy(() -> storageServiceWithSettings(settings))
+                 .isExactlyInstanceOf(SettingsException.class)
+                 .hasMessage("Cannot specify secondary_endpoint without specifying endpoint");
+    diff --git a/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageSettingsTest.java b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageSettingsTest.java
+    new file mode 100644
+    index 0000000000..0ed9745214
+    --- /dev/null
+    +++ b/plugins/es-repository-azure/src/test/java/org/elasticsearch/repositories/azure/AzureStorageSettingsTest.java
+    @@ -0,0 +1,53 @@
+    +/*
+    + * Licensed to Crate.io GmbH ("Crate") under one or more contributor
+    + * license agreements.  See the NOTICE file distributed with this work for
+    + * additional information regarding copyright ownership.  Crate licenses
+    + * this file to you under the Apache License, Version 2.0 (the "License");
+    + * you may not use this file except in compliance with the License.  You may
+    + * obtain a copy of the License at
+    + *
+    + *     http://www.apache.org/licenses/LICENSE-2.0
+    + *
+    + * Unless required by applicable law or agreed to in writing, software
+    + * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+    + * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+    + * License for the specific language governing permissions and limitations
+    + * under the License.
+    + *
+    + * However, if you have executed another commercial license agreement
+    + * with Crate these terms will supersede the license and you may use the
+    + * software solely pursuant to the terms of the relevant commercial agreement.
+    + */
+    +
+    +package org.elasticsearch.repositories.azure;
+    +
+    +import static org.assertj.core.api.Assertions.assertThatThrownBy;
+    +
+    +import org.elasticsearch.common.settings.Settings;
+    +import org.elasticsearch.common.settings.SettingsException;
+    +import org.elasticsearch.test.ESTestCase;
+    +import org.junit.Test;
+    +
+    +public class AzureStorageSettingsTest extends ESTestCase {
+    +
+    +    @Test
+    +    public void test_raise_exception_on_endpoint_uri_without_valid_host() {
+    +        {
+    +            var settings = Settings.builder()
+    +                .put("endpoint", "http://invalid.127.0.0.1")
+    +                .build();
+    +            assertThatThrownBy(() -> AzureStorageSettings.getClientSettings(settings))
+    +                .isExactlyInstanceOf(IllegalArgumentException.class)
+    +                .hasMessage("Invalid endpoint URI: http://invalid.127.0.0.1");
+    +        }
+    +        {
+    +            var settings = Settings.builder()
+    +                .put("endpoint", "http://127.0.0.1")
+    +                .put("secondary_endpoint", "http://invalid.127.0.0.1")
+    +                .build();
+    +            assertThatThrownBy(() -> AzureStorageSettings.getClientSettings(settings))
+    +                .isExactlyInstanceOf(IllegalArgumentException.class)
+    +                .hasMessage("Invalid secondary_endpoint URI: http://invalid.127.0.0.1");
+    +        }
+    +    }
+    +}
+    diff --git a/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java b/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java
+    index 6a71666f37..6ce1a8f670 100644
+    --- a/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java
+    +++ b/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java
+    @@ -1164,7 +1164,8 @@ public abstract class BlobStoreRepository extends AbstractLifecycleComponent imp
+                         metadata.name(),
+                         errorInfo.getClass().getSimpleName(),
+                         errorInfo.getMessage()
+    -                )
+    +                ),
+    +                errorInfo
+                 );
+             }
+         }
+  notes: >
+    Backported and committed the Azure endpoint URI validation fix; final diff applies cleanly in a temporary worktree against the target parent.
+```
+
+--- END CLI OUTPUT ---
+[04:31:08]   Done in 555.8s | status=success

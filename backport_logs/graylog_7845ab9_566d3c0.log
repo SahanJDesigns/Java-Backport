@@ -1,0 +1,11 @@
+[13:37:58] === Row 9: graylog  7845ab99 -> 566d3c01  [TYPE-I] ===
+[13:37:58]   Resolving parent of backport commit 566d3c01...
+[13:37:58]   Backport parent (target ref): 4d5b0a70fc4854c345e39d2b2eb0b4a0289e5783
+[13:37:58]   Extracting new-version patch for 7845ab99...
+[13:37:58]   New-version patch size: 13247 chars
+[13:37:58]   Checking out backport parent 4d5b0a70...
+[13:37:59]   ERROR: Could not checkout backport parent 4d5b0a70fc4854c345e39d2b2eb0b4a0289e5783: error: Your local changes to the following files would be overwritten by checkout:
+	graylog2-server/src/main/java/org/graylog/events/processor/aggregation/PivotAggregationSearch.java
+	graylog2-server/src/test/java/org/graylog/events/processor/aggregation/PivotAggregationSearchTest.java
+Please commit your changes or stash them before you switch branches.
+Aborting

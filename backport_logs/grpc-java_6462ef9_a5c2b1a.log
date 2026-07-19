@@ -1,0 +1,642 @@
+[14:18:58] === Row 24: grpc-java  6462ef9a -> a5c2b1aa  [TYPE-I] ===
+[14:18:58]   Resolving parent of backport commit a5c2b1aa...
+[14:18:58]   Backport parent (target ref): 0d3e8283a8105a7bbf1bf746d96cac1e363de2e3
+[14:18:58]   Extracting new-version patch for 6462ef9a...
+[14:18:58]   New-version patch size: 11918 chars
+[14:18:58]   Checking out backport parent 0d3e8283...
+[14:18:58]   Invoking OpenCode CLI (15809 chars)...
+[14:18:58]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll map the provided master diff onto the current `v1.75.x` parent, inspect the target files for drift, then validate the resulting hunks individually without running full validation.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target file context
+[ ] Construct adapted backport diff
+[ ] Validate each hunk applies to target ref
+[ ] Return parseable YAML result
+[0m
+[0m⚙ [0mgit_show {"ref":"6462ef9a11980e168c21d90bbc7245c728fd1a7a"}
+[0m⚙ [0mlocate_symbol {"ref":"0d3e8283a8105a7bbf1bf746d96cac1e363de2e3","symbol":"rapidReset"}
+[0m⚙ [0mviewcode {"ref":"0d3e8283a8105a7bbf1bf746d96cac1e363de2e3","path":"netty/src/main/java/io/grpc/netty/NettyServerHandler.java","startline":50,"endline":390}
+[0m⚙ [0mviewcode {"ref":"0d3e8283a8105a7bbf1bf746d96cac1e363de2e3","path":"netty/src/main/java/io/grpc/netty/NettyServerHandler.java","startline":540,"endline":610}
+[0m⚙ [0mviewcode {"ref":"0d3e8283a8105a7bbf1bf746d96cac1e363de2e3","path":"netty/src/main/java/io/grpc/netty/NettyServerHandler.java","startline":1140,"endline":1210}
+[0m⚙ [0mviewcode {"ref":"0d3e8283a8105a7bbf1bf746d96cac1e363de2e3","path":"netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java","startline":1280,"endline":1345}
+[0m⚙ [0mlocate_symbol {"ref":"0d3e8283a8105a7bbf1bf746d96cac1e363de2e3","symbol":"NettyServerHandler"}
+The target branch contains the same relevant `NettyServerHandler` structure as the provided master diff, so this is a direct Type-I port with context offsets only. One symbol lookup hit a stale `.git/index.lock` while running in parallel, but the target code location was confirmed through `viewcode`; I’m continuing with the patch construction and hunk validation.
+[0m⚙ [0mgit_history {"filepath":"netty/src/main/java/io/grpc/netty/NettyServerHandler.java","start_line":120,"end_line":155,"start_commit":"0d3e8283a8105a7bbf1bf746d96cac1e363de2e3","end_commit":"0d3e8283a8105a7bbf1bf746d96cac1e363de2e3"}
+[0m⚙ [0mgit_history {"filepath":"netty/src/main/java/io/grpc/netty/NettyServerHandler.java","start_line":575,"end_line":598,"start_commit":"0d3e8283a8105a7bbf1bf746d96cac1e363de2e3","end_commit":"0d3e8283a8105a7bbf1bf746d96cac1e363de2e3"}
+[0m⚙ [0mgit_history {"filepath":"netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java","start_line":1286,"end_line":1328,"start_commit":"0d3e8283a8105a7bbf1bf746d96cac1e363de2e3","end_commit":"0d3e8283a8105a7bbf1bf746d96cac1e363de2e3"}
+I’m applying the minimal direct port now: sharing reset-count state between received RST_STREAM handling and a new encoder wrapper that counts server-sent non-normal RST_STREAMs, plus the corresponding Netty handler tests.
+[0m% [0mPatch 1 file
+The constructor and encoder setup are adapted cleanly. I’m adding the shared counter usage in RST handling and the new encoder/counter helper classes next.
+[0m% [0mPatch 1 file
+The production patch is in place. I’m adding the test fixture tracer setup and new server-sent reset limit tests now.
+[0m% [0mPatch 1 file
+[0m
+[0m$ [0mgit diff -- netty/src/main/java/io/grpc/netty/NettyServerHandler.java netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java
+warning: in the working copy of 'netty/src/main/java/io/grpc/netty/NettyServerHandler.java', LF will be replaced by CRLF the next time Git touches it
+diff --git a/netty/src/main/java/io/grpc/netty/NettyServerHandler.java b/netty/src/main/java/io/grpc/netty/NettyServerHandler.java
+index 668c3b5c9..48f1aae91 100644
+--- a/netty/src/main/java/io/grpc/netty/NettyServerHandler.java
++++ b/netty/src/main/java/io/grpc/netty/NettyServerHandler.java
+@@ -60,6 +60,7 @@ import io.netty.channel.ChannelFuture;
+ import io.netty.channel.ChannelFutureListener;
+ import io.netty.channel.ChannelHandlerContext;
+ import io.netty.channel.ChannelPromise;
++import io.netty.handler.codec.http2.DecoratingHttp2ConnectionEncoder;
+ import io.netty.handler.codec.http2.DecoratingHttp2FrameWriter;
+ import io.netty.handler.codec.http2.DefaultHttp2Connection;
+ import io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder;
+@@ -83,6 +84,7 @@ import io.netty.handler.codec.http2.Http2FrameWriter;
+ import io.netty.handler.codec.http2.Http2Headers;
+ import io.netty.handler.codec.http2.Http2HeadersDecoder;
+ import io.netty.handler.codec.http2.Http2InboundFrameLogger;
++import io.netty.handler.codec.http2.Http2LifecycleManager;
+ import io.netty.handler.codec.http2.Http2OutboundFrameLogger;
+ import io.netty.handler.codec.http2.Http2Settings;
+ import io.netty.handler.codec.http2.Http2Stream;
+@@ -125,13 +127,11 @@ class NettyServerHandler extends AbstractNettyHandler {
+   private final long keepAliveTimeoutInNanos;
+   private final long maxConnectionAgeInNanos;
+   private final long maxConnectionAgeGraceInNanos;
+-  private final int maxRstCount;
+-  private final long maxRstPeriodNanos;
++  private final RstStreamCounter rstStreamCounter;
+   private final List<? extends ServerStreamTracer.Factory> streamTracerFactories;
+   private final TransportTracer transportTracer;
+   private final KeepAliveEnforcer keepAliveEnforcer;
+   private final Attributes eagAttributes;
+-  private final Ticker ticker;
+   /** Incomplete attributes produced by negotiator. */
+   private Attributes negotiationAttributes;
+   private InternalChannelz.Security securityInfo;
+@@ -149,8 +149,6 @@ class NettyServerHandler extends AbstractNettyHandler {
+   private ScheduledFuture<?> maxConnectionAgeMonitor;
+   @CheckForNull
+   private GracefulShutdown gracefulShutdown;
+-  private int rstCount;
+-  private long lastRstNanoTime;
+ 
+   static NettyServerHandler newHandler(
+       ServerTransportListener transportListener,
+@@ -251,6 +249,12 @@ class NettyServerHandler extends AbstractNettyHandler {
+     final KeepAliveEnforcer keepAliveEnforcer = new KeepAliveEnforcer(
+         permitKeepAliveWithoutCalls, permitKeepAliveTimeInNanos, TimeUnit.NANOSECONDS);
+ 
++    if (ticker == null) {
++      ticker = Ticker.systemTicker();
++    }
++
++    RstStreamCounter rstStreamCounter
++        = new RstStreamCounter(maxRstCount, maxRstPeriodNanos, ticker);
+     // Create the local flow controller configured to auto-refill the connection window.
+     connection.local().flowController(
+         new DefaultHttp2LocalFlowController(connection, DEFAULT_WINDOW_UPDATE_RATIO, true));
+@@ -258,6 +262,7 @@ class NettyServerHandler extends AbstractNettyHandler {
+     Http2ConnectionEncoder encoder =
+         new DefaultHttp2ConnectionEncoder(connection, frameWriter);
+     encoder = new Http2ControlFrameLimitEncoder(encoder, 10000);
++    encoder = new Http2RstCounterEncoder(encoder, rstStreamCounter);
+     Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder,
+         frameReader);
+ 
+@@ -266,10 +271,6 @@ class NettyServerHandler extends AbstractNettyHandler {
+     settings.maxConcurrentStreams(maxStreams);
+     settings.maxHeaderListSize(maxHeaderListSize);
+ 
+-    if (ticker == null) {
+-      ticker = Ticker.systemTicker();
+-    }
+-
+     return new NettyServerHandler(
+         channelUnused,
+         connection,
+@@ -286,8 +287,7 @@ class NettyServerHandler extends AbstractNettyHandler {
+         maxConnectionAgeInNanos, maxConnectionAgeGraceInNanos,
+         keepAliveEnforcer,
+         autoFlowControl,
+-        maxRstCount,
+-        maxRstPeriodNanos,
++        rstStreamCounter,
+         eagAttributes, ticker);
+   }
+ 
+@@ -310,8 +310,7 @@ class NettyServerHandler extends AbstractNettyHandler {
+       long maxConnectionAgeGraceInNanos,
+       final KeepAliveEnforcer keepAliveEnforcer,
+       boolean autoFlowControl,
+-      int maxRstCount,
+-      long maxRstPeriodNanos,
++      RstStreamCounter rstStreamCounter,
+       Attributes eagAttributes,
+       Ticker ticker) {
+     super(
+@@ -363,12 +362,9 @@ class NettyServerHandler extends AbstractNettyHandler {
+     this.maxConnectionAgeInNanos = maxConnectionAgeInNanos;
+     this.maxConnectionAgeGraceInNanos = maxConnectionAgeGraceInNanos;
+     this.keepAliveEnforcer = checkNotNull(keepAliveEnforcer, "keepAliveEnforcer");
+-    this.maxRstCount = maxRstCount;
+-    this.maxRstPeriodNanos = maxRstPeriodNanos;
++    this.rstStreamCounter = rstStreamCounter;
+     this.eagAttributes = checkNotNull(eagAttributes, "eagAttributes");
+-    this.ticker = checkNotNull(ticker, "ticker");
+ 
+-    this.lastRstNanoTime = ticker.read();
+     streamKey = encoder.connection().newKey();
+     this.transportListener = checkNotNull(transportListener, "transportListener");
+     this.streamTracerFactories = checkNotNull(streamTracerFactories, "streamTracerFactories");
+@@ -575,24 +571,9 @@ class NettyServerHandler extends AbstractNettyHandler {
+   }
+ 
+   private void onRstStreamRead(int streamId, long errorCode) throws Http2Exception {
+-    if (maxRstCount > 0) {
+-      long now = ticker.read();
+-      if (now - lastRstNanoTime > maxRstPeriodNanos) {
+-        lastRstNanoTime = now;
+-        rstCount = 1;
+-      } else {
+-        rstCount++;
+-        if (rstCount > maxRstCount) {
+-          throw new Http2Exception(Http2Error.ENHANCE_YOUR_CALM, "too_many_rststreams") {
+-            @SuppressWarnings("UnsynchronizedOverridesSynchronized") // No memory accesses
+-            @Override
+-            public Throwable fillInStackTrace() {
+-              // Avoid the CPU cycles, since the resets may be a CPU consumption attack
+-              return this;
+-            }
+-          };
+-        }
+-      }
++    Http2Exception tooManyRstStream = rstStreamCounter.countRstStream();
++    if (tooManyRstStream != null) {
++      throw tooManyRstStream;
+     }
+ 
+     try {
+@@ -1180,6 +1161,81 @@ class NettyServerHandler extends AbstractNettyHandler {
+     }
+   }
+ 
++  private static final class Http2RstCounterEncoder extends DecoratingHttp2ConnectionEncoder {
++    private final RstStreamCounter rstStreamCounter;
++    private Http2LifecycleManager lifecycleManager;
++
++    Http2RstCounterEncoder(Http2ConnectionEncoder encoder, RstStreamCounter rstStreamCounter) {
++      super(encoder);
++      this.rstStreamCounter = rstStreamCounter;
++    }
++
++    @Override
++    public void lifecycleManager(Http2LifecycleManager lifecycleManager) {
++      this.lifecycleManager = lifecycleManager;
++      super.lifecycleManager(lifecycleManager);
++    }
++
++    @Override
++    public ChannelFuture writeRstStream(
++        ChannelHandlerContext ctx, int streamId, long errorCode, ChannelPromise promise) {
++      ChannelFuture future = super.writeRstStream(ctx, streamId, errorCode, promise);
++      // We want to count "induced" RST_STREAM, where the server sent a reset because of a malformed
++      // frame.
++      boolean normalRst
++          = errorCode == Http2Error.NO_ERROR.code() || errorCode == Http2Error.CANCEL.code();
++      if (!normalRst) {
++        Http2Exception tooManyRstStream = rstStreamCounter.countRstStream();
++        if (tooManyRstStream != null) {
++          lifecycleManager.onError(ctx, true, tooManyRstStream);
++          ctx.close();
++        }
++      }
++      return future;
++    }
++  }
++
++  private static final class RstStreamCounter {
++    private final int maxRstCount;
++    private final long maxRstPeriodNanos;
++    private final Ticker ticker;
++    private int rstCount;
++    private long lastRstNanoTime;
++
++    RstStreamCounter(int maxRstCount, long maxRstPeriodNanos, Ticker ticker) {
++      checkArgument(maxRstCount >= 0, "maxRstCount must be non-negative: %s", maxRstCount);
++      this.maxRstCount = maxRstCount;
++      this.maxRstPeriodNanos = maxRstPeriodNanos;
++      this.ticker = checkNotNull(ticker, "ticker");
++      this.lastRstNanoTime = ticker.read();
++    }
++
++    /** Returns non-{@code null} when the connection should be killed by the caller. */
++    private Http2Exception countRstStream() {
++      if (maxRstCount == 0) {
++        return null;
++      }
++      long now = ticker.read();
++      if (now - lastRstNanoTime > maxRstPeriodNanos) {
++        lastRstNanoTime = now;
++        rstCount = 1;
++      } else {
++        rstCount++;
++        if (rstCount > maxRstCount) {
++          return new Http2Exception(Http2Error.ENHANCE_YOUR_CALM, "too_many_rststreams") {
++            @SuppressWarnings("UnsynchronizedOverridesSynchronized") // No memory accesses
++            @Override
++            public Throwable fillInStackTrace() {
++              // Avoid the CPU cycles, since the resets may be a CPU consumption attack
++              return this;
++            }
++          };
++        }
++      }
++      return null;
++    }
++  }
++
+   private static class ServerChannelLogger extends ChannelLogger {
+     private static final Logger log = Logger.getLogger(ChannelLogger.class.getName());
+ 
+diff --git a/netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java b/netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java
+index 54c1375ee..28217937a 100644
+--- a/netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java
++++ b/netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java
+@@ -1304,6 +1304,8 @@ public class NettyServerHandlerTest extends NettyHandlerTestBase<NettyServerHand
+   }
+ 
+   private void rapidReset(int burstSize) throws Exception {
++    when(streamTracerFactory.newServerStreamTracer(anyString(), any(Metadata.class)))
++        .thenAnswer((args) -> new TestServerStreamTracer());
+     Http2Headers headers = new DefaultHttp2Headers()
+         .method(HTTP_METHOD)
+         .set(CONTENT_TYPE_HEADER, new AsciiString("application/grpc", UTF_8))
+@@ -1323,6 +1325,48 @@ public class NettyServerHandlerTest extends NettyHandlerTestBase<NettyServerHand
+     }
+   }
+ 
++  @Test
++  public void maxRstCountSent_withinLimit_succeeds() throws Exception {
++    maxRstCount = 10;
++    maxRstPeriodNanos = TimeUnit.MILLISECONDS.toNanos(100);
++    manualSetUp();
++    madeYouReset(maxRstCount);
++
++    assertTrue(channel().isOpen());
++  }
++
++  @Test
++  public void maxRstCountSent_exceedsLimit_fails() throws Exception {
++    maxRstCount = 10;
++    maxRstPeriodNanos = TimeUnit.MILLISECONDS.toNanos(100);
++    manualSetUp();
++    assertThrows(ClosedChannelException.class, () -> madeYouReset(maxRstCount + 1));
++
++    assertFalse(channel().isOpen());
++  }
++
++  private void madeYouReset(int burstSize) throws Exception {
++    when(streamTracerFactory.newServerStreamTracer(anyString(), any(Metadata.class)))
++        .thenAnswer((args) -> new TestServerStreamTracer());
++    Http2Headers headers = new DefaultHttp2Headers()
++        .method(HTTP_METHOD)
++        .set(CONTENT_TYPE_HEADER, new AsciiString("application/grpc", UTF_8))
++        .set(TE_HEADER, TE_TRAILERS)
++        .path(new AsciiString("/foo/bar"));
++    int streamId = 1;
++    long rpcTimeNanos = maxRstPeriodNanos / 2 / burstSize;
++    for (int period = 0; period < 3; period++) {
++      for (int i = 0; i < burstSize; i++) {
++        channelRead(headersFrame(streamId, headers));
++        channelRead(windowUpdate(streamId, 0));
++        streamId += 2;
++        fakeClock().forwardNanos(rpcTimeNanos);
++      }
++      while (channel().readOutbound() != null) {}
++      fakeClock().forwardNanos(maxRstPeriodNanos - rpcTimeNanos * burstSize + 1);
++    }
++  }
++
+   private void createStream() throws Exception {
+     Http2Headers headers = new DefaultHttp2Headers()
+         .method(HTTP_METHOD)
+warning: in the working copy of 'netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java', LF will be replaced by CRLF the next time Git touches it
+[0m
+The generated diff matches the supplied change against the target file versions. I’m validating the patch application in hunk mode against `0d3e8283a8105a7bbf1bf746d96cac1e363de2e3` now, as requested, and will skip full validation.
+[0m⚙ [0mvalidate {"ref":"0d3e8283a8105a7bbf1bf746d96cac1e363de2e3","mode":"hunk","patch":"diff --git a/netty/src/main/java/io/grpc/netty/NettyServerHandler.java b/netty/src/main/java/io/grpc/netty/NettyServerHandler.java\nindex 668c3b5c9..48f1aae91 100644\n--- a/netty/src/main/java/io/grpc/netty/NettyServerHandler.java\n+++ b/netty/src/main/java/io/grpc/netty/NettyServerHandler.java\n@@ -60,6 +60,7 @@ import io.netty.channel.ChannelFuture;\n import io.netty.channel.ChannelFutureListener;\n import io.netty.channel.ChannelHandlerContext;\n import io.netty.channel.ChannelPromise;\n+import io.netty.handler.codec.http2.DecoratingHttp2ConnectionEncoder;\n import io.netty.handler.codec.http2.DecoratingHttp2FrameWriter;\n import io.netty.handler.codec.http2.DefaultHttp2Connection;\n import io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder;\n@@ -83,6 +84,7 @@ import io.netty.handler.codec.http2.Http2FrameWriter;\n import io.netty.handler.codec.http2.Http2Headers;\n import io.netty.handler.codec.http2.Http2HeadersDecoder;\n import io.netty.handler.codec.http2.Http2InboundFrameLogger;\n+import io.netty.handler.codec.http2.Http2LifecycleManager;\n import io.netty.handler.codec.http2.Http2OutboundFrameLogger;\n import io.netty.handler.codec.http2.Http2Settings;\n import io.netty.handler.codec.http2.Http2Stream;\n@@ -125,13 +127,11 @@ class NettyServerHandler extends AbstractNettyHandler {\n   private final long keepAliveTimeoutInNanos;\n   private final long maxConnectionAgeInNanos;\n   private final long maxConnectionAgeGraceInNanos;\n-  private final int maxRstCount;\n-  private final long maxRstPeriodNanos;\n+  private final RstStreamCounter rstStreamCounter;\n   private final List<? extends ServerStreamTracer.Factory> streamTracerFactories;\n   private final TransportTracer transportTracer;\n   private final KeepAliveEnforcer keepAliveEnforcer;\n   private final Attributes eagAttributes;\n-  private final Ticker ticker;\n   /** Incomplete attributes produced by negotiator. */\n   private Attributes negotiationAttributes;\n   private InternalChannelz.Security securityInfo;\n@@ -149,8 +149,6 @@ class NettyServerHandler extends AbstractNettyHandler {\n   private ScheduledFuture<?> maxConnectionAgeMonitor;\n   @CheckForNull\n   private GracefulShutdown gracefulShutdown;\n-  private int rstCount;\n-  private long lastRstNanoTime;\n \n   static NettyServerHandler newHandler(\n       ServerTransportListener transportListener,\n@@ -251,6 +249,12 @@ class NettyServerHandler extends AbstractNettyHandler {\n     final KeepAliveEnforcer keepAliveEnforcer = new KeepAliveEnforcer(\n         permitKeepAliveWithoutCalls, permitKeepAliveTimeInNanos, TimeUnit.NANOSECONDS);\n \n+    if (ticker == null) {\n+      ticker = Ticker.systemTicker();\n+    }\n+\n+    RstStreamCounter rstStreamCounter\n+        = new RstStreamCounter(maxRstCount, maxRstPeriodNanos, ticker);\n     // Create the local flow controller configured to auto-refill the connection window.\n     connection.local().flowController(\n         new DefaultHttp2LocalFlowController(connection, DEFAULT_WINDOW_UPDATE_RATIO, true));\n@@ -258,6 +262,7 @@ class NettyServerHandler extends AbstractNettyHandler {\n     Http2ConnectionEncoder encoder =\n         new DefaultHttp2ConnectionEncoder(connection, frameWriter);\n     encoder = new Http2ControlFrameLimitEncoder(encoder, 10000);\n+    encoder = new Http2RstCounterEncoder(encoder, rstStreamCounter);\n     Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder,\n         frameReader);\n \n@@ -266,10 +271,6 @@ class NettyServerHandler extends AbstractNettyHandler {\n     settings.maxConcurrentStreams(maxStreams);\n     settings.maxHeaderListSize(maxHeaderListSize);\n \n-    if (ticker == null) {\n-      ticker = Ticker.systemTicker();\n-    }\n-\n     return new NettyServerHandler(\n         channelUnused,\n         connection,\n@@ -286,8 +287,7 @@ class NettyServerHandler extends AbstractNettyHandler {\n         maxConnectionAgeInNanos, maxConnectionAgeGraceInNanos,\n         keepAliveEnforcer,\n         autoFlowControl,\n-        maxRstCount,\n-        maxRstPeriodNanos,\n+        rstStreamCounter,\n         eagAttributes, ticker);\n   }\n \n@@ -310,8 +310,7 @@ class NettyServerHandler extends AbstractNettyHandler {\n       long maxConnectionAgeGraceInNanos,\n       final KeepAliveEnforcer keepAliveEnforcer,\n       boolean autoFlowControl,\n-      int maxRstCount,\n-      long maxRstPeriodNanos,\n+      RstStreamCounter rstStreamCounter,\n       Attributes eagAttributes,\n       Ticker ticker) {\n     super(\n@@ -363,12 +362,9 @@ class NettyServerHandler extends AbstractNettyHandler {\n     this.maxConnectionAgeInNanos = maxConnectionAgeInNanos;\n     this.maxConnectionAgeGraceInNanos = maxConnectionAgeGraceInNanos;\n     this.keepAliveEnforcer = checkNotNull(keepAliveEnforcer, \"keepAliveEnforcer\");\n-    this.maxRstCount = maxRstCount;\n-    this.maxRstPeriodNanos = maxRstPeriodNanos;\n+    this.rstStreamCounter = rstStreamCounter;\n     this.eagAttributes = checkNotNull(eagAttributes, \"eagAttributes\");\n-    this.ticker = checkNotNull(ticker, \"ticker\");\n \n-    this.lastRstNanoTime = ticker.read();\n     streamKey = encoder.connection().newKey();\n     this.transportListener = checkNotNull(transportListener, \"transportListener\");\n     this.streamTracerFactories = checkNotNull(streamTracerFactories, \"streamTracerFactories\");\n@@ -575,24 +571,9 @@ class NettyServerHandler extends AbstractNettyHandler {\n   }\n \n   private void onRstStreamRead(int streamId, long errorCode) throws Http2Exception {\n-    if (maxRstCount > 0) {\n-      long now = ticker.read();\n-      if (now - lastRstNanoTime > maxRstPeriodNanos) {\n-        lastRstNanoTime = now;\n-        rstCount = 1;\n-      } else {\n-        rstCount++;\n-        if (rstCount > maxRstCount) {\n-          throw new Http2Exception(Http2Error.ENHANCE_YOUR_CALM, \"too_many_rststreams\") {\n-            @SuppressWarnings(\"UnsynchronizedOverridesSynchronized\") // No memory accesses\n-            @Override\n-            public Throwable fillInStackTrace() {\n-              // Avoid the CPU cycles, since the resets may be a CPU consumption attack\n-              return this;\n-            }\n-          };\n-        }\n-      }\n+    Http2Exception tooManyRstStream = rstStreamCounter.countRstStream();\n+    if (tooManyRstStream != null) {\n+      throw tooManyRstStream;\n     }\n \n     try {\n@@ -1180,6 +1161,81 @@ class NettyServerHandler extends AbstractNettyHandler {\n     }\n   }\n \n+  private static final class Http2RstCounterEncoder extends DecoratingHttp2ConnectionEncoder {\n+    private final RstStreamCounter rstStreamCounter;\n+    private Http2LifecycleManager lifecycleManager;\n+\n+    Http2RstCounterEncoder(Http2ConnectionEncoder encoder, RstStreamCounter rstStreamCounter) {\n+      super(encoder);\n+      this.rstStreamCounter = rstStreamCounter;\n+    }\n+\n+    @Override\n+    public void lifecycleManager(Http2LifecycleManager lifecycleManager) {\n+      this.lifecycleManager = lifecycleManager;\n+      super.lifecycleManager(lifecycleManager);\n+    }\n+\n+    @Override\n+    public ChannelFuture writeRstStream(\n+        ChannelHandlerContext ctx, int streamId, long errorCode, ChannelPromise promise) {\n+      ChannelFuture future = super.writeRstStream(ctx, streamId, errorCode, promise);\n+      // We want to count \"induced\" RST_STREAM, where the server sent a reset because of a malformed\n+      // frame.\n+      boolean normalRst\n+          = errorCode == Http2Error.NO_ERROR.code() || errorCode == Http2Error.CANCEL.code();\n+      if (!normalRst) {\n+        Http2Exception tooManyRstStream = rstStreamCounter.countRstStream();\n+        if (tooManyRstStream != null) {\n+          lifecycleManager.onError(ctx, true, tooManyRstStream);\n+          ctx.close();\n+        }\n+      }\n+      return future;\n+    }\n+  }\n+\n+  private static final class RstStreamCounter {\n+    private final int maxRstCount;\n+    private final long maxRstPeriodNanos;\n+    private final Ticker ticker;\n+    private int rstCount;\n+    private long lastRstNanoTime;\n+\n+    RstStreamCounter(int maxRstCount, long maxRstPeriodNanos, Ticker ticker) {\n+      checkArgument(maxRstCount >= 0, \"maxRstCount must be non-negative: %s\", maxRstCount);\n+      this.maxRstCount = maxRstCount;\n+      this.maxRstPeriodNanos = maxRstPeriodNanos;\n+      this.ticker = checkNotNull(ticker, \"ticker\");\n+      this.lastRstNanoTime = ticker.read();\n+    }\n+\n+    /** Returns non-{@code null} when the connection should be killed by the caller. */\n+    private Http2Exception countRstStream() {\n+      if (maxRstCount == 0) {\n+        return null;\n+      }\n+      long now = ticker.read();\n+      if (now - lastRstNanoTime > maxRstPeriodNanos) {\n+        lastRstNanoTime = now;\n+        rstCount = 1;\n+      } else {\n+        rstCount++;\n+        if (rstCount > maxRstCount) {\n+          return new Http2Exception(Http2Error.ENHANCE_YOUR_CALM, \"too_many_rststreams\") {\n+            @SuppressWarnings(\"UnsynchronizedOverridesSynchronized\") // No memory accesses\n+            @Override\n+            public Throwable fillInStackTrace() {\n+              // Avoid the CPU cycles, since the resets may be a CPU consumption attack\n+              return this;\n+            }\n+          };\n+        }\n+      }\n+      return null;\n+    }\n+  }\n+\n   private static class ServerChannelLogger extends ChannelLogger {\n     private static final Logger log = Logger.getLogger(ChannelLogger.class.getName());\n \ndiff --git a/netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java b/netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java\nindex 54c1375ee..28217937a 100644\n--- a/netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java\n+++ b/netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java\n@@ -1304,6 +1304,8 @@ public class NettyServerHandlerTest extends NettyHandlerTestBase<NettyServerHand\n   }\n \n   private void rapidReset(int burstSize) throws Exception {\n+    when(streamTracerFactory.newServerStreamTracer(anyString(), any(Metadata.class)))\n+        .thenAnswer((args) -> new TestServerStreamTracer());\n     Http2Headers headers = new DefaultHttp2Headers()\n         .method(HTTP_METHOD)\n         .set(CONTENT_TYPE_HEADER, new AsciiString(\"application/grpc\", UTF_8))\n@@ -1323,6 +1325,48 @@ public class NettyServerHandlerTest extends NettyHandlerTestBase<NettyServerHand\n     }\n   }\n \n+  @Test\n+  public void maxRstCountSent_withinLimit_succeeds() throws Exception {\n+    maxRstCount = 10;\n+    maxRstPeriodNanos = TimeUnit.MILLISECONDS.toNanos(100);\n+    manualSetUp();\n+    madeYouReset(maxRstCount);\n+\n+    assertTrue(channel().isOpen());\n+  }\n+\n+  @Test\n+  public void maxRstCountSent_exceedsLimit_fails() throws Exception {\n+    maxRstCount = 10;\n+    maxRstPeriodNanos = TimeUnit.MILLISECONDS.toNanos(100);\n+    manualSetUp();\n+    assertThrows(ClosedChannelException.class, () -> madeYouReset(maxRstCount + 1));\n+\n+    assertFalse(channel().isOpen());\n+  }\n+\n+  private void madeYouReset(int burstSize) throws Exception {\n+    when(streamTracerFactory.newServerStreamTracer(anyString(), any(Metadata.class)))\n+        .thenAnswer((args) -> new TestServerStreamTracer());\n+    Http2Headers headers = new DefaultHttp2Headers()\n+        .method(HTTP_METHOD)\n+        .set(CONTENT_TYPE_HEADER, new AsciiString(\"application/grpc\", UTF_8))\n+        .set(TE_HEADER, TE_TRAILERS)\n+        .path(new AsciiString(\"/foo/bar\"));\n+    int streamId = 1;\n+    long rpcTimeNanos = maxRstPeriodNanos / 2 / burstSize;\n+    for (int period = 0; period < 3; period++) {\n+      for (int i = 0; i < burstSize; i++) {\n+        channelRead(headersFrame(streamId, headers));\n+        channelRead(windowUpdate(streamId, 0));\n+        streamId += 2;\n+        fakeClock().forwardNanos(rpcTimeNanos);\n+      }\n+      while (channel().readOutbound() != null) {}\n+      fakeClock().forwardNanos(maxRstPeriodNanos - rpcTimeNanos * burstSize + 1);\n+    }\n+  }\n+\n   private void createStream() throws Exception {\n     Http2Headers headers = new DefaultHttp2Headers()\n         .method(HTTP_METHOD)\n"}
+Hunk validation reported context mismatches even though it found 100% matching source blocks; the diagnostics show line-ending artifacts rather than semantic drift. I’m rerunning hunk validation with context revision enabled to verify the same hunks against the target ref.
+[0m⚙ [0mvalidate {"ref":"0d3e8283a8105a7bbf1bf746d96cac1e363de2e3","mode":"hunk","revise_context":true,"patch":"diff --git a/netty/src/main/java/io/grpc/netty/NettyServerHandler.java b/netty/src/main/java/io/grpc/netty/NettyServerHandler.java\nindex 668c3b5c9..48f1aae91 100644\n--- a/netty/src/main/java/io/grpc/netty/NettyServerHandler.java\n+++ b/netty/src/main/java/io/grpc/netty/NettyServerHandler.java\n@@ -60,6 +60,7 @@ import io.netty.channel.ChannelFuture;\n import io.netty.channel.ChannelFutureListener;\n import io.netty.channel.ChannelHandlerContext;\n import io.netty.channel.ChannelPromise;\n+import io.netty.handler.codec.http2.DecoratingHttp2ConnectionEncoder;\n import io.netty.handler.codec.http2.DecoratingHttp2FrameWriter;\n import io.netty.handler.codec.http2.DefaultHttp2Connection;\n import io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder;\n@@ -83,6 +84,7 @@ import io.netty.handler.codec.http2.Http2FrameWriter;\n import io.netty.handler.codec.http2.Http2Headers;\n import io.netty.handler.codec.http2.Http2HeadersDecoder;\n import io.netty.handler.codec.http2.Http2InboundFrameLogger;\n+import io.netty.handler.codec.http2.Http2LifecycleManager;\n import io.netty.handler.codec.http2.Http2OutboundFrameLogger;\n import io.netty.handler.codec.http2.Http2Settings;\n import io.netty.handler.codec.http2.Http2Stream;\n@@ -125,13 +127,11 @@ class NettyServerHandler extends AbstractNettyHandler {\n   private final long keepAliveTimeoutInNanos;\n   private final long maxConnectionAgeInNanos;\n   private final long maxConnectionAgeGraceInNanos;\n-  private final int maxRstCount;\n-  private final long maxRstPeriodNanos;\n+  private final RstStreamCounter rstStreamCounter;\n   private final List<? extends ServerStreamTracer.Factory> streamTracerFactories;\n   private final TransportTracer transportTracer;\n   private final KeepAliveEnforcer keepAliveEnforcer;\n   private final Attributes eagAttributes;\n-  private final Ticker ticker;\n   /** Incomplete attributes produced by negotiator. */\n   private Attributes negotiationAttributes;\n   private InternalChannelz.Security securityInfo;\n@@ -149,8 +149,6 @@ class NettyServerHandler extends AbstractNettyHandler {\n   private ScheduledFuture<?> maxConnectionAgeMonitor;\n   @CheckForNull\n   private GracefulShutdown gracefulShutdown;\n-  private int rstCount;\n-  private long lastRstNanoTime;\n \n   static NettyServerHandler newHandler(\n       ServerTransportListener transportListener,\n@@ -251,6 +249,12 @@ class NettyServerHandler extends AbstractNettyHandler {\n     final KeepAliveEnforcer keepAliveEnforcer = new KeepAliveEnforcer(\n         permitKeepAliveWithoutCalls, permitKeepAliveTimeInNanos, TimeUnit.NANOSECONDS);\n \n+    if (ticker == null) {\n+      ticker = Ticker.systemTicker();\n+    }\n+\n+    RstStreamCounter rstStreamCounter\n+        = new RstStreamCounter(maxRstCount, maxRstPeriodNanos, ticker);\n     // Create the local flow controller configured to auto-refill the connection window.\n     connection.local().flowController(\n         new DefaultHttp2LocalFlowController(connection, DEFAULT_WINDOW_UPDATE_RATIO, true));\n@@ -258,6 +262,7 @@ class NettyServerHandler extends AbstractNettyHandler {\n     Http2ConnectionEncoder encoder =\n         new DefaultHttp2ConnectionEncoder(connection, frameWriter);\n     encoder = new Http2ControlFrameLimitEncoder(encoder, 10000);\n+    encoder = new Http2RstCounterEncoder(encoder, rstStreamCounter);\n     Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder,\n         frameReader);\n \n@@ -266,10 +271,6 @@ class NettyServerHandler extends AbstractNettyHandler {\n     settings.maxConcurrentStreams(maxStreams);\n     settings.maxHeaderListSize(maxHeaderListSize);\n \n-    if (ticker == null) {\n-      ticker = Ticker.systemTicker();\n-    }\n-\n     return new NettyServerHandler(\n         channelUnused,\n         connection,\n@@ -286,8 +287,7 @@ class NettyServerHandler extends AbstractNettyHandler {\n         maxConnectionAgeInNanos, maxConnectionAgeGraceInNanos,\n         keepAliveEnforcer,\n         autoFlowControl,\n-        maxRstCount,\n-        maxRstPeriodNanos,\n+        rstStreamCounter,\n         eagAttributes, ticker);\n   }\n \n@@ -310,8 +310,7 @@ class NettyServerHandler extends AbstractNettyHandler {\n       long maxConnectionAgeGraceInNanos,\n       final KeepAliveEnforcer keepAliveEnforcer,\n       boolean autoFlowControl,\n-      int maxRstCount,\n-      long maxRstPeriodNanos,\n+      RstStreamCounter rstStreamCounter,\n       Attributes eagAttributes,\n       Ticker ticker) {\n     super(\n@@ -363,12 +362,9 @@ class NettyServerHandler extends AbstractNettyHandler {\n     this.maxConnectionAgeInNanos = maxConnectionAgeInNanos;\n     this.maxConnectionAgeGraceInNanos = maxConnectionAgeGraceInNanos;\n     this.keepAliveEnforcer = checkNotNull(keepAliveEnforcer, \"keepAliveEnforcer\");\n-    this.maxRstCount = maxRstCount;\n-    this.maxRstPeriodNanos = maxRstPeriodNanos;\n+    this.rstStreamCounter = rstStreamCounter;\n     this.eagAttributes = checkNotNull(eagAttributes, \"eagAttributes\");\n-    this.ticker = checkNotNull(ticker, \"ticker\");\n \n-    this.lastRstNanoTime = ticker.read();\n     streamKey = encoder.connection().newKey();\n     this.transportListener = checkNotNull(transportListener, \"transportListener\");\n     this.streamTracerFactories = checkNotNull(streamTracerFactories, \"streamTracerFactories\");\n@@ -575,24 +571,9 @@ class NettyServerHandler extends AbstractNettyHandler {\n   }\n \n   private void onRstStreamRead(int streamId, long errorCode) throws Http2Exception {\n-    if (maxRstCount > 0) {\n-      long now = ticker.read();\n-      if (now - lastRstNanoTime > maxRstPeriodNanos) {\n-        lastRstNanoTime = now;\n-        rstCount = 1;\n-      } else {\n-        rstCount++;\n-        if (rstCount > maxRstCount) {\n-          throw new Http2Exception(Http2Error.ENHANCE_YOUR_CALM, \"too_many_rststreams\") {\n-            @SuppressWarnings(\"UnsynchronizedOverridesSynchronized\") // No memory accesses\n-            @Override\n-            public Throwable fillInStackTrace() {\n-              // Avoid the CPU cycles, since the resets may be a CPU consumption attack\n-              return this;\n-            }\n-          };\n-        }\n-      }\n+    Http2Exception tooManyRstStream = rstStreamCounter.countRstStream();\n+    if (tooManyRstStream != null) {\n+      throw tooManyRstStream;\n     }\n \n     try {\n@@ -1180,6 +1161,81 @@ class NettyServerHandler extends AbstractNettyHandler {\n     }\n   }\n \n+  private static final class Http2RstCounterEncoder extends DecoratingHttp2ConnectionEncoder {\n+    private final RstStreamCounter rstStreamCounter;\n+    private Http2LifecycleManager lifecycleManager;\n+\n+    Http2RstCounterEncoder(Http2ConnectionEncoder encoder, RstStreamCounter rstStreamCounter) {\n+      super(encoder);\n+      this.rstStreamCounter = rstStreamCounter;\n+    }\n+\n+    @Override\n+    public void lifecycleManager(Http2LifecycleManager lifecycleManager) {\n+      this.lifecycleManager = lifecycleManager;\n+      super.lifecycleManager(lifecycleManager);\n+    }\n+\n+    @Override\n+    public ChannelFuture writeRstStream(\n+        ChannelHandlerContext ctx, int streamId, long errorCode, ChannelPromise promise) {\n+      ChannelFuture future = super.writeRstStream(ctx, streamId, errorCode, promise);\n+      // We want to count \"induced\" RST_STREAM, where the server sent a reset because of a malformed\n+      // frame.\n+      boolean normalRst\n+          = errorCode == Http2Error.NO_ERROR.code() || errorCode == Http2Error.CANCEL.code();\n+      if (!normalRst) {\n+        Http2Exception tooManyRstStream = rstStreamCounter.countRstStream();\n+        if (tooManyRstStream != null) {\n+          lifecycleManager.onError(ctx, true, tooManyRstStream);\n+          ctx.close();\n+        }\n+      }\n+      return future;\n+    }\n+  }\n+\n+  private static final class RstStreamCounter {\n+    private final int maxRstCount;\n+    private final long maxRstPeriodNanos;\n+    private final Ticker ticker;\n+    private int rstCount;\n+    private long lastRstNanoTime;\n+\n+    RstStreamCounter(int maxRstCount, long maxRstPeriodNanos, Ticker ticker) {\n+      checkArgument(maxRstCount >= 0, \"maxRstCount must be non-negative: %s\", maxRstCount);\n+      this.maxRstCount = maxRstCount;\n+      this.maxRstPeriodNanos = maxRstPeriodNanos;\n+      this.ticker = checkNotNull(ticker, \"ticker\");\n+      this.lastRstNanoTime = ticker.read();\n+    }\n+\n+    /** Returns non-{@code null} when the connection should be killed by the caller. */\n+    private Http2Exception countRstStream() {\n+      if (maxRstCount == 0) {\n+        return null;\n+      }\n+      long now = ticker.read();\n+      if (now - lastRstNanoTime > maxRstPeriodNanos) {\n+        lastRstNanoTime = now;\n+        rstCount = 1;\n+      } else {\n+        rstCount++;\n+        if (rstCount > maxRstCount) {\n+          return new Http2Exception(Http2Error.ENHANCE_YOUR_CALM, \"too_many_rststreams\") {\n+            @SuppressWarnings(\"UnsynchronizedOverridesSynchronized\") // No memory accesses\n+            @Override\n+            public Throwable fillInStackTrace() {\n+              // Avoid the CPU cycles, since the resets may be a CPU consumption attack\n+              return this;\n+            }\n+          };\n+        }\n+      }\n+      return null;\n+    }\n+  }\n+\n   private static class ServerChannelLogger extends ChannelLogger {\n     private static final Logger log = Logger.getLogger(ChannelLogger.class.getName());\n \ndiff --git a/netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java b/netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java\nindex 54c1375ee..28217937a 100644\n--- a/netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java\n+++ b/netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java\n@@ -1304,6 +1304,8 @@ public class NettyServerHandlerTest extends NettyHandlerTestBase<NettyServerHand\n   }\n \n   private void rapidReset(int burstSize) throws Exception {\n+    when(streamTracerFactory.newServerStreamTracer(anyString(), any(Metadata.class)))\n+        .thenAnswer((args) -> new TestServerStreamTracer());\n     Http2Headers headers = new DefaultHttp2Headers()\n         .method(HTTP_METHOD)\n         .set(CONTENT_TYPE_HEADER, new AsciiString(\"application/grpc\", UTF_8))\n@@ -1323,6 +1325,48 @@ public class NettyServerHandlerTest extends NettyHandlerTestBase<NettyServerHand\n     }\n   }\n \n+  @Test\n+  public void maxRstCountSent_withinLimit_succeeds() throws Exception {\n+    maxRstCount = 10;\n+    maxRstPeriodNanos = TimeUnit.MILLISECONDS.toNanos(100);\n+    manualSetUp();\n+    madeYouReset(maxRstCount);\n+\n+    assertTrue(channel().isOpen());\n+  }\n+\n+  @Test\n+  public void maxRstCountSent_exceedsLimit_fails() throws Exception {\n+    maxRstCount = 10;\n+    maxRstPeriodNanos = TimeUnit.MILLISECONDS.toNanos(100);\n+    manualSetUp();\n+    assertThrows(ClosedChannelException.class, () -> madeYouReset(maxRstCount + 1));\n+\n+    assertFalse(channel().isOpen());\n+  }\n+\n+  private void madeYouReset(int burstSize) throws Exception {\n+    when(streamTracerFactory.newServerStreamTracer(anyString(), any(Metadata.class)))\n+        .thenAnswer((args) -> new TestServerStreamTracer());\n+    Http2Headers headers = new DefaultHttp2Headers()\n+        .method(HTTP_METHOD)\n+        .set(CONTENT_TYPE_HEADER, new AsciiString(\"application/grpc\", UTF_8))\n+        .set(TE_HEADER, TE_TRAILERS)\n+        .path(new AsciiString(\"/foo/bar\"));\n+    int streamId = 1;\n+    long rpcTimeNanos = maxRstPeriodNanos / 2 / burstSize;\n+    for (int period = 0; period < 3; period++) {\n+      for (int i = 0; i < burstSize; i++) {\n+        channelRead(headersFrame(streamId, headers));\n+        channelRead(windowUpdate(streamId, 0));\n+        streamId += 2;\n+        fakeClock().forwardNanos(rpcTimeNanos);\n+      }\n+      while (channel().readOutbound() != null) {}\n+      fakeClock().forwardNanos(maxRstPeriodNanos - rpcTimeNanos * burstSize + 1);\n+    }\n+  }\n+\n   private void createStream() throws Exception {\n     Http2Headers headers = new DefaultHttp2Headers()\n         .method(HTTP_METHOD)\n"}
+The validate tool is still flagging the hunks despite exact source matches, likely due its patch/context handling rather than code drift. I’m checking with wider context on a representative hunk to separate format sensitivity from actual applicability.
+[0m⚙ [0mvalidate {"ref":"0d3e8283a8105a7bbf1bf746d96cac1e363de2e3","mode":"hunk","patch":"--- a/netty/src/main/java/io/grpc/netty/NettyServerHandler.java\n+++ b/netty/src/main/java/io/grpc/netty/NettyServerHandler.java\n@@ -58,10 +58,11 @@ import io.netty.buffer.ByteBufUtil;\n import io.netty.buffer.Unpooled;\n import io.netty.channel.ChannelFuture;\n import io.netty.channel.ChannelFutureListener;\n import io.netty.channel.ChannelHandlerContext;\n import io.netty.channel.ChannelPromise;\n+import io.netty.handler.codec.http2.DecoratingHttp2ConnectionEncoder;\n import io.netty.handler.codec.http2.DecoratingHttp2FrameWriter;\n import io.netty.handler.codec.http2.DefaultHttp2Connection;\n import io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder;\n import io.netty.handler.codec.http2.DefaultHttp2ConnectionEncoder;\n import io.netty.handler.codec.http2.DefaultHttp2FrameReader;\n"}
+The validation failure is because the patch was already applied in the working tree before invoking `validate`; the tool checks the working tree state despite the ref parameter. I’m reverting only my applied edits, then validating the patch against the unmodified target state.
+[0m% [0mPatch 1 file
+[0m% [0mPatch 1 file
+[0m
+[0m$ [0mgit diff --stat -- netty/src/main/java/io/grpc/netty/NettyServerHandler.java netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java
+warning: in the working copy of 'netty/src/main/java/io/grpc/netty/NettyServerHandler.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java', LF will be replaced by CRLF the next time Git touches it
+[0m
+[0m⚙ [0mvalidate {"ref":"0d3e8283a8105a7bbf1bf746d96cac1e363de2e3","mode":"hunk","patch":"diff --git a/netty/src/main/java/io/grpc/netty/NettyServerHandler.java b/netty/src/main/java/io/grpc/netty/NettyServerHandler.java\nindex 668c3b5c9..48f1aae91 100644\n--- a/netty/src/main/java/io/grpc/netty/NettyServerHandler.java\n+++ b/netty/src/main/java/io/grpc/netty/NettyServerHandler.java\n@@ -60,6 +60,7 @@ import io.netty.channel.ChannelFuture;\n import io.netty.channel.ChannelFutureListener;\n import io.netty.channel.ChannelHandlerContext;\n import io.netty.channel.ChannelPromise;\n+import io.netty.handler.codec.http2.DecoratingHttp2ConnectionEncoder;\n import io.netty.handler.codec.http2.DecoratingHttp2FrameWriter;\n import io.netty.handler.codec.http2.DefaultHttp2Connection;\n import io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder;\n@@ -83,6 +84,7 @@ import io.netty.handler.codec.http2.Http2FrameWriter;\n import io.netty.handler.codec.http2.Http2Headers;\n import io.netty.handler.codec.http2.Http2HeadersDecoder;\n import io.netty.handler.codec.http2.Http2InboundFrameLogger;\n+import io.netty.handler.codec.http2.Http2LifecycleManager;\n import io.netty.handler.codec.http2.Http2OutboundFrameLogger;\n import io.netty.handler.codec.http2.Http2Settings;\n import io.netty.handler.codec.http2.Http2Stream;\n@@ -125,13 +127,11 @@ class NettyServerHandler extends AbstractNettyHandler {\n   private final long keepAliveTimeoutInNanos;\n   private final long maxConnectionAgeInNanos;\n   private final long maxConnectionAgeGraceInNanos;\n-  private final int maxRstCount;\n-  private final long maxRstPeriodNanos;\n+  private final RstStreamCounter rstStreamCounter;\n   private final List<? extends ServerStreamTracer.Factory> streamTracerFactories;\n   private final TransportTracer transportTracer;\n   private final KeepAliveEnforcer keepAliveEnforcer;\n   private final Attributes eagAttributes;\n-  private final Ticker ticker;\n   /** Incomplete attributes produced by negotiator. */\n   private Attributes negotiationAttributes;\n   private InternalChannelz.Security securityInfo;\n@@ -149,8 +149,6 @@ class NettyServerHandler extends AbstractNettyHandler {\n   private ScheduledFuture<?> maxConnectionAgeMonitor;\n   @CheckForNull\n   private GracefulShutdown gracefulShutdown;\n-  private int rstCount;\n-  private long lastRstNanoTime;\n \n   static NettyServerHandler newHandler(\n       ServerTransportListener transportListener,\n@@ -251,6 +249,12 @@ class NettyServerHandler extends AbstractNettyHandler {\n     final KeepAliveEnforcer keepAliveEnforcer = new KeepAliveEnforcer(\n         permitKeepAliveWithoutCalls, permitKeepAliveTimeInNanos, TimeUnit.NANOSECONDS);\n \n+    if (ticker == null) {\n+      ticker = Ticker.systemTicker();\n+    }\n+\n+    RstStreamCounter rstStreamCounter\n+        = new RstStreamCounter(maxRstCount, maxRstPeriodNanos, ticker);\n     // Create the local flow controller configured to auto-refill the connection window.\n     connection.local().flowController(\n         new DefaultHttp2LocalFlowController(connection, DEFAULT_WINDOW_UPDATE_RATIO, true));\n@@ -258,6 +262,7 @@ class NettyServerHandler extends AbstractNettyHandler {\n     Http2ConnectionEncoder encoder =\n         new DefaultHttp2ConnectionEncoder(connection, frameWriter);\n     encoder = new Http2ControlFrameLimitEncoder(encoder, 10000);\n+    encoder = new Http2RstCounterEncoder(encoder, rstStreamCounter);\n     Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder,\n         frameReader);\n \n@@ -266,10 +271,6 @@ class NettyServerHandler extends AbstractNettyHandler {\n     settings.maxConcurrentStreams(maxStreams);\n     settings.maxHeaderListSize(maxHeaderListSize);\n \n-    if (ticker == null) {\n-      ticker = Ticker.systemTicker();\n-    }\n-\n     return new NettyServerHandler(\n         channelUnused,\n         connection,\n@@ -286,8 +287,7 @@ class NettyServerHandler extends AbstractNettyHandler {\n         maxConnectionAgeInNanos, maxConnectionAgeGraceInNanos,\n         keepAliveEnforcer,\n         autoFlowControl,\n-        maxRstCount,\n-        maxRstPeriodNanos,\n+        rstStreamCounter,\n         eagAttributes, ticker);\n   }\n \n@@ -310,8 +310,7 @@ class NettyServerHandler extends AbstractNettyHandler {\n       long maxConnectionAgeGraceInNanos,\n       final KeepAliveEnforcer keepAliveEnforcer,\n       boolean autoFlowControl,\n-      int maxRstCount,\n-      long maxRstPeriodNanos,\n+      RstStreamCounter rstStreamCounter,\n       Attributes eagAttributes,\n       Ticker ticker) {\n     super(\n@@ -363,12 +362,9 @@ class NettyServerHandler extends AbstractNettyHandler {\n     this.maxConnectionAgeInNanos = maxConnectionAgeInNanos;\n     this.maxConnectionAgeGraceInNanos = maxConnectionAgeGraceInNanos;\n     this.keepAliveEnforcer = checkNotNull(keepAliveEnforcer, \"keepAliveEnforcer\");\n-    this.maxRstCount = maxRstCount;\n-    this.maxRstPeriodNanos = maxRstPeriodNanos;\n+    this.rstStreamCounter = rstStreamCounter;\n     this.eagAttributes = checkNotNull(eagAttributes, \"eagAttributes\");\n-    this.ticker = checkNotNull(ticker, \"ticker\");\n \n-    this.lastRstNanoTime = ticker.read();\n     streamKey = encoder.connection().newKey();\n     this.transportListener = checkNotNull(transportListener, \"transportListener\");\n     this.streamTracerFactories = checkNotNull(streamTracerFactories, \"streamTracerFactories\");\n@@ -575,24 +571,9 @@ class NettyServerHandler extends AbstractNettyHandler {\n   }\n \n   private void onRstStreamRead(int streamId, long errorCode) throws Http2Exception {\n-    if (maxRstCount > 0) {\n-      long now = ticker.read();\n-      if (now - lastRstNanoTime > maxRstPeriodNanos) {\n-        lastRstNanoTime = now;\n-        rstCount = 1;\n-      } else {\n-        rstCount++;\n-        if (rstCount > maxRstCount) {\n-          throw new Http2Exception(Http2Error.ENHANCE_YOUR_CALM, \"too_many_rststreams\") {\n-            @SuppressWarnings(\"UnsynchronizedOverridesSynchronized\") // No memory accesses\n-            @Override\n-            public Throwable fillInStackTrace() {\n-              // Avoid the CPU cycles, since the resets may be a CPU consumption attack\n-              return this;\n-            }\n-          };\n-        }\n-      }\n+    Http2Exception tooManyRstStream = rstStreamCounter.countRstStream();\n+    if (tooManyRstStream != null) {\n+      throw tooManyRstStream;\n     }\n \n     try {\n@@ -1180,6 +1161,81 @@ class NettyServerHandler extends AbstractNettyHandler {\n     }\n   }\n \n+  private static final class Http2RstCounterEncoder extends DecoratingHttp2ConnectionEncoder {\n+    private final RstStreamCounter rstStreamCounter;\n+    private Http2LifecycleManager lifecycleManager;\n+\n+    Http2RstCounterEncoder(Http2ConnectionEncoder encoder, RstStreamCounter rstStreamCounter) {\n+      super(encoder);\n+      this.rstStreamCounter = rstStreamCounter;\n+    }\n+\n+    @Override\n+    public void lifecycleManager(Http2LifecycleManager lifecycleManager) {\n+      this.lifecycleManager = lifecycleManager;\n+      super.lifecycleManager(lifecycleManager);\n+    }\n+\n+    @Override\n+    public ChannelFuture writeRstStream(\n+        ChannelHandlerContext ctx, int streamId, long errorCode, ChannelPromise promise) {\n+      ChannelFuture future = super.writeRstStream(ctx, streamId, errorCode, promise);\n+      // We want to count \"induced\" RST_STREAM, where the server sent a reset because of a malformed\n+      // frame.\n+      boolean normalRst\n+          = errorCode == Http2Error.NO_ERROR.code() || errorCode == Http2Error.CANCEL.code();\n+      if (!normalRst) {\n+        Http2Exception tooManyRstStream = rstStreamCounter.countRstStream();\n+        if (tooManyRstStream != null) {\n+          lifecycleManager.onError(ctx, true, tooManyRstStream);\n+          ctx.close();\n+        }\n+      }\n+      return future;\n+    }\n+  }\n+\n+  private static final class RstStreamCounter {\n+    private final int maxRstCount;\n+    private final long maxRstPeriodNanos;\n+    private final Ticker ticker;\n+    private int rstCount;\n+    private long lastRstNanoTime;\n+\n+    RstStreamCounter(int maxRstCount, long maxRstPeriodNanos, Ticker ticker) {\n+      checkArgument(maxRstCount >= 0, \"maxRstCount must be non-negative: %s\", maxRstCount);\n+      this.maxRstCount = maxRstCount;\n+      this.maxRstPeriodNanos = maxRstPeriodNanos;\n+      this.ticker = checkNotNull(ticker, \"ticker\");\n+      this.lastRstNanoTime = ticker.read();\n+    }\n+\n+    /** Returns non-{@code null} when the connection should be killed by the caller. */\n+    private Http2Exception countRstStream() {\n+      if (maxRstCount == 0) {\n+        return null;\n+      }\n+      long now = ticker.read();\n+      if (now - lastRstNanoTime > maxRstPeriodNanos) {\n+        lastRstNanoTime = now;\n+        rstCount = 1;\n+      } else {\n+        rstCount++;\n+        if (rstCount > maxRstCount) {\n+          return new Http2Exception(Http2Error.ENHANCE_YOUR_CALM, \"too_many_rststreams\") {\n+            @SuppressWarnings(\"UnsynchronizedOverridesSynchronized\") // No memory accesses\n+            @Override\n+            public Throwable fillInStackTrace() {\n+              // Avoid the CPU cycles, since the resets may be a CPU consumption attack\n+              return this;\n+            }\n+          };\n+        }\n+      }\n+      return null;\n+    }\n+  }\n+\n   private static class ServerChannelLogger extends ChannelLogger {\n     private static final Logger log = Logger.getLogger(ChannelLogger.class.getName());\n \ndiff --git a/netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java b/netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java\nindex 54c1375ee..28217937a 100644\n--- a/netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java\n+++ b/netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java\n@@ -1304,6 +1304,8 @@ public class NettyServerHandlerTest extends NettyHandlerTestBase<NettyServerHand\n   }\n \n   private void rapidReset(int burstSize) throws Exception {\n+    when(streamTracerFactory.newServerStreamTracer(anyString(), any(Metadata.class)))\n+        .thenAnswer((args) -> new TestServerStreamTracer());\n     Http2Headers headers = new DefaultHttp2Headers()\n         .method(HTTP_METHOD)\n         .set(CONTENT_TYPE_HEADER, new AsciiString(\"application/grpc\", UTF_8))\n@@ -1323,6 +1325,48 @@ public class NettyServerHandlerTest extends NettyHandlerTestBase<NettyServerHand\n     }\n   }\n \n+  @Test\n+  public void maxRstCountSent_withinLimit_succeeds() throws Exception {\n+    maxRstCount = 10;\n+    maxRstPeriodNanos = TimeUnit.MILLISECONDS.toNanos(100);\n+    manualSetUp();\n+    madeYouReset(maxRstCount);\n+\n+    assertTrue(channel().isOpen());\n+  }\n+\n+  @Test\n+  public void maxRstCountSent_exceedsLimit_fails() throws Exception {\n+    maxRstCount = 10;\n+    maxRstPeriodNanos = TimeUnit.MILLISECONDS.toNanos(100);\n+    manualSetUp();\n+    assertThrows(ClosedChannelException.class, () -> madeYouReset(maxRstCount + 1));\n+\n+    assertFalse(channel().isOpen());\n+  }\n+\n+  private void madeYouReset(int burstSize) throws Exception {\n+    when(streamTracerFactory.newServerStreamTracer(anyString(), any(Metadata.class)))\n+        .thenAnswer((args) -> new TestServerStreamTracer());\n+    Http2Headers headers = new DefaultHttp2Headers()\n+        .method(HTTP_METHOD)\n+        .set(CONTENT_TYPE_HEADER, new AsciiString(\"application/grpc\", UTF_8))\n+        .set(TE_HEADER, TE_TRAILERS)\n+        .path(new AsciiString(\"/foo/bar\"));\n+    int streamId = 1;\n+    long rpcTimeNanos = maxRstPeriodNanos / 2 / burstSize;\n+    for (int period = 0; period < 3; period++) {\n+      for (int i = 0; i < burstSize; i++) {\n+        channelRead(headersFrame(streamId, headers));\n+        channelRead(windowUpdate(streamId, 0));\n+        streamId += 2;\n+        fakeClock().forwardNanos(rpcTimeNanos);\n+      }\n+      while (channel().readOutbound() != null) {}\n+      fakeClock().forwardNanos(maxRstPeriodNanos - rpcTimeNanos * burstSize + 1);\n+    }\n+  }\n+\n   private void createStream() throws Exception {\n     Http2Headers headers = new DefaultHttp2Headers()\n         .method(HTTP_METHOD)\n"}
+[0m
+[0m$ [0mgit diff --stat -- netty/src/main/java/io/grpc/netty/NettyServerHandler.java netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java
+warning: in the working copy of 'netty/src/main/java/io/grpc/netty/NettyServerHandler.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java', LF will be replaced by CRLF the next time Git touches it
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target file context
+[✓] Construct adapted backport diff
+[✓] Validate each hunk applies to target ref
+[•] Return parseable YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/netty/src/main/java/io/grpc/netty/NettyServerHandler.java b/netty/src/main/java/io/grpc/netty/NettyServerHandler.java
+    index 668c3b5c9..48f1aae91 100644
+    --- a/netty/src/main/java/io/grpc/netty/NettyServerHandler.java
+    +++ b/netty/src/main/java/io/grpc/netty/NettyServerHandler.java
+    @@ -60,6 +60,7 @@ import io.netty.channel.ChannelFuture;
+     import io.netty.channel.ChannelFutureListener;
+     import io.netty.channel.ChannelHandlerContext;
+     import io.netty.channel.ChannelPromise;
+    +import io.netty.handler.codec.http2.DecoratingHttp2ConnectionEncoder;
+     import io.netty.handler.codec.http2.DecoratingHttp2FrameWriter;
+     import io.netty.handler.codec.http2.DefaultHttp2Connection;
+     import io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder;
+    @@ -83,6 +84,7 @@ import io.netty.handler.codec.http2.Http2FrameWriter;
+     import io.netty.handler.codec.http2.Http2Headers;
+     import io.netty.handler.codec.http2.Http2HeadersDecoder;
+     import io.netty.handler.codec.http2.Http2InboundFrameLogger;
+    +import io.netty.handler.codec.http2.Http2LifecycleManager;
+     import io.netty.handler.codec.http2.Http2OutboundFrameLogger;
+     import io.netty.handler.codec.http2.Http2Settings;
+     import io.netty.handler.codec.http2.Http2Stream;
+    @@ -125,13 +127,11 @@ class NettyServerHandler extends AbstractNettyHandler {
+       private final long keepAliveTimeoutInNanos;
+       private final long maxConnectionAgeInNanos;
+       private final long maxConnectionAgeGraceInNanos;
+    -  private final int maxRstCount;
+    -  private final long maxRstPeriodNanos;
+    +  private final RstStreamCounter rstStreamCounter;
+       private final List<? extends ServerStreamTracer.Factory> streamTracerFactories;
+       private final TransportTracer transportTracer;
+       private final KeepAliveEnforcer keepAliveEnforcer;
+       private final Attributes eagAttributes;
+    -  private final Ticker ticker;
+       /** Incomplete attributes produced by negotiator. */
+       private Attributes negotiationAttributes;
+       private InternalChannelz.Security securityInfo;
+    @@ -149,8 +149,6 @@ class NettyServerHandler extends AbstractNettyHandler {
+       private ScheduledFuture<?> maxConnectionAgeMonitor;
+       @CheckForNull
+       private GracefulShutdown gracefulShutdown;
+    -  private int rstCount;
+    -  private long lastRstNanoTime;
+     
+       static NettyServerHandler newHandler(
+           ServerTransportListener transportListener,
+    @@ -251,6 +249,12 @@ class NettyServerHandler extends AbstractNettyHandler {
+         final KeepAliveEnforcer keepAliveEnforcer = new KeepAliveEnforcer(
+             permitKeepAliveWithoutCalls, permitKeepAliveTimeInNanos, TimeUnit.NANOSECONDS);
+     
+    +    if (ticker == null) {
+    +      ticker = Ticker.systemTicker();
+    +    }
+    +
+    +    RstStreamCounter rstStreamCounter
+    +        = new RstStreamCounter(maxRstCount, maxRstPeriodNanos, ticker);
+         // Create the local flow controller configured to auto-refill the connection window.
+         connection.local().flowController(
+             new DefaultHttp2LocalFlowController(connection, DEFAULT_WINDOW_UPDATE_RATIO, true));
+    @@ -258,6 +262,7 @@ class NettyServerHandler extends AbstractNettyHandler {
+         Http2ConnectionEncoder encoder =
+             new DefaultHttp2ConnectionEncoder(connection, frameWriter);
+         encoder = new Http2ControlFrameLimitEncoder(encoder, 10000);
+    +    encoder = new Http2RstCounterEncoder(encoder, rstStreamCounter);
+         Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder,
+             frameReader);
+     
+    @@ -266,10 +271,6 @@ class NettyServerHandler extends AbstractNettyHandler {
+         settings.maxConcurrentStreams(maxStreams);
+         settings.maxHeaderListSize(maxHeaderListSize);
+     
+    -    if (ticker == null) {
+    -      ticker = Ticker.systemTicker();
+    -    }
+    -
+         return new NettyServerHandler(
+             channelUnused,
+             connection,
+    @@ -286,8 +287,7 @@ class NettyServerHandler extends AbstractNettyHandler {
+             maxConnectionAgeInNanos, maxConnectionAgeGraceInNanos,
+             keepAliveEnforcer,
+             autoFlowControl,
+    -        maxRstCount,
+    -        maxRstPeriodNanos,
+    +        rstStreamCounter,
+             eagAttributes, ticker);
+       }
+     
+    @@ -310,8 +310,7 @@ class NettyServerHandler extends AbstractNettyHandler {
+           long maxConnectionAgeGraceInNanos,
+           final KeepAliveEnforcer keepAliveEnforcer,
+           boolean autoFlowControl,
+    -      int maxRstCount,
+    -      long maxRstPeriodNanos,
+    +      RstStreamCounter rstStreamCounter,
+           Attributes eagAttributes,
+           Ticker ticker) {
+         super(
+    @@ -363,12 +362,9 @@ class NettyServerHandler extends AbstractNettyHandler {
+         this.maxConnectionAgeInNanos = maxConnectionAgeInNanos;
+         this.maxConnectionAgeGraceInNanos = maxConnectionAgeGraceInNanos;
+         this.keepAliveEnforcer = checkNotNull(keepAliveEnforcer, "keepAliveEnforcer");
+    -    this.maxRstCount = maxRstCount;
+    -    this.maxRstPeriodNanos = maxRstPeriodNanos;
+    +    this.rstStreamCounter = rstStreamCounter;
+         this.eagAttributes = checkNotNull(eagAttributes, "eagAttributes");
+    -    this.ticker = checkNotNull(ticker, "ticker");
+     
+    -    this.lastRstNanoTime = ticker.read();
+         streamKey = encoder.connection().newKey();
+         this.transportListener = checkNotNull(transportListener, "transportListener");
+         this.streamTracerFactories = checkNotNull(streamTracerFactories, "streamTracerFactories");
+    @@ -575,24 +571,9 @@ class NettyServerHandler extends AbstractNettyHandler {
+       }
+     
+       private void onRstStreamRead(int streamId, long errorCode) throws Http2Exception {
+    -    if (maxRstCount > 0) {
+    -      long now = ticker.read();
+    -      if (now - lastRstNanoTime > maxRstPeriodNanos) {
+    -        lastRstNanoTime = now;
+    -        rstCount = 1;
+    -      } else {
+    -        rstCount++;
+    -        if (rstCount > maxRstCount) {
+    -          throw new Http2Exception(Http2Error.ENHANCE_YOUR_CALM, "too_many_rststreams") {
+    -            @SuppressWarnings("UnsynchronizedOverridesSynchronized") // No memory accesses
+    -            @Override
+    -            public Throwable fillInStackTrace() {
+    -              // Avoid the CPU cycles, since the resets may be a CPU consumption attack
+    -              return this;
+    -            }
+    -          };
+    -        }
+    -      }
+    +    Http2Exception tooManyRstStream = rstStreamCounter.countRstStream();
+    +    if (tooManyRstStream != null) {
+    +      throw tooManyRstStream;
+         }
+     
+         try {
+    @@ -1180,6 +1161,81 @@ class NettyServerHandler extends AbstractNettyHandler {
+         }
+       }
+     
+    +  private static final class Http2RstCounterEncoder extends DecoratingHttp2ConnectionEncoder {
+    +    private final RstStreamCounter rstStreamCounter;
+    +    private Http2LifecycleManager lifecycleManager;
+    +
+    +    Http2RstCounterEncoder(Http2ConnectionEncoder encoder, RstStreamCounter rstStreamCounter) {
+    +      super(encoder);
+    +      this.rstStreamCounter = rstStreamCounter;
+    +    }
+    +
+    +    @Override
+    +    public void lifecycleManager(Http2LifecycleManager lifecycleManager) {
+    +      this.lifecycleManager = lifecycleManager;
+    +      super.lifecycleManager(lifecycleManager);
+    +    }
+    +
+    +    @Override
+    +    public ChannelFuture writeRstStream(
+    +        ChannelHandlerContext ctx, int streamId, long errorCode, ChannelPromise promise) {
+    +      ChannelFuture future = super.writeRstStream(ctx, streamId, errorCode, promise);
+    +      // We want to count "induced" RST_STREAM, where the server sent a reset because of a malformed
+    +      // frame.
+    +      boolean normalRst
+    +          = errorCode == Http2Error.NO_ERROR.code() || errorCode == Http2Error.CANCEL.code();
+    +      if (!normalRst) {
+    +        Http2Exception tooManyRstStream = rstStreamCounter.countRstStream();
+    +        if (tooManyRstStream != null) {
+    +          lifecycleManager.onError(ctx, true, tooManyRstStream);
+    +          ctx.close();
+    +        }
+    +      }
+    +      return future;
+    +    }
+    +  }
+    +
+    +  private static final class RstStreamCounter {
+    +    private final int maxRstCount;
+    +    private final long maxRstPeriodNanos;
+    +    private final Ticker ticker;
+    +    private int rstCount;
+    +    private long lastRstNanoTime;
+    +
+    +    RstStreamCounter(int maxRstCount, long maxRstPeriodNanos, Ticker ticker) {
+    +      checkArgument(maxRstCount >= 0, "maxRstCount must be non-negative: %s", maxRstCount);
+    +      this.maxRstCount = maxRstCount;
+    +      this.maxRstPeriodNanos = maxRstPeriodNanos;
+    +      this.ticker = checkNotNull(ticker, "ticker");
+    +      this.lastRstNanoTime = ticker.read();
+    +    }
+    +
+    +    /** Returns non-{@code null} when the connection should be killed by the caller. */
+    +    private Http2Exception countRstStream() {
+    +      if (maxRstCount == 0) {
+    +        return null;
+    +      }
+    +      long now = ticker.read();
+    +      if (now - lastRstNanoTime > maxRstPeriodNanos) {
+    +        lastRstNanoTime = now;
+    +        rstCount = 1;
+    +      } else {
+    +        rstCount++;
+    +        if (rstCount > maxRstCount) {
+    +          return new Http2Exception(Http2Error.ENHANCE_YOUR_CALM, "too_many_rststreams") {
+    +            @SuppressWarnings("UnsynchronizedOverridesSynchronized") // No memory accesses
+    +            @Override
+    +            public Throwable fillInStackTrace() {
+    +              // Avoid the CPU cycles, since the resets may be a CPU consumption attack
+    +              return this;
+    +            }
+    +          };
+    +        }
+    +      }
+    +      return null;
+    +    }
+    +  }
+    +
+       private static class ServerChannelLogger extends ChannelLogger {
+         private static final Logger log = Logger.getLogger(ChannelLogger.class.getName());
+     
+    diff --git a/netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java b/netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java
+    index 54c1375ee..28217937a 100644
+    --- a/netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java
+    +++ b/netty/src/test/java/io/grpc/netty/NettyServerHandlerTest.java
+    @@ -1304,6 +1304,8 @@ public class NettyServerHandlerTest extends NettyHandlerTestBase<NettyServerHand
+       }
+     
+       private void rapidReset(int burstSize) throws Exception {
+    +    when(streamTracerFactory.newServerStreamTracer(anyString(), any(Metadata.class)))
+    +        .thenAnswer((args) -> new TestServerStreamTracer());
+         Http2Headers headers = new DefaultHttp2Headers()
+             .method(HTTP_METHOD)
+             .set(CONTENT_TYPE_HEADER, new AsciiString("application/grpc", UTF_8))
+    @@ -1323,6 +1325,48 @@ public class NettyServerHandlerTest extends NettyHandlerTestBase<NettyServerHand
+         }
+       }
+     
+    +  @Test
+    +  public void maxRstCountSent_withinLimit_succeeds() throws Exception {
+    +    maxRstCount = 10;
+    +    maxRstPeriodNanos = TimeUnit.MILLISECONDS.toNanos(100);
+    +    manualSetUp();
+    +    madeYouReset(maxRstCount);
+    +
+    +    assertTrue(channel().isOpen());
+    +  }
+    +
+    +  @Test
+    +  public void maxRstCountSent_exceedsLimit_fails() throws Exception {
+    +    maxRstCount = 10;
+    +    maxRstPeriodNanos = TimeUnit.MILLISECONDS.toNanos(100);
+    +    manualSetUp();
+    +    assertThrows(ClosedChannelException.class, () -> madeYouReset(maxRstCount + 1));
+    +
+    +    assertFalse(channel().isOpen());
+    +  }
+    +
+    +  private void madeYouReset(int burstSize) throws Exception {
+    +    when(streamTracerFactory.newServerStreamTracer(anyString(), any(Metadata.class)))
+    +        .thenAnswer((args) -> new TestServerStreamTracer());
+    +    Http2Headers headers = new DefaultHttp2Headers()
+    +        .method(HTTP_METHOD)
+    +        .set(CONTENT_TYPE_HEADER, new AsciiString("application/grpc", UTF_8))
+    +        .set(TE_HEADER, TE_TRAILERS)
+    +        .path(new AsciiString("/foo/bar"));
+    +    int streamId = 1;
+    +    long rpcTimeNanos = maxRstPeriodNanos / 2 / burstSize;
+    +    for (int period = 0; period < 3; period++) {
+    +      for (int i = 0; i < burstSize; i++) {
+    +        channelRead(headersFrame(streamId, headers));
+    +        channelRead(windowUpdate(streamId, 0));
+    +        streamId += 2;
+    +        fakeClock().forwardNanos(rpcTimeNanos);
+    +      }
+    +      while (channel().readOutbound() != null) {}
+    +      fakeClock().forwardNanos(maxRstPeriodNanos - rpcTimeNanos * burstSize + 1);
+    +    }
+    +  }
+    +
+       private void createStream() throws Exception {
+         Http2Headers headers = new DefaultHttp2Headers()
+             .method(HTTP_METHOD)
+  notes: >
+    Direct Type-I backport of the reset counting change; hunk validation succeeded against the target ref and full validation was intentionally skipped.
+```
+
+--- END CLI OUTPUT ---
+[14:27:39]   Done in 520.8s | status=success

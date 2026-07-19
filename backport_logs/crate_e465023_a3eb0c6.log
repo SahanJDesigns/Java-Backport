@@ -1,0 +1,244 @@
+[11:31:14] === Row 2: crate  e4650232 -> a3eb0c6d  [TYPE-II] ===
+[11:31:14]   Resolving parent of backport commit a3eb0c6d...
+[11:31:14]   Backport parent (target ref): 719da7fe63d79c35ed222c6531e1ecd838512bbe
+[11:31:14]   Extracting new-version patch for e4650232...
+[11:31:14]   New-version patch size: 8933 chars
+[11:31:14]   Checking out backport parent 719da7fe...
+[11:31:14]   Invoking OpenCode CLI (12789 chars)...
+[11:31:14]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the 5.6-side context for each changed area, then build and hunk-validate a minimal patch against the specified parent ref without switching refs.
+[0m# [0mTodos
+[•] Inspect original commit metadata and locate corresponding 5.6 code
+[ ] Construct adapted unified diff patch
+[ ] Validate each patch hunk against target ref
+[ ] Return parseable YAML result
+[0m
+[0m⚙ [0mgit_show {"ref":"e465023281585265d178276c9d4c3ccee298fe7b"}
+[0m⚙ [0mlocate_symbol {"ref":"719da7fe63d79c35ed222c6531e1ecd838512bbe","symbol":"DocTableInfoFactory"}
+[0m⚙ [0mlocate_symbol {"ref":"719da7fe63d79c35ed222c6531e1ecd838512bbe","symbol":"PartitionedTableIntegrationTest"}
+[0m⚙ [0mlocate_symbol {"ref":"719da7fe63d79c35ed222c6531e1ecd838512bbe","symbol":"DocTableInfo"}
+[0m⚙ [0mlocate_symbol {"ref":"719da7fe63d79c35ed222c6531e1ecd838512bbe","symbol":"DeletePlannerTest"}
+[0m⚙ [0mlocate_symbol {"ref":"719da7fe63d79c35ed222c6531e1ecd838512bbe","symbol":"SysShardsTest"}
+The original commit makes table/index resolution strict by removing orphaned-partition fallback behavior, deletes tests that depended on that fallback, and adds a `_all` delete planning regression test. A stale `.git/index.lock` is blocking some ref-based helper tools, so I’ll use the checked-out tree plus non-mutating reads/searches for context and continue validating via `validate`.
+[0m→ [0mRead server/src/test/java/io/crate/integrationtests/SysShardsTest.java[90m [offset=40, limit=40][0m
+[0m→ [0mRead server/src/main/java/io/crate/metadata/doc/DocTableInfoFactory.java[90m [offset=115, limit=70][0m
+[0m→ [0mRead server/src/test/java/io/crate/integrationtests/SysShardsTest.java[90m [offset=350, limit=60][0m
+[0m→ [0mRead server/src/test/java/io/crate/planner/DeletePlannerTest.java[90m [offset=20, limit=110][0m
+[0m→ [0mRead server/src/main/java/io/crate/metadata/doc/DocTableInfo.java[90m [offset=380, limit=80][0m
+[0m→ [0mRead server/src/test/java/io/crate/integrationtests/PartitionedTableIntegrationTest.java[90m [offset=50, limit=40][0m
+[0m→ [0mRead server/src/test/java/io/crate/integrationtests/PartitionedTableIntegrationTest.java[90m [offset=2010, limit=50][0m
+The equivalent code exists at the same paths in 5.6. The only API adaptation needed is in `DeletePlannerTest`: this branch imports `org.assertj.core.api.Assertions` rather than static `assertThatThrownBy`, so the added assertion should use `Assertions.assertThatThrownBy`.
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/metadata/doc/DocTableInfo.java","start_line":420,"end_line":438,"start_commit":"719da7fe63d79c35ed222c6531e1ecd838512bbe","end_commit":"719da7fe63d79c35ed222c6531e1ecd838512bbe"}
+[0m⚙ [0mviewcode {"ref":"719da7fe63d79c35ed222c6531e1ecd838512bbe","path":"server/src/main/java/io/crate/metadata/doc/DocTableInfo.java","startline":420,"endline":438}
+[0m⚙ [0mviewcode {"ref":"719da7fe63d79c35ed222c6531e1ecd838512bbe","path":"server/src/main/java/io/crate/metadata/doc/DocTableInfoFactory.java","startline":138,"endline":160}
+[0m⚙ [0mgit_history {"filepath":"server/src/test/java/io/crate/planner/DeletePlannerTest.java","start_line":103,"end_line":116,"start_commit":"719da7fe63d79c35ed222c6531e1ecd838512bbe","end_commit":"719da7fe63d79c35ed222c6531e1ecd838512bbe"}
+I’m constructing the backport as a direct deletion of orphan fallback code/tests plus the regression test, with a branch-specific AssertJ invocation in `DeletePlannerTest`.
+[0m⚙ [0mvalidate {"ref":"719da7fe63d79c35ed222c6531e1ecd838512bbe","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java b/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java\n--- a/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java\n+++ b/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java\n@@ -422,17 +422,7 @@ public class DocTableInfo implements TableInfo, ShardedTable, StoredTable {\n         if (!isPartitioned) {\n             IndexMetadata index = metadata.index(ident.indexNameOrAlias());\n             if (index == null) {\n-                if (concreteIndices.length > 0) {\n-                    index = metadata.index(concreteIndices[0]);\n-                    LOGGER.info(\n-                        \"Found indices={} for relation={} without index template. Orphaned partition?\",\n-                        concreteIndices,\n-                        ident\n-                    );\n-                }\n-                if (index == null) {\n-                    throw new RelationUnknown(ident);\n-                }\n+                throw new RelationUnknown(ident);\n             }\n             if (concreteIndices.length == 0) {\n                 throw new RelationUnknown(ident);\n"}
+[0m⚙ [0mvalidate {"ref":"719da7fe63d79c35ed222c6531e1ecd838512bbe","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/metadata/doc/DocTableInfoFactory.java b/server/src/main/java/io/crate/metadata/doc/DocTableInfoFactory.java\n--- a/server/src/main/java/io/crate/metadata/doc/DocTableInfoFactory.java\n+++ b/server/src/main/java/io/crate/metadata/doc/DocTableInfoFactory.java\n@@ -138,17 +138,7 @@ public class DocTableInfoFactory {\n         if (indexTemplateMetadata == null) {\n             IndexMetadata index = metadata.index(relation.indexNameOrAlias());\n             if (index == null) {\n-                if (concreteIndices.length > 0) {\n-                    index = metadata.index(concreteIndices[0]);\n-                    LOGGER.info(\n-                        \"Found indices={} for relation={} without index template. Orphaned partition?\",\n-                        concreteIndices,\n-                        relation\n-                    );\n-                }\n-                if (index == null) {\n-                    throw new RelationUnknown(relation);\n-                }\n+                throw new RelationUnknown(relation);\n             }\n             tableParameters = index.getSettings();\n             versionCreated = IndexMetadata.SETTING_INDEX_VERSION_CREATED.get(tableParameters);\n"}
+The first two production-code hunks apply cleanly against the target ref. I’ll validate the import/test removal hunks and the branch-adapted delete planner test next.
+[0m⚙ [0mvalidate {"ref":"719da7fe63d79c35ed222c6531e1ecd838512bbe","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/integrationtests/PartitionedTableIntegrationTest.java b/server/src/test/java/io/crate/integrationtests/PartitionedTableIntegrationTest.java\n--- a/server/src/test/java/io/crate/integrationtests/PartitionedTableIntegrationTest.java\n+++ b/server/src/test/java/io/crate/integrationtests/PartitionedTableIntegrationTest.java\n@@ -60,7 +60,6 @@ import java.util.Map;\n \n import org.elasticsearch.Version;\n import org.elasticsearch.action.admin.cluster.state.ClusterStateRequest;\n-import org.elasticsearch.action.admin.indices.template.delete.DeleteIndexTemplateRequest;\n import org.elasticsearch.action.admin.indices.template.get.GetIndexTemplatesRequest;\n import org.elasticsearch.action.admin.indices.template.get.GetIndexTemplatesResponse;\n import org.elasticsearch.cluster.ClusterState;\n@@ -73,7 +72,6 @@ import org.elasticsearch.common.xcontent.DeprecationHandler;\n import org.elasticsearch.common.xcontent.NamedXContentRegistry;\n import org.elasticsearch.common.xcontent.json.JsonXContent;\n import org.elasticsearch.test.IntegTestCase;\n-import org.hamcrest.CoreMatchers;\n import org.hamcrest.Matchers;\n import org.hamcrest.core.Is;\n import org.junit.After;\n@@ -2030,24 +2028,6 @@ public class PartitionedTableIntegrationTest extends IntegTestCase {\n         assertThat(response.rowCount(), is(lessThanOrEqualTo(1L)));\n     }\n \n-    @Test\n-    public void testDeleteOrphanedPartitions() throws Throwable {\n-        execute(\"create table foo (name string, p string) partitioned by (p) with (number_of_replicas=0, refresh_interval = 0)\");\n-        ensureYellow();\n-        execute(\"insert into foo (name, p) values (?, ?)\", new Object[]{\"Marvin\", 1});\n-        execute(\"refresh table foo\");\n-\n-        String templateName = PartitionName.templateName(sqlExecutor.getCurrentSchema(), \"foo\");\n-        client().admin().indices().deleteTemplate(new DeleteIndexTemplateRequest(templateName)).get();\n-        waitNoPendingTasksOnAll();\n-        execute(\"select * from sys.shards where table_name = 'foo'\");\n-        assertThat(response.rowCount(), Matchers.greaterThan(0L));\n-        execute(\"drop table foo\");\n-\n-        execute(\"select * from sys.shards where table_name = 'foo'\");\n-        assertThat(response.rowCount(), CoreMatchers.is(0L));\n-    }\n-\n     @Test\n     public void testAlterTableAfterDeleteDoesNotAttemptToAlterDeletedPartitions() throws Exception {\n         execute(\"create table t (name string, p string) partitioned by (p)\");\n"}
+[0m⚙ [0mvalidate {"ref":"719da7fe63d79c35ed222c6531e1ecd838512bbe","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/integrationtests/SysShardsTest.java b/server/src/test/java/io/crate/integrationtests/SysShardsTest.java\n--- a/server/src/test/java/io/crate/integrationtests/SysShardsTest.java\n+++ b/server/src/test/java/io/crate/integrationtests/SysShardsTest.java\n@@ -46,10 +46,8 @@ import java.nio.file.Path;\n import java.util.Arrays;\n import java.util.List;\n import java.util.Map;\n-import java.util.concurrent.TimeUnit;\n \n import org.apache.lucene.util.Version;\n-import org.elasticsearch.action.admin.indices.template.delete.DeleteIndexTemplateRequest;\n import org.elasticsearch.cluster.block.ClusterBlockException;\n import org.elasticsearch.cluster.metadata.IndexMetadata;\n import org.elasticsearch.cluster.metadata.Metadata;\n@@ -59,7 +57,6 @@ import org.junit.Before;\n import org.junit.Test;\n \n import io.crate.exceptions.OperationOnInaccessibleRelationException;\n-import io.crate.metadata.PartitionName;\n import io.crate.testing.Asserts;\n import io.crate.testing.SQLResponse;\n import io.crate.testing.TestingHelpers;\n@@ -378,33 +375,6 @@ public class SysShardsTest extends IntegTestCase {\n         assertEquals(\"node_s0\", fullNode.get(\"name\"));\n     }\n \n-    @Test\n-    public void testOrphanedPartitionExpression() throws Exception {\n-        try {\n-            execute(\"create table c.orphan_test (id int primary key, p string primary key) \" +\n-                    \"partitioned by (p) \" +\n-                    \"clustered into 1 shards \" +\n-                    \"with (number_of_replicas = 0)\"\n-            );\n-            execute(\"insert into c.orphan_test (id, p) values (1, 'foo')\");\n-            ensureYellow();\n-\n-            SQLResponse response = execute(\n-                \"select orphan_partition from sys.shards where table_name = 'orphan_test'\");\n-            assertThat(TestingHelpers.printedTable(response.rows()), is(\"false\\n\"));\n-\n-            client().admin().indices()\n-                .deleteTemplate(new DeleteIndexTemplateRequest(PartitionName.templateName(\"c\", \"orphan_test\")))\n-                .get(1, TimeUnit.SECONDS);\n-\n-            response = execute(\n-                \"select orphan_partition from sys.shards where table_name = 'orphan_test'\");\n-            assertThat(TestingHelpers.printedTable(response.rows()), is(\"true\\n\"));\n-        } finally {\n-            execute(\"drop table c.orphan_test\");\n-        }\n-    }\n-\n     @Test\n     public void testSelectNodeSysExpressionWithUnassignedShards() throws Exception {\n         try {\n"}
+The integration-test removal hunks also apply cleanly. The final test hunk uses the existing `Assertions` import style on 5.6, avoiding an unnecessary static import change.
+[0m⚙ [0mvalidate {"ref":"719da7fe63d79c35ed222c6531e1ecd838512bbe","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/planner/DeletePlannerTest.java b/server/src/test/java/io/crate/planner/DeletePlannerTest.java\n--- a/server/src/test/java/io/crate/planner/DeletePlannerTest.java\n+++ b/server/src/test/java/io/crate/planner/DeletePlannerTest.java\n@@ -35,6 +35,7 @@ import org.junit.Test;\n \n import io.crate.analyze.TableDefinitions;\n import io.crate.data.Row;\n+import io.crate.exceptions.RelationUnknown;\n import io.crate.exceptions.VersioningValidationException;\n import io.crate.expression.symbol.ParameterSymbol;\n import io.crate.expression.symbol.Symbol;\n@@ -113,4 +114,10 @@ public class DeletePlannerTest extends CrateDummyClusterServiceUnitTest {\n             .isExactlyInstanceOf(VersioningValidationException.class)\n             .hasMessageContaining(VersioningValidationException.SEQ_NO_AND_PRIMARY_TERM_USAGE_MSG);\n     }\n+\n+    @Test\n+    public void test_cannot_delete_from__all() throws Exception {\n+        Assertions.assertThatThrownBy(() -> e.plan(\"delete from _all\"))\n+            .isExactlyInstanceOf(RelationUnknown.class);\n+    }\n }\n"}
+All five hunks apply cleanly in `mode=hunk` against `719da7fe63d79c35ed222c6531e1ecd838512bbe`. Per instructions, I’m skipping full validation and returning the YAML.
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and locate corresponding 5.6 code
+[✓] Construct adapted unified diff patch
+[✓] Validate each patch hunk against target ref
+[•] Return parseable YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java b/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java
+    --- a/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java
+    +++ b/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java
+    @@ -422,17 +422,7 @@ public class DocTableInfo implements TableInfo, ShardedTable, StoredTable {
+             if (!isPartitioned) {
+                 IndexMetadata index = metadata.index(ident.indexNameOrAlias());
+                 if (index == null) {
+    -                if (concreteIndices.length > 0) {
+    -                    index = metadata.index(concreteIndices[0]);
+    -                    LOGGER.info(
+    -                        "Found indices={} for relation={} without index template. Orphaned partition?",
+    -                        concreteIndices,
+    -                        ident
+    -                    );
+    -                }
+    -                if (index == null) {
+    -                    throw new RelationUnknown(ident);
+    -                }
+    +                throw new RelationUnknown(ident);
+                 }
+                 if (concreteIndices.length == 0) {
+                     throw new RelationUnknown(ident);
+    diff --git a/server/src/main/java/io/crate/metadata/doc/DocTableInfoFactory.java b/server/src/main/java/io/crate/metadata/doc/DocTableInfoFactory.java
+    --- a/server/src/main/java/io/crate/metadata/doc/DocTableInfoFactory.java
+    +++ b/server/src/main/java/io/crate/metadata/doc/DocTableInfoFactory.java
+    @@ -138,17 +138,7 @@ public class DocTableInfoFactory {
+             if (indexTemplateMetadata == null) {
+                 IndexMetadata index = metadata.index(relation.indexNameOrAlias());
+                 if (index == null) {
+    -                if (concreteIndices.length > 0) {
+    -                    index = metadata.index(concreteIndices[0]);
+    -                    LOGGER.info(
+    -                        "Found indices={} for relation={} without index template. Orphaned partition?",
+    -                        concreteIndices,
+    -                        relation
+    -                    );
+    -                }
+    -                if (index == null) {
+    -                    throw new RelationUnknown(relation);
+    -                }
+    +                throw new RelationUnknown(relation);
+                 }
+                 tableParameters = index.getSettings();
+                 versionCreated = IndexMetadata.SETTING_INDEX_VERSION_CREATED.get(tableParameters);
+    diff --git a/server/src/test/java/io/crate/integrationtests/PartitionedTableIntegrationTest.java b/server/src/test/java/io/crate/integrationtests/PartitionedTableIntegrationTest.java
+    --- a/server/src/test/java/io/crate/integrationtests/PartitionedTableIntegrationTest.java
+    +++ b/server/src/test/java/io/crate/integrationtests/PartitionedTableIntegrationTest.java
+    @@ -60,7 +60,6 @@ import java.util.Map;
+     
+     import org.elasticsearch.Version;
+     import org.elasticsearch.action.admin.cluster.state.ClusterStateRequest;
+    -import org.elasticsearch.action.admin.indices.template.delete.DeleteIndexTemplateRequest;
+     import org.elasticsearch.action.admin.indices.template.get.GetIndexTemplatesRequest;
+     import org.elasticsearch.action.admin.indices.template.get.GetIndexTemplatesResponse;
+     import org.elasticsearch.cluster.ClusterState;
+    @@ -73,7 +72,6 @@ import org.elasticsearch.common.xcontent.DeprecationHandler;
+     import org.elasticsearch.common.xcontent.NamedXContentRegistry;
+     import org.elasticsearch.common.xcontent.json.JsonXContent;
+     import org.elasticsearch.test.IntegTestCase;
+    -import org.hamcrest.CoreMatchers;
+     import org.hamcrest.Matchers;
+     import org.hamcrest.core.Is;
+     import org.junit.After;
+    @@ -2030,24 +2028,6 @@ public class PartitionedTableIntegrationTest extends IntegTestCase {
+             assertThat(response.rowCount(), is(lessThanOrEqualTo(1L)));
+         }
+     
+    -    @Test
+    -    public void testDeleteOrphanedPartitions() throws Throwable {
+    -        execute("create table foo (name string, p string) partitioned by (p) with (number_of_replicas=0, refresh_interval = 0)");
+    -        ensureYellow();
+    -        execute("insert into foo (name, p) values (?, ?)", new Object[]{"Marvin", 1});
+    -        execute("refresh table foo");
+    -
+    -        String templateName = PartitionName.templateName(sqlExecutor.getCurrentSchema(), "foo");
+    -        client().admin().indices().deleteTemplate(new DeleteIndexTemplateRequest(templateName)).get();
+    -        waitNoPendingTasksOnAll();
+    -        execute("select * from sys.shards where table_name = 'foo'");
+    -        assertThat(response.rowCount(), Matchers.greaterThan(0L));
+    -        execute("drop table foo");
+    -
+    -        execute("select * from sys.shards where table_name = 'foo'");
+    -        assertThat(response.rowCount(), CoreMatchers.is(0L));
+    -    }
+    -
+         @Test
+         public void testAlterTableAfterDeleteDoesNotAttemptToAlterDeletedPartitions() throws Exception {
+             execute("create table t (name string, p string) partitioned by (p)");
+    diff --git a/server/src/test/java/io/crate/integrationtests/SysShardsTest.java b/server/src/test/java/io/crate/integrationtests/SysShardsTest.java
+    --- a/server/src/test/java/io/crate/integrationtests/SysShardsTest.java
+    +++ b/server/src/test/java/io/crate/integrationtests/SysShardsTest.java
+    @@ -46,10 +46,8 @@ import java.nio.file.Path;
+     import java.util.Arrays;
+     import java.util.List;
+     import java.util.Map;
+    -import java.util.concurrent.TimeUnit;
+     
+     import org.apache.lucene.util.Version;
+    -import org.elasticsearch.action.admin.indices.template.delete.DeleteIndexTemplateRequest;
+     import org.elasticsearch.cluster.block.ClusterBlockException;
+     import org.elasticsearch.cluster.metadata.IndexMetadata;
+     import org.elasticsearch.cluster.metadata.Metadata;
+    @@ -59,7 +57,6 @@ import org.junit.Before;
+     import org.junit.Test;
+     
+     import io.crate.exceptions.OperationOnInaccessibleRelationException;
+    -import io.crate.metadata.PartitionName;
+     import io.crate.testing.Asserts;
+     import io.crate.testing.SQLResponse;
+     import io.crate.testing.TestingHelpers;
+    @@ -378,33 +375,6 @@ public class SysShardsTest extends IntegTestCase {
+             assertEquals("node_s0", fullNode.get("name"));
+         }
+     
+    -    @Test
+    -    public void testOrphanedPartitionExpression() throws Exception {
+    -        try {
+    -            execute("create table c.orphan_test (id int primary key, p string primary key) " +
+    -                    "partitioned by (p) " +
+    -                    "clustered into 1 shards " +
+    -                    "with (number_of_replicas = 0)"
+    -            );
+    -            execute("insert into c.orphan_test (id, p) values (1, 'foo')");
+    -            ensureYellow();
+    -
+    -            SQLResponse response = execute(
+    -                "select orphan_partition from sys.shards where table_name = 'orphan_test'");
+    -            assertThat(TestingHelpers.printedTable(response.rows()), is("false\n"));
+    -
+    -            client().admin().indices()
+    -                .deleteTemplate(new DeleteIndexTemplateRequest(PartitionName.templateName("c", "orphan_test")))
+    -                .get(1, TimeUnit.SECONDS);
+    -
+    -            response = execute(
+    -                "select orphan_partition from sys.shards where table_name = 'orphan_test'");
+    -            assertThat(TestingHelpers.printedTable(response.rows()), is("true\n"));
+    -        } finally {
+    -            execute("drop table c.orphan_test");
+    -        }
+    -    }
+    -
+         @Test
+         public void testSelectNodeSysExpressionWithUnassignedShards() throws Exception {
+             try {
+    diff --git a/server/src/test/java/io/crate/planner/DeletePlannerTest.java b/server/src/test/java/io/crate/planner/DeletePlannerTest.java
+    --- a/server/src/test/java/io/crate/planner/DeletePlannerTest.java
+    +++ b/server/src/test/java/io/crate/planner/DeletePlannerTest.java
+    @@ -35,6 +35,7 @@ import org.junit.Test;
+     
+     import io.crate.analyze.TableDefinitions;
+     import io.crate.data.Row;
+    +import io.crate.exceptions.RelationUnknown;
+     import io.crate.exceptions.VersioningValidationException;
+     import io.crate.expression.symbol.ParameterSymbol;
+     import io.crate.expression.symbol.Symbol;
+    @@ -113,4 +114,10 @@ public class DeletePlannerTest extends CrateDummyClusterServiceUnitTest {
+                 .isExactlyInstanceOf(VersioningValidationException.class)
+                 .hasMessageContaining(VersioningValidationException.SEQ_NO_AND_PRIMARY_TERM_USAGE_MSG);
+         }
+    +
+    +    @Test
+    +    public void test_cannot_delete_from__all() throws Exception {
+    +        Assertions.assertThatThrownBy(() -> e.plan("delete from _all"))
+    +            .isExactlyInstanceOf(RelationUnknown.class);
+    +    }
+     }
+  notes: >
+    Backported strict table/index resolving and related test changes to 5.6; each hunk validated cleanly, with DeletePlannerTest adapted to the branch's existing AssertJ import style.
+```
+
+--- END CLI OUTPUT ---
+[11:34:13]   Done in 179.4s | status=success
+[12:53:15] === Row 33: crate  e4650232 -> a3eb0c6d  [TYPE-II] ===
+[12:53:15]   Resolving parent of backport commit a3eb0c6d...
+[12:53:15]   Backport parent (target ref): 719da7fe63d79c35ed222c6531e1ecd838512bbe
+[12:53:15]   Extracting new-version patch for e4650232...
+[12:53:15]   New-version patch size: 8933 chars
+[12:53:15]   Checking out backport parent 719da7fe...
+[12:53:15]   ERROR: Could not checkout backport parent 719da7fe63d79c35ed222c6531e1ecd838512bbe: error: Your local changes to the following files would be overwritten by checkout:
+	docs/appendices/release-notes/5.5.3.rst
+	server/src/main/java/io/crate/expression/tablefunctions/UnnestFunction.java
+	server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java
+	server/src/test/java/io/crate/integrationtests/TransportSQLActionSingleNodeTest.java
+Please commit your changes or stash them before you switch branches.
+Aborting

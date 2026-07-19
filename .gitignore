@@ -18,3 +18,22 @@ gradle-cache/
 .DS_Store
 *.swp
 *.swo
+
+# Cloned repositories
+crate/
+druid/
+elasticsearch/
+hadoop/
+jdk8u-dev/
+jdk11u-dev/
+jdk17u-dev/
+jdk21u-dev/
+jdk25u-dev/
+graylog2-server/
+graylog/
+hibernate-orm/
+spring-framework/
+logstash/
+hbase/
+grpc-java/
+sql/

@@ -1,0 +1,442 @@
+[06:55:24] === Row 4: crate  0e8b8fc3 -> cf9a4b14  [TYPE-II] ===
+[06:55:24]   Resolving parent of backport commit cf9a4b14...
+[06:55:24]   Backport parent (target ref): 7e0562ab10bb8dc67aaf7a73f89bce9bcb37cafb
+[06:55:24]   Extracting new-version patch for 0e8b8fc3...
+[06:55:24]   New-version patch size: 5149 chars
+[06:55:24]   Checking out backport parent 7e0562ab...
+[06:55:25]   Invoking OpenCode CLI (9238 chars)...
+[06:55:25]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the target 5.9 context for each changed location, then build and validate a minimal backport patch before applying and committing it.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target branch code context
+[ ] Construct and hunk-validate backport patch
+[ ] Run full validation
+[ ] Apply patch and commit result
+[0m
+[0m⚙ [0mgit_show {"ref":"0e8b8fc34bc388e70b9f48e14cd256c54a15d37c"}
+[0m⚙ [0mlocate_symbol {"ref":"7e0562ab10bb8dc67aaf7a73f89bce9bcb37cafb","symbol":"MappingUtil"}
+[0m⚙ [0mlocate_symbol {"ref":"7e0562ab10bb8dc67aaf7a73f89bce9bcb37cafb","symbol":"GeneratedReference"}
+[0m⚙ [0mlocate_symbol {"ref":"7e0562ab10bb8dc67aaf7a73f89bce9bcb37cafb","symbol":"DocTableInfo"}
+[0m⚙ [0mlocate_symbol {"ref":"7e0562ab10bb8dc67aaf7a73f89bce9bcb37cafb","symbol":"DropColumnTaskTest"}
+The symbol lookup hit a stale `.git/index.lock`, likely from a previous crashed git operation. I’ll check whether any git process is active before removing only the lock file so validation tools can run.
+[0m
+[0m$ [0mgit status --short
+?? tags
+[0m
+[0m$ [0mGet-Process git -ErrorAction SilentlyContinue
+(no output)
+[0m
+No active git process is present and `git status` works; the earlier lock appears transient. The only existing untracked item is `tags`, which I won’t touch.
+[0m⚙ [0mviewcode {"ref":"7e0562ab10bb8dc67aaf7a73f89bce9bcb37cafb","path":"server/src/main/java/io/crate/metadata/GeneratedReference.java","startline":220,"endline":240}
+[0m⚙ [0mviewcode {"ref":"7e0562ab10bb8dc67aaf7a73f89bce9bcb37cafb","path":"server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java","startline":270,"endline":305}
+[0m⚙ [0mviewcode {"ref":"7e0562ab10bb8dc67aaf7a73f89bce9bcb37cafb","path":"server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java","startline":60,"endline":120}
+[0m⚙ [0mviewcode {"ref":"7e0562ab10bb8dc67aaf7a73f89bce9bcb37cafb","path":"server/src/main/java/io/crate/metadata/doc/DocTableInfo.java","startline":232,"endline":252}
+[0m⚙ [0mviewcode {"ref":"7e0562ab10bb8dc67aaf7a73f89bce9bcb37cafb","path":"docs/appendices/release-notes/5.9.3.rst","startline":40,"endline":60}
+The target branch already has the test body shape around `DropColumnTaskTest`; I’m checking whether the generated-column test is already present or whether only context shifted.
+[0m⚙ [0mgit_history {"filepath":"server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java","start_line":50,"end_line":85,"start_commit":"7e0562ab10bb8dc67aaf7a73f89bce9bcb37cafb","end_commit":"0e8b8fc34bc388e70b9f48e14cd256c54a15d37c"}
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/metadata/GeneratedReference.java","start_line":232,"end_line":235,"start_commit":"7e0562ab10bb8dc67aaf7a73f89bce9bcb37cafb","end_commit":"0e8b8fc34bc388e70b9f48e14cd256c54a15d37c"}
+[0m⚙ [0mviewcode {"ref":"7e0562ab10bb8dc67aaf7a73f89bce9bcb37cafb","path":"server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java","startline":1,"endline":75}
+The viewed 5.9 test file currently only has the simple-column test in that location, so the generated-column test still needs to be inserted after it.
+[0m⚙ [0mlocate_symbol {"ref":"7e0562ab10bb8dc67aaf7a73f89bce9bcb37cafb","symbol":"GeneratedReference"}
+[0m⚙ [0mlocate_symbol {"ref":"7e0562ab10bb8dc67aaf7a73f89bce9bcb37cafb","symbol":"DocTableInfo"}
+[0m✱ [0mGrep "test_can_drop_generated_column|GENERATED ALWAYS"[90m in server/src/test/java/io/crate/execution/ddl/tables · 0 matches[0m
+[0m⚙ [0mlocate_symbol {"ref":"7e0562ab10bb8dc67aaf7a73f89bce9bcb37cafb","symbol":"MappingUtil"}
+Parallel symbol lookups contend with the repository index because the tool resets internally. I’ll avoid concurrent git-ref tools and clear the transient lock if it remains.
+[0m
+[0m$ [0mif (Test-Path -LiteralPath ".git\index.lock") { Remove-Item -LiteralPath ".git\index.lock" }; git status --short
+?? tags
+[0m
+The patch is a direct backport: release note entry, two dropped-generated-column filters, delegating `GeneratedReference.isDropped()` to the wrapped reference, and a regression test. I’ll hunk-validate each file now.
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch code context
+[•] Construct and hunk-validate backport patch
+[ ] Run full validation
+[ ] Apply patch and commit result
+[0m
+[0m⚙ [0mvalidate {"ref":"7e0562ab10bb8dc67aaf7a73f89bce9bcb37cafb","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.9.3.rst b/docs/appendices/release-notes/5.9.3.rst\n--- a/docs/appendices/release-notes/5.9.3.rst\n+++ b/docs/appendices/release-notes/5.9.3.rst\n@@ -47,6 +47,11 @@ See the :ref:`version_5.9.0` release notes for a full list of changes in the\n Fixes\n =====\n \n+- Fixed an issue that would prevent\n+  :ref:`dropping <sql-alter-table-drop-column>` a\n+  :ref:`generated column <ddl-generated-columns>` from a table, even though no\n+  error was returned.\n+\n - Fixed an issue that would cause an error to be thrown when attempting to\n   ``ORDER BY`` on top of a complex query (e.g. a ``JOIN``), using an expression\n   which contains a query parameter, e.g.::\n"}
+[0m⚙ [0mvalidate {"ref":"7e0562ab10bb8dc67aaf7a73f89bce9bcb37cafb","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java b/server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java\n--- a/server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java\n+++ b/server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java\n@@ -276,7 +276,7 @@ public final class MappingUtil {\n \n         // Generated expressions\n         List<GeneratedReference> newGenExpressions = references.stream()\n-            .filter(ref -> ref instanceof GeneratedReference)\n+            .filter(ref -> ref instanceof GeneratedReference && !ref.isDropped())\n             .map(ref -> (GeneratedReference) ref)\n             .toList();\n         if (newGenExpressions.isEmpty() == false) {\n"}
+[0m⚙ [0mvalidate {"ref":"7e0562ab10bb8dc67aaf7a73f89bce9bcb37cafb","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/metadata/GeneratedReference.java b/server/src/main/java/io/crate/metadata/GeneratedReference.java\n--- a/server/src/main/java/io/crate/metadata/GeneratedReference.java\n+++ b/server/src/main/java/io/crate/metadata/GeneratedReference.java\n@@ -229,7 +229,7 @@ public final class GeneratedReference implements Reference {\n \n     @Override\n     public boolean isDropped() {\n-        return false;\n+        return ref.isDropped();\n     }\n \n     @Override\n"}
+[0m⚙ [0mvalidate {"ref":"7e0562ab10bb8dc67aaf7a73f89bce9bcb37cafb","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java b/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java\n--- a/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java\n+++ b/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java\n@@ -247,7 +247,7 @@ public class DocTableInfo implements TableInfo, ShardedTable, StoredTable {\n             return ref;\n         });\n         this.generatedColumns = this.references.values().stream()\n-            .filter(r -> r instanceof GeneratedReference)\n+            .filter(r -> r instanceof GeneratedReference && !r.isDropped())\n             .map(r -> (GeneratedReference) r)\n             .toList();\n         this.indexColumns = indexColumns;\n"}
+All non-test hunks apply cleanly. I’m validating the regression-test insertion separately because its nearby context differs slightly from the master line numbers.
+[0m⚙ [0mvalidate {"ref":"7e0562ab10bb8dc67aaf7a73f89bce9bcb37cafb","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java b/server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java\n--- a/server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java\n+++ b/server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java\n@@ -82,6 +82,40 @@ public class DropColumnTaskTest extends CrateDummyClusterServiceUnitTest {\n         );\n     }\n \n+    @Test\n+    public void test_can_drop_generated_column() throws Exception {\n+        var e = SQLExecutor.of(clusterService)\n+            .addTable(\"create table tbl (x int, y int GENERATED ALWAYS AS (x+1), z int)\");\n+        DocTableInfo tbl = e.resolveTableInfo(\"tbl\");\n+        ClusterState initialState = clusterService.state();\n+        var dropColumnTask = new AlterTableTask<>(\n+            e.nodeCtx, tbl.ident(), TransportDropColumnAction.DROP_COLUMN_OPERATOR);\n+        Reference colToDrop = tbl.getReference(ColumnIdent.of(\"y\"));\n+        var request = new DropColumnRequest(tbl.ident(), List.of(new DropColumn(colToDrop, false)));\n+        ClusterState newState = dropColumnTask.execute(initialState, request);\n+\n+        assertThat(newState.version())\n+            .as(\"Version is not increased. The MasterService does when the state is applied\")\n+            .isEqualTo(initialState.version());\n+        assertThat(newState.metadata().version())\n+            .as(\"Version is not increased. The MasterService does when the state is applied\")\n+            .isEqualTo(initialState.metadata().version());\n+\n+        String indexName = tbl.ident().indexNameOrAlias();\n+        assertThat(newState.metadata().index(indexName).getVersion())\n+            .isGreaterThan(initialState.metadata().index(indexName).getVersion());\n+\n+        DocTableInfo newTable = new DocTableInfoFactory(e.nodeCtx).create(tbl.ident(), newState.metadata());\n+\n+        assertThat(newTable.getReference(colToDrop.column())).isNull();\n+        assertThat(newTable.columns()).hasSize(2);\n+        assertThat(newTable.droppedColumns()).satisfiesExactly(\n+            x -> assertThat(x)\n+                .hasName(\"_dropped_2\")\n+                .hasPosition(2)\n+        );\n+    }\n+\n     @Test\n     public void test_can_drop_subcolumn() throws Exception {\n         var e = SQLExecutor.of(clusterService)\n"}
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch code context
+[✓] Construct and hunk-validate backport patch
+[•] Run full validation
+[ ] Apply patch and commit result
+[0m
+Each hunk applies against the target ref. I’m running full validation for the complete patch next.
+[0m⚙ [0mvalidate {"ref":"7e0562ab10bb8dc67aaf7a73f89bce9bcb37cafb","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.9.3.rst b/docs/appendices/release-notes/5.9.3.rst\n--- a/docs/appendices/release-notes/5.9.3.rst\n+++ b/docs/appendices/release-notes/5.9.3.rst\n@@ -47,6 +47,11 @@ See the :ref:`version_5.9.0` release notes for a full list of changes in the\n Fixes\n =====\n \n+- Fixed an issue that would prevent\n+  :ref:`dropping <sql-alter-table-drop-column>` a\n+  :ref:`generated column <ddl-generated-columns>` from a table, even though no\n+  error was returned.\n+\n - Fixed an issue that would cause an error to be thrown when attempting to\n   ``ORDER BY`` on top of a complex query (e.g. a ``JOIN``), using an expression\n   which contains a query parameter, e.g.::\ndiff --git a/server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java b/server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java\n--- a/server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java\n+++ b/server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java\n@@ -276,7 +276,7 @@ public final class MappingUtil {\n \n         // Generated expressions\n         List<GeneratedReference> newGenExpressions = references.stream()\n-            .filter(ref -> ref instanceof GeneratedReference)\n+            .filter(ref -> ref instanceof GeneratedReference && !ref.isDropped())\n             .map(ref -> (GeneratedReference) ref)\n             .toList();\n         if (newGenExpressions.isEmpty() == false) {\ndiff --git a/server/src/main/java/io/crate/metadata/GeneratedReference.java b/server/src/main/java/io/crate/metadata/GeneratedReference.java\n--- a/server/src/main/java/io/crate/metadata/GeneratedReference.java\n+++ b/server/src/main/java/io/crate/metadata/GeneratedReference.java\n@@ -229,7 +229,7 @@ public final class GeneratedReference implements Reference {\n \n     @Override\n     public boolean isDropped() {\n-        return false;\n+        return ref.isDropped();\n     }\n \n     @Override\ndiff --git a/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java b/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java\n--- a/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java\n+++ b/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java\n@@ -247,7 +247,7 @@ public class DocTableInfo implements TableInfo, ShardedTable, StoredTable {\n             return ref;\n         });\n         this.generatedColumns = this.references.values().stream()\n-            .filter(r -> r instanceof GeneratedReference)\n+            .filter(r -> r instanceof GeneratedReference && !r.isDropped())\n             .map(r -> (GeneratedReference) r)\n             .toList();\n         this.indexColumns = indexColumns;\ndiff --git a/server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java b/server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java\n--- a/server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java\n+++ b/server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java\n@@ -82,6 +82,40 @@ public class DropColumnTaskTest extends CrateDummyClusterServiceUnitTest {\n         );\n     }\n \n+    @Test\n+    public void test_can_drop_generated_column() throws Exception {\n+        var e = SQLExecutor.of(clusterService)\n+            .addTable(\"create table tbl (x int, y int GENERATED ALWAYS AS (x+1), z int)\");\n+        DocTableInfo tbl = e.resolveTableInfo(\"tbl\");\n+        ClusterState initialState = clusterService.state();\n+        var dropColumnTask = new AlterTableTask<>(\n+            e.nodeCtx, tbl.ident(), TransportDropColumnAction.DROP_COLUMN_OPERATOR);\n+        Reference colToDrop = tbl.getReference(ColumnIdent.of(\"y\"));\n+        var request = new DropColumnRequest(tbl.ident(), List.of(new DropColumn(colToDrop, false)));\n+        ClusterState newState = dropColumnTask.execute(initialState, request);\n+\n+        assertThat(newState.version())\n+            .as(\"Version is not increased. The MasterService does when the state is applied\")\n+            .isEqualTo(initialState.version());\n+        assertThat(newState.metadata().version())\n+            .as(\"Version is not increased. The MasterService does when the state is applied\")\n+            .isEqualTo(initialState.metadata().version());\n+\n+        String indexName = tbl.ident().indexNameOrAlias();\n+        assertThat(newState.metadata().index(indexName).getVersion())\n+            .isGreaterThan(initialState.metadata().index(indexName).getVersion());\n+\n+        DocTableInfo newTable = new DocTableInfoFactory(e.nodeCtx).create(tbl.ident(), newState.metadata());\n+\n+        assertThat(newTable.getReference(colToDrop.column())).isNull();\n+        assertThat(newTable.columns()).hasSize(2);\n+        assertThat(newTable.droppedColumns()).satisfiesExactly(\n+            x -> assertThat(x)\n+                .hasName(\"_dropped_2\")\n+                .hasPosition(2)\n+        );\n+    }\n+\n     @Test\n     public void test_can_drop_subcolumn() throws Exception {\n         var e = SQLExecutor.of(clusterService)\n"}
+Full validation passed: the patch compiles and the validation test set passes. I’ll apply the validated patch to the working tree and commit it.
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch code context
+[✓] Construct and hunk-validate backport patch
+[✓] Run full validation
+[•] Apply patch and commit result
+[0m
+[0m% [0mPatch 5 files
+[0m
+[0m$ [0mgit log --oneline -10
+7e0562ab10 The SubQueryAndParamBinder must not ignore conversion exceptions
+b51346a3d5 Fix query used at JDBC FDW, alias symbols must be replaced by their source
+c6e6240fcd Fix printing of a `CASE` expression.
+8108b22ce2 Make warnings in 5.9.0 release notes less scary; clarify it's a testing release
+78b6c6617e Ingore value parsing and sanitizing errors when parsing translog entries
+145b9e8637 Add note to the add-column docs explaining issues with ignored objects
+14b1db1615 Handle stored source data of different type on collect
+08e73cce3b Log warning instead of throwing exception when adding col to ignored object
+c5619e5003 Add reference tree to find reference's parent/child (partial backport)
+c6ebf38d9c docs: Remove reference to article about visual join representation
+[0m
+[0m$ [0mgit diff -- docs/appendices/release-notes/5.9.3.rst server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java server/src/main/java/io/crate/metadata/GeneratedReference.java server/src/main/java/io/crate/metadata/doc/DocTableInfo.java server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java
+warning: in the working copy of 'docs/appendices/release-notes/5.9.3.rst', LF will be replaced by CRLF the next time Git touches it
+diff --git a/docs/appendices/release-notes/5.9.3.rst b/docs/appendices/release-notes/5.9.3.rst
+index 7afad0007b..174cf5f77b 100644
+--- a/docs/appendices/release-notes/5.9.3.rst
++++ b/docs/appendices/release-notes/5.9.3.rst
+@@ -47,6 +47,11 @@ See the :ref:`version_5.9.0` release notes for a full list of changes in the
+ Fixes
+ =====
+ 
++- Fixed an issue that would prevent
++  :ref:`dropping <sql-alter-table-drop-column>` a
++  :ref:`generated column <ddl-generated-columns>` from a table, even though no
++  error was returned.
++
+ - Fixed an issue that would cause an error to be thrown when attempting to
+   ``ORDER BY`` on top of a complex query (e.g. a ``JOIN``), using an expression
+   which contains a query parameter, e.g.::
+diff --git a/server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java b/server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java
+index 892dad5233..190c04fc2e 100644
+--- a/server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java
++++ b/server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java
+@@ -275,7 +275,7 @@ public final class MappingUtil {
+ 
+         // Generated expressions
+         List<GeneratedReference> newGenExpressions = references.stream()
+-            .filter(ref -> ref instanceof GeneratedReference)
++            .filter(ref -> ref instanceof GeneratedReference && !ref.isDropped())
+             .map(ref -> (GeneratedReference) ref)
+             .toList();
+         if (newGenExpressions.isEmpty() == false) {
+diff --git a/server/src/main/java/io/crate/metadata/GeneratedReference.java b/server/src/main/java/io/crate/metadata/GeneratedReference.java
+index 8c51481a18..7a55d1a8f7 100644
+--- a/server/src/main/java/io/crate/metadata/GeneratedReference.java
++++ b/server/src/main/java/io/crate/metadata/GeneratedReference.java
+@@ -232,7 +232,7 @@ public final class GeneratedReference implements Reference {
+ 
+     @Override
+     public boolean isDropped() {
+-        return false;
++        return ref.isDropped();
+     }
+ 
+     @Override
+diff --git a/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java b/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java
+index 2aa293ddf3..70f49f9aa4 100644
+--- a/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java
++++ b/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java
+@@ -247,7 +247,7 @@ public class DocTableInfo implements TableInfo, ShardedTable, StoredTable {
+             return ref;
+         });
+         this.generatedColumns = this.references.values().stream()
+-            .filter(r -> r instanceof GeneratedReference)
++            .filter(r -> r instanceof GeneratedReference && !r.isDropped())
+             .map(r -> (GeneratedReference) r)
+             .toList();
+         this.indexColumns = indexColumns;
+diff --git a/server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java b/server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java
+index 59814dccd0..ee9be23ccb 100644
+--- a/server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java
++++ b/server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java
+@@ -83,6 +83,40 @@ public class DropColumnTaskTest extends CrateDummyClusterServiceUnitTest {
+         );
+     }
+ 
++    @Test
++    public void test_can_drop_generated_column() throws Exception {
++        var e = SQLExecutor.of(clusterService)
++            .addTable("create table tbl (x int, y int GENERATED ALWAYS AS (x+1), z int)");
++        DocTableInfo tbl = e.resolveTableInfo("tbl");
++        ClusterState initialState = clusterService.state();
++        var dropColumnTask = new AlterTableTask<>(
++            e.nodeCtx, tbl.ident(), TransportDropColumnAction.DROP_COLUMN_OPERATOR);
++        Reference colToDrop = tbl.getReference(ColumnIdent.of("y"));
++        var request = new DropColumnRequest(tbl.ident(), List.of(new DropColumn(colToDrop, false)));
++        ClusterState newState = dropColumnTask.execute(initialState, request);
++
++        assertThat(newState.version())
++            .as("Version is not increased. The MasterService does when the state is applied")
++            .isEqualTo(initialState.version());
++        assertThat(newState.metadata().version())
++            .as("Version is not increased. The MasterService does when the state is applied")
++            .isEqualTo(initialState.metadata().version());
++
++        String indexName = tbl.ident().indexNameOrAlias();
++        assertThat(newState.metadata().index(indexName).getVersion())
++            .isGreaterThan(initialState.metadata().index(indexName).getVersion());
++
++        DocTableInfo newTable = new DocTableInfoFactory(e.nodeCtx).create(tbl.ident(), newState.metadata());
++
++        assertThat(newTable.getReference(colToDrop.column())).isNull();
++        assertThat(newTable.columns()).hasSize(2);
++        assertThat(newTable.droppedColumns()).satisfiesExactly(
++            x -> assertThat(x)
++                .hasName("_dropped_2")
++                .hasPosition(2)
++        );
++    }
++
+     @Test
+     public void test_can_drop_subcolumn() throws Exception {
+         var e = SQLExecutor.of(clusterService)
+warning: in the working copy of 'server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/metadata/GeneratedReference.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/metadata/doc/DocTableInfo.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java', LF will be replaced by CRLF the next time Git touches it
+[0m
+[0m$ [0mgit status --short
+M docs/appendices/release-notes/5.9.3.rst
+ M server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java
+ M server/src/main/java/io/crate/metadata/GeneratedReference.java
+ M server/src/main/java/io/crate/metadata/doc/DocTableInfo.java
+ M server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java
+[0m
+The working-tree diff matches the validated patch. I’ll stage only the five intended files and create the backport commit.
+[0m$ [0mgit add -- docs/appendices/release-notes/5.9.3.rst server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java server/src/main/java/io/crate/metadata/GeneratedReference.java server/src/main/java/io/crate/metadata/doc/DocTableInfo.java server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java; if ($?) { git commit -m "Fix dropping generated columns" }
+warning: in the working copy of 'docs/appendices/release-notes/5.9.3.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/metadata/GeneratedReference.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/metadata/doc/DocTableInfo.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java', LF will be replaced by CRLF the next time Git touches it
+[detached HEAD 54582d0806] Fix dropping generated columns
+ 5 files changed, 42 insertions(+), 3 deletions(-)
+[0m
+[0m$ [0mgit diff 7e0562ab10bb8dc67aaf7a73f89bce9bcb37cafb HEAD
+diff --git a/docs/appendices/release-notes/5.9.3.rst b/docs/appendices/release-notes/5.9.3.rst
+index 7afad0007b..174cf5f77b 100644
+--- a/docs/appendices/release-notes/5.9.3.rst
++++ b/docs/appendices/release-notes/5.9.3.rst
+@@ -47,6 +47,11 @@ See the :ref:`version_5.9.0` release notes for a full list of changes in the
+ Fixes
+ =====
+ 
++- Fixed an issue that would prevent
++  :ref:`dropping <sql-alter-table-drop-column>` a
++  :ref:`generated column <ddl-generated-columns>` from a table, even though no
++  error was returned.
++
+ - Fixed an issue that would cause an error to be thrown when attempting to
+   ``ORDER BY`` on top of a complex query (e.g. a ``JOIN``), using an expression
+   which contains a query parameter, e.g.::
+diff --git a/server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java b/server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java
+index 892dad5233..190c04fc2e 100644
+--- a/server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java
++++ b/server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java
+@@ -275,7 +275,7 @@ public final class MappingUtil {
+ 
+         // Generated expressions
+         List<GeneratedReference> newGenExpressions = references.stream()
+-            .filter(ref -> ref instanceof GeneratedReference)
++            .filter(ref -> ref instanceof GeneratedReference && !ref.isDropped())
+             .map(ref -> (GeneratedReference) ref)
+             .toList();
+         if (newGenExpressions.isEmpty() == false) {
+diff --git a/server/src/main/java/io/crate/metadata/GeneratedReference.java b/server/src/main/java/io/crate/metadata/GeneratedReference.java
+index 8c51481a18..7a55d1a8f7 100644
+--- a/server/src/main/java/io/crate/metadata/GeneratedReference.java
++++ b/server/src/main/java/io/crate/metadata/GeneratedReference.java
+@@ -232,7 +232,7 @@ public final class GeneratedReference implements Reference {
+ 
+     @Override
+     public boolean isDropped() {
+-        return false;
++        return ref.isDropped();
+     }
+ 
+     @Override
+diff --git a/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java b/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java
+index 2aa293ddf3..70f49f9aa4 100644
+--- a/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java
++++ b/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java
+@@ -247,7 +247,7 @@ public class DocTableInfo implements TableInfo, ShardedTable, StoredTable {
+             return ref;
+         });
+         this.generatedColumns = this.references.values().stream()
+-            .filter(r -> r instanceof GeneratedReference)
++            .filter(r -> r instanceof GeneratedReference && !r.isDropped())
+             .map(r -> (GeneratedReference) r)
+             .toList();
+         this.indexColumns = indexColumns;
+diff --git a/server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java b/server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java
+index 59814dccd0..ee9be23ccb 100644
+--- a/server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java
++++ b/server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java
+@@ -83,6 +83,40 @@ public class DropColumnTaskTest extends CrateDummyClusterServiceUnitTest {
+         );
+     }
+ 
++    @Test
++    public void test_can_drop_generated_column() throws Exception {
++        var e = SQLExecutor.of(clusterService)
++            .addTable("create table tbl (x int, y int GENERATED ALWAYS AS (x+1), z int)");
++        DocTableInfo tbl = e.resolveTableInfo("tbl");
++        ClusterState initialState = clusterService.state();
++        var dropColumnTask = new AlterTableTask<>(
++            e.nodeCtx, tbl.ident(), TransportDropColumnAction.DROP_COLUMN_OPERATOR);
++        Reference colToDrop = tbl.getReference(ColumnIdent.of("y"));
++        var request = new DropColumnRequest(tbl.ident(), List.of(new DropColumn(colToDrop, false)));
++        ClusterState newState = dropColumnTask.execute(initialState, request);
++
++        assertThat(newState.version())
++            .as("Version is not increased. The MasterService does when the state is applied")
++            .isEqualTo(initialState.version());
++        assertThat(newState.metadata().version())
++            .as("Version is not increased. The MasterService does when the state is applied")
++            .isEqualTo(initialState.metadata().version());
++
++        String indexName = tbl.ident().indexNameOrAlias();
++        assertThat(newState.metadata().index(indexName).getVersion())
++            .isGreaterThan(initialState.metadata().index(indexName).getVersion());
++
++        DocTableInfo newTable = new DocTableInfoFactory(e.nodeCtx).create(tbl.ident(), newState.metadata());
++
++        assertThat(newTable.getReference(colToDrop.column())).isNull();
++        assertThat(newTable.columns()).hasSize(2);
++        assertThat(newTable.droppedColumns()).satisfiesExactly(
++            x -> assertThat(x)
++                .hasName("_dropped_2")
++                .hasPosition(2)
++        );
++    }
++
+     @Test
+     public void test_can_drop_subcolumn() throws Exception {
+         var e = SQLExecutor.of(clusterService)
+[0m
+[0m$ [0mgit status --short
+(no output)
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch code context
+[✓] Construct and hunk-validate backport patch
+[✓] Run full validation
+[✓] Apply patch and commit result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/docs/appendices/release-notes/5.9.3.rst b/docs/appendices/release-notes/5.9.3.rst
+    index 7afad0007b..174cf5f77b 100644
+    --- a/docs/appendices/release-notes/5.9.3.rst
+    +++ b/docs/appendices/release-notes/5.9.3.rst
+    @@ -47,6 +47,11 @@ See the :ref:`version_5.9.0` release notes for a full list of changes in the
+     Fixes
+     =====
+     
+    +- Fixed an issue that would prevent
+    +  :ref:`dropping <sql-alter-table-drop-column>` a
+    +  :ref:`generated column <ddl-generated-columns>` from a table, even though no
+    +  error was returned.
+    +
+     - Fixed an issue that would cause an error to be thrown when attempting to
+       ``ORDER BY`` on top of a complex query (e.g. a ``JOIN``), using an expression
+       which contains a query parameter, e.g.::
+    diff --git a/server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java b/server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java
+    index 892dad5233..190c04fc2e 100644
+    --- a/server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java
+    +++ b/server/src/main/java/io/crate/execution/ddl/tables/MappingUtil.java
+    @@ -275,7 +275,7 @@ public final class MappingUtil {
+     
+             // Generated expressions
+             List<GeneratedReference> newGenExpressions = references.stream()
+    -            .filter(ref -> ref instanceof GeneratedReference)
+    +            .filter(ref -> ref instanceof GeneratedReference && !ref.isDropped())
+                 .map(ref -> (GeneratedReference) ref)
+                 .toList();
+             if (newGenExpressions.isEmpty() == false) {
+    diff --git a/server/src/main/java/io/crate/metadata/GeneratedReference.java b/server/src/main/java/io/crate/metadata/GeneratedReference.java
+    index 8c51481a18..7a55d1a8f7 100644
+    --- a/server/src/main/java/io/crate/metadata/GeneratedReference.java
+    +++ b/server/src/main/java/io/crate/metadata/GeneratedReference.java
+    @@ -232,7 +232,7 @@ public final class GeneratedReference implements Reference {
+     
+         @Override
+         public boolean isDropped() {
+    -        return false;
+    +        return ref.isDropped();
+         }
+     
+         @Override
+    diff --git a/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java b/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java
+    index 2aa293ddf3..70f49f9aa4 100644
+    --- a/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java
+    +++ b/server/src/main/java/io/crate/metadata/doc/DocTableInfo.java
+    @@ -247,7 +247,7 @@ public class DocTableInfo implements TableInfo, ShardedTable, StoredTable {
+                 return ref;
+             });
+             this.generatedColumns = this.references.values().stream()
+    -            .filter(r -> r instanceof GeneratedReference)
+    +            .filter(r -> r instanceof GeneratedReference && !r.isDropped())
+                 .map(r -> (GeneratedReference) r)
+                 .toList();
+             this.indexColumns = indexColumns;
+    diff --git a/server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java b/server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java
+    index 59814dccd0..ee9be23ccb 100644
+    --- a/server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java
+    +++ b/server/src/test/java/io/crate/execution/ddl/tables/DropColumnTaskTest.java
+    @@ -83,6 +83,40 @@ public class DropColumnTaskTest extends CrateDummyClusterServiceUnitTest {
+             );
+         }
+     
+    +    @Test
+    +    public void test_can_drop_generated_column() throws Exception {
+    +        var e = SQLExecutor.of(clusterService)
+    +            .addTable("create table tbl (x int, y int GENERATED ALWAYS AS (x+1), z int)");
+    +        DocTableInfo tbl = e.resolveTableInfo("tbl");
+    +        ClusterState initialState = clusterService.state();
+    +        var dropColumnTask = new AlterTableTask<>(
+    +            e.nodeCtx, tbl.ident(), TransportDropColumnAction.DROP_COLUMN_OPERATOR);
+    +        Reference colToDrop = tbl.getReference(ColumnIdent.of("y"));
+    +        var request = new DropColumnRequest(tbl.ident(), List.of(new DropColumn(colToDrop, false)));
+    +        ClusterState newState = dropColumnTask.execute(initialState, request);
+    +
+    +        assertThat(newState.version())
+    +            .as("Version is not increased. The MasterService does when the state is applied")
+    +            .isEqualTo(initialState.version());
+    +        assertThat(newState.metadata().version())
+    +            .as("Version is not increased. The MasterService does when the state is applied")
+    +            .isEqualTo(initialState.metadata().version());
+    +
+    +        String indexName = tbl.ident().indexNameOrAlias();
+    +        assertThat(newState.metadata().index(indexName).getVersion())
+    +            .isGreaterThan(initialState.metadata().index(indexName).getVersion());
+    +
+    +        DocTableInfo newTable = new DocTableInfoFactory(e.nodeCtx).create(tbl.ident(), newState.metadata());
+    +
+    +        assertThat(newTable.getReference(colToDrop.column())).isNull();
+    +        assertThat(newTable.columns()).hasSize(2);
+    +        assertThat(newTable.droppedColumns()).satisfiesExactly(
+    +            x -> assertThat(x)
+    +                .hasName("_dropped_2")
+    +                .hasPosition(2)
+    +        );
+    +    }
+    +
+         @Test
+         public void test_can_drop_subcolumn() throws Exception {
+             var e = SQLExecutor.of(clusterService)
+  notes: >
+    Backported and committed the generated-column drop fix; hunk and full validation passed.
+```
+
+--- END CLI OUTPUT ---
+[07:41:00]   Done in 2735.5s | status=success

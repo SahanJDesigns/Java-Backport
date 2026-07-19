@@ -1,0 +1,606 @@
+[02:26:11] === Row 28: crate  9b61be3c -> 021eb4ea  [TYPE-II] ===
+[02:26:11]   Resolving parent of backport commit 021eb4ea...
+[02:26:11]   Backport parent (target ref): f1229d922b690b9e21c92ed1abab909717e3664d
+[02:26:11]   Extracting new-version patch for 9b61be3c...
+[02:26:11]   New-version patch size: 4201 chars
+[02:26:11]   Checking out backport parent f1229d92...
+[02:26:11]   Invoking OpenCode CLI (8230 chars)...
+[02:26:11]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the commit metadata and the 5.1-side file contexts first, then construct and validate the smallest equivalent patch before applying and committing it.
+[0m# [0mTodos
+[•] Inspect original commit metadata and changed-file context on 5.1 parent
+[ ] Build and hunk-validate backport patch
+[ ] Apply patch and commit result
+[ ] Run full validation and report YAML result
+[0m
+[0m✱ [0mGlob "docs/appendices/release-notes/*.rst"[90m 100 matches[0m
+[0m⚙ [0mviewcode {"ref":"f1229d922b690b9e21c92ed1abab909717e3664d","path":"server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java","startline":1,"endline":120}
+[0m⚙ [0mgit_show {"ref":"9b61be3c7aef89289e8575e23dad7ca8e9bdc12e"}
+[0m⚙ [0mviewcode {"ref":"f1229d922b690b9e21c92ed1abab909717e3664d","path":"server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java","startline":1,"endline":220}
+The 5.1 parent has the same receiver/test classes with minor API differences: `RestResultSetReceiver` lacks `fieldNames`, and the existing tests use `Symbols.typeView(fields)` rather than `Lists.map(fields, Symbol::valueType)`. I’m checking release-note placement and symbol history before writing the patch.
+[0m⚙ [0mviewcode {"ref":"f1229d922b690b9e21c92ed1abab909717e3664d","path":"docs/appendices/release-notes/5.10.8.rst","startline":1,"endline":90}
+[0m⚙ [0mviewcode {"ref":"f1229d922b690b9e21c92ed1abab909717e3664d","path":"docs/appendices/release-notes/5.1.4.rst","startline":1,"endline":140}
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java","start_line":60,"end_line":75,"start_commit":"f1229d922b690b9e21c92ed1abab909717e3664d","end_commit":"f1229d922b690b9e21c92ed1abab909717e3664d"}
+[0m⚙ [0mgit_history {"filepath":"server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java","start_line":90,"end_line":147,"start_commit":"f1229d922b690b9e21c92ed1abab909717e3664d","end_commit":"f1229d922b690b9e21c92ed1abab909717e3664d"}
+[0m⚙ [0mlocate_symbol {"ref":"f1229d922b690b9e21c92ed1abab909717e3664d","symbol":"RestResultSetReceiver"}
+[0m⚙ [0mlocate_symbol {"ref":"f1229d922b690b9e21c92ed1abab909717e3664d","symbol":"BlockBasedRamAccounting"}
+One symbol lookup hit a stale `.git/index.lock`, so git operations that need the index may be blocked. I’ll verify whether a git process is active before removing only that lock file.
+[0m✱ [0mGrep "class TestCircuitBreaker"[90m in . · 1 match[0m
+[0m✱ [0mGrep "MAX_BLOCK_SIZE_IN_BYTES|BlockBasedRamAccounting\("[90m in . · 41 matches[0m
+[0m
+[0m$ [0mTest-Path -LiteralPath ".git\index.lock"; Get-Process -Name git -ErrorAction SilentlyContinue
+False
+[0m
+[0m→ [0mRead server/src/testFixtures/java/org/elasticsearch/common/breaker/TestCircuitBreaker.java[90m [limit=120][0m
+[0m→ [0mRead server/src/main/java/io/crate/rest/action/SqlHttpHandler.java[90m [offset=240, limit=40][0m
+[0m→ [0mRead libs/dex/src/main/java/io/crate/data/breaker/BlockBasedRamAccounting.java[90m [limit=100][0m
+I’m going to keep the functional fix identical and adapt only the test construction to the 5.1 APIs: no `fieldNames` argument and existing `Symbols.typeView(fields)` for typed accounting. The release-note hunk applies to the existing `5.10.8.rst` context in this target ref, so I’ll include it as-is.
+[0m⚙ [0mvalidate {"ref":"f1229d922b690b9e21c92ed1abab909717e3664d","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.10.8.rst b/docs/appendices/release-notes/5.10.8.rst\n--- a/docs/appendices/release-notes/5.10.8.rst\n+++ b/docs/appendices/release-notes/5.10.8.rst\n@@ -60,3 +60,6 @@ Fixes\n - Fixed an issue where ``sas_token`` and ``key`` settings for\n   :ref:`azure repositories <sql-create-repo-azure>` were exposed as unmasked\n   settings in :ref:`sys.repositories <sys-repositories>` table.\n+\n+- Fixed an issue that caused queries to not complete and return if a \n+  ``CircuitBreakerException`` was thrown while constructing the result set.\n"}
+[0m⚙ [0mvalidate {"ref":"f1229d922b690b9e21c92ed1abab909717e3664d","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java b/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java\n--- a/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java\n+++ b/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java\n@@ -68,7 +68,7 @@ class RestResultSetReceiver implements ResultReceiver<XContentBuilder> {\n             builder.addRow(row, outputFields.size());\n             rowCount++;\n             return null;\n-        } catch (IOException e) {\n+        } catch (Exception e) {\n             fail(e);\n             return null;\n         }\n"}
+[0m⚙ [0mvalidate {"ref":"f1229d922b690b9e21c92ed1abab909717e3664d","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n--- a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n+++ b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n@@ -21,6 +21,7 @@\n \n package io.crate.rest.action;\n \n+import static io.crate.data.breaker.BlockBasedRamAccounting.MAX_BLOCK_SIZE_IN_BYTES;\n import static org.assertj.core.api.Assertions.assertThat;\n \n import java.io.IOException;\n@@ -28,6 +29,7 @@ import java.util.Collections;\n import java.util.List;\n \n import org.elasticsearch.common.Strings;\n+import org.elasticsearch.common.breaker.TestCircuitBreaker;\n import org.elasticsearch.common.xcontent.XContentBuilder;\n import org.elasticsearch.common.xcontent.json.JsonXContent;\n import org.elasticsearch.index.engine.VersionConflictEngineException;\n@@ -39,12 +41,15 @@ import org.junit.Test;\n import io.crate.auth.AccessControl;\n import io.crate.breaker.TypedRowAccounting;\n import io.crate.data.Row;\n import io.crate.data.Row1;\n import io.crate.data.RowN;\n+import io.crate.data.breaker.BlockBasedRamAccounting;\n import io.crate.data.breaker.RamAccounting;\n import io.crate.expression.symbol.ScopedSymbol;\n import io.crate.expression.symbol.Symbol;\n import io.crate.expression.symbol.Symbols;\n import io.crate.metadata.ColumnIdent;\n import io.crate.metadata.RelationName;\n+import io.crate.session.ResultReceiver;\n import io.crate.types.DataTypes;\n \n public class RestActionReceiversTest extends ESTestCase {\n@@ -143,4 +148,29 @@ public class RestActionReceiversTest extends ESTestCase {\n         assertThat(results[0].rowCount()).isEqualTo(1L);\n         assertThat(results[0].error()).isNull();\n     }\n+\n+    @Test\n+    public void test_result_reciever_future_completed_on_cbe() throws Exception {\n+        TestCircuitBreaker breaker = new TestCircuitBreaker();\n+        breaker.startBreaking();\n+        RamAccounting ramAccounting = new BlockBasedRamAccounting(\n+            b -> breaker.addEstimateBytesAndMaybeBreak(b, \"http-result\"),\n+            MAX_BLOCK_SIZE_IN_BYTES);\n+\n+        ResultReceiver<XContentBuilder> resultReceiver = new RestResultSetReceiver(\n+            JsonXContent.builder(),\n+            fields,\n+            System.currentTimeMillis(),\n+            new TypedRowAccounting(\n+                Symbols.typeView(fields),\n+                ramAccounting\n+            ),\n+            false\n+        );\n+\n+        // Fails with CBE, resultReceiver's future must be completed, so that sys.jobs entry is cleared.\n+        resultReceiver.setNextRow(rows.get(0));\n+        assertThat(resultReceiver.completionFuture().isDone()).isTrue();\n+        assertThat(resultReceiver.completionFuture().isCompletedExceptionally()).isTrue();\n+    }\n }\n"}
+The release note and receiver hunks validate. The test hunk needs smaller, exact-context validation because the combined import-and-method patch was rejected as malformed by the validator.
+[0m⚙ [0mvalidate {"ref":"f1229d922b690b9e21c92ed1abab909717e3664d","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n--- a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n+++ b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n@@ -21,6 +21,7 @@\n \n package io.crate.rest.action;\n \n+import static io.crate.data.breaker.BlockBasedRamAccounting.MAX_BLOCK_SIZE_IN_BYTES;\n import static org.assertj.core.api.Assertions.assertThat;\n \n import java.io.IOException;\n"}
+[0m⚙ [0mvalidate {"ref":"f1229d922b690b9e21c92ed1abab909717e3664d","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n--- a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n+++ b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n@@ -28,6 +29,7 @@ import java.util.Collections;\n import java.util.List;\n \n import org.elasticsearch.common.Strings;\n+import org.elasticsearch.common.breaker.TestCircuitBreaker;\n import org.elasticsearch.common.xcontent.XContentBuilder;\n import org.elasticsearch.common.xcontent.json.JsonXContent;\n import org.elasticsearch.index.engine.VersionConflictEngineException;\n"}
+[0m⚙ [0mvalidate {"ref":"f1229d922b690b9e21c92ed1abab909717e3664d","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n--- a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n+++ b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n@@ -39,12 +41,15 @@ import org.junit.Test;\n import io.crate.auth.AccessControl;\n import io.crate.breaker.TypedRowAccounting;\n import io.crate.data.Row;\n import io.crate.data.Row1;\n import io.crate.data.RowN;\n+import io.crate.data.breaker.BlockBasedRamAccounting;\n import io.crate.data.breaker.RamAccounting;\n import io.crate.expression.symbol.ScopedSymbol;\n import io.crate.expression.symbol.Symbol;\n import io.crate.expression.symbol.Symbols;\n import io.crate.metadata.ColumnIdent;\n import io.crate.metadata.RelationName;\n+import io.crate.session.ResultReceiver;\n import io.crate.types.DataTypes;\n"}
+[0m⚙ [0mvalidate {"ref":"f1229d922b690b9e21c92ed1abab909717e3664d","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n--- a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n+++ b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n@@ -143,4 +148,29 @@ public class RestActionReceiversTest extends ESTestCase {\n         assertThat(results[0].rowCount()).isEqualTo(1L);\n         assertThat(results[0].error()).isNull();\n     }\n+\n+    @Test\n+    public void test_result_reciever_future_completed_on_cbe() throws Exception {\n+        TestCircuitBreaker breaker = new TestCircuitBreaker();\n+        breaker.startBreaking();\n+        RamAccounting ramAccounting = new BlockBasedRamAccounting(\n+            b -> breaker.addEstimateBytesAndMaybeBreak(b, \"http-result\"),\n+            MAX_BLOCK_SIZE_IN_BYTES);\n+\n+        ResultReceiver<XContentBuilder> resultReceiver = new RestResultSetReceiver(\n+            JsonXContent.builder(),\n+            fields,\n+            System.currentTimeMillis(),\n+            new TypedRowAccounting(\n+                Symbols.typeView(fields),\n+                ramAccounting\n+            ),\n+            false\n+        );\n+\n+        // Fails with CBE, resultReceiver's future must be completed, so that sys.jobs entry is cleared.\n+        resultReceiver.setNextRow(rows.get(0));\n+        assertThat(resultReceiver.completionFuture().isDone()).isTrue();\n+        assertThat(resultReceiver.completionFuture().isCompletedExceptionally()).isTrue();\n+    }\n }\n"}
+[0m⚙ [0mvalidate {"ref":"f1229d922b690b9e21c92ed1abab909717e3664d","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n--- a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n+++ b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n@@ -41,6 +41,7 @@ import org.junit.Test;\n import io.crate.data.Row;\n import io.crate.data.Row1;\n import io.crate.data.RowN;\n+import io.crate.data.breaker.BlockBasedRamAccounting;\n import io.crate.data.breaker.RamAccounting;\n import io.crate.expression.symbol.ScopedSymbol;\n import io.crate.expression.symbol.Symbol;\n"}
+[0m⚙ [0mvalidate {"ref":"f1229d922b690b9e21c92ed1abab909717e3664d","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n--- a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n+++ b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n@@ -48,6 +48,7 @@ import io.crate.metadata.ColumnIdent;\n import io.crate.metadata.RelationName;\n+import io.crate.session.ResultReceiver;\n import io.crate.types.DataTypes;\n \n public class RestActionReceiversTest extends ESTestCase {\n"}
+All test additions validate except the final import hunk, which had an incorrect line count in my candidate diff. I’m correcting that count and then applying the full patch.
+[0m⚙ [0mvalidate {"ref":"f1229d922b690b9e21c92ed1abab909717e3664d","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n--- a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n+++ b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n@@ -47,5 +47,6 @@ import io.crate.metadata.ColumnIdent;\n import io.crate.metadata.RelationName;\n+import io.crate.session.ResultReceiver;\n import io.crate.types.DataTypes;\n \n public class RestActionReceiversTest extends ESTestCase {\n"}
+[0m⚙ [0mvalidate {"ref":"f1229d922b690b9e21c92ed1abab909717e3664d","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n--- a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n+++ b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n@@ -46,6 +46,7 @@ import io.crate.expression.symbol.Symbols;\n import io.crate.metadata.ColumnIdent;\n import io.crate.metadata.RelationName;\n+import io.crate.session.ResultReceiver;\n import io.crate.types.DataTypes;\n \n public class RestActionReceiversTest extends ESTestCase {\n"}
+[0m⚙ [0mvalidate {"ref":"f1229d922b690b9e21c92ed1abab909717e3664d","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n--- a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n+++ b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n@@ -46,5 +46,6 @@ import io.crate.expression.symbol.Symbols;\n import io.crate.metadata.ColumnIdent;\n import io.crate.metadata.RelationName;\n+import io.crate.session.ResultReceiver;\n import io.crate.types.DataTypes;\n \n public class RestActionReceiversTest extends ESTestCase {\n"}
+The backport patch hunks now validate individually. I’m applying the edits to the working tree and will commit only these intended files.
+[0m% [0mPatch 3 files
+The three intended files are edited. I’m inspecting the diff, then I’ll stage and commit the backport.
+[0m
+[0m$ [0mgit log --oneline -10
+f1229d922b Fix task leak on `createTask` failures
+561e9be5a2 Fixed masked settings for Azure repos
+8d4763384e docs: Mention that NUMERIC is not supported for AVG(DISTINCT <col>)
+f35c185d2f Fix geoshapes iso link
+7891a139f7 Remove reference to ping discovery configuration
+5c54ff4e50 Expose indices with non-active primary shards in publications
+d108a3900f Improve documentation around NUMERIC type and agg functions
+dd7f84830c Bump to 5.10.8-SNAPSHOT
+67ecbaad52 Release 5.10.7
+45a9b4952e Improve mem accounting for stddev_pop aggregation state.
+[0m
+[0m$ [0mgit status --short
+M docs/appendices/release-notes/5.10.8.rst
+ M server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java
+ M server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java
+?? tags
+[0m
+[0m$ [0mgit diff -- docs/appendices/release-notes/5.10.8.rst server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java
+warning: in the working copy of 'docs/appendices/release-notes/5.10.8.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java', LF will be replaced by CRLF the next time Git touches it
+diff --git a/docs/appendices/release-notes/5.10.8.rst b/docs/appendices/release-notes/5.10.8.rst
+index 384e8bb325..f9e41484a8 100644
+--- a/docs/appendices/release-notes/5.10.8.rst
++++ b/docs/appendices/release-notes/5.10.8.rst
+@@ -60,3 +60,6 @@ Fixes
+ - Fixed an issue where ``sas_token`` and ``key`` settings for
+   :ref:`azure repositories <sql-create-repo-azure>` were exposed as unmasked
+   settings in :ref:`sys.repositories <sys-repositories>` table.
++
++- Fixed an issue that caused queries to not complete and return if a 
++  ``CircuitBreakerException`` was thrown while constructing the result set.
+diff --git a/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java b/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java
+index c0cece4959..7eff95efb5 100644
+--- a/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java
++++ b/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java
+@@ -67,7 +67,7 @@ class RestResultSetReceiver implements ResultReceiver<XContentBuilder> {
+             builder.addRow(row, outputFields.size());
+             rowCount++;
+             return null;
+-        } catch (IOException e) {
++        } catch (Exception e) {
+             fail(e);
+             return null;
+         }
+diff --git a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java
+index 995034476f..6a95085184 100644
+--- a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java
++++ b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java
+@@ -21,6 +21,7 @@
+ 
+ package io.crate.rest.action;
+ 
++import static io.crate.data.breaker.BlockBasedRamAccounting.MAX_BLOCK_SIZE_IN_BYTES;
+ import static org.assertj.core.api.Assertions.assertThat;
+ 
+ import java.io.IOException;
+@@ -28,6 +29,7 @@ import java.util.Collections;
+ import java.util.List;
+ 
+ import org.elasticsearch.common.Strings;
++import org.elasticsearch.common.breaker.TestCircuitBreaker;
+ import org.elasticsearch.common.xcontent.XContentBuilder;
+ import org.elasticsearch.common.xcontent.json.JsonXContent;
+ import org.elasticsearch.index.engine.VersionConflictEngineException;
+@@ -40,12 +42,14 @@ import io.crate.breaker.TypedRowAccounting;
+ import io.crate.data.Row;
+ import io.crate.data.Row1;
+ import io.crate.data.RowN;
++import io.crate.data.breaker.BlockBasedRamAccounting;
+ import io.crate.data.breaker.RamAccounting;
+ import io.crate.expression.symbol.ScopedSymbol;
+ import io.crate.expression.symbol.Symbol;
+ import io.crate.expression.symbol.Symbols;
+ import io.crate.metadata.ColumnIdent;
+ import io.crate.metadata.RelationName;
++import io.crate.session.ResultReceiver;
+ import io.crate.types.DataTypes;
+ 
+ public class RestActionReceiversTest extends ESTestCase {
+@@ -143,4 +147,29 @@ public class RestActionReceiversTest extends ESTestCase {
+         assertThat(results[0].rowCount()).isEqualTo(1L);
+         assertThat(results[0].error()).isNull();
+     }
++
++    @Test
++    public void test_result_reciever_future_completed_on_cbe() throws Exception {
++        TestCircuitBreaker breaker = new TestCircuitBreaker();
++        breaker.startBreaking();
++        RamAccounting ramAccounting = new BlockBasedRamAccounting(
++            b -> breaker.addEstimateBytesAndMaybeBreak(b, "http-result"),
++            MAX_BLOCK_SIZE_IN_BYTES);
++
++        ResultReceiver<XContentBuilder> resultReceiver = new RestResultSetReceiver(
++            JsonXContent.builder(),
++            fields,
++            System.currentTimeMillis(),
++            new TypedRowAccounting(
++                Symbols.typeView(fields),
++                ramAccounting
++            ),
++            false
++        );
++
++        // Fails with CBE, resultReceiver's future must be completed, so that sys.jobs entry is cleared.
++        resultReceiver.setNextRow(rows.get(0));
++        assertThat(resultReceiver.completionFuture().isDone()).isTrue();
++        assertThat(resultReceiver.completionFuture().isCompletedExceptionally()).isTrue();
++    }
+ }
+[0m
+There is an unrelated untracked `tags` file; I’m leaving it untouched and staging only the three backport files.
+[0m$ [0mgit add -- "docs/appendices/release-notes/5.10.8.rst" "server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java" "server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java"; if ($?) { git commit -m "Fail RestResultSetReceiver on circuit breaker exceptions" }
+warning: in the working copy of 'docs/appendices/release-notes/5.10.8.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java', LF will be replaced by CRLF the next time Git touches it
+[detached HEAD 70c7a00be1] Fail RestResultSetReceiver on circuit breaker exceptions
+ 3 files changed, 33 insertions(+), 1 deletion(-)
+[0m
+The backport is committed. I’m extracting the final diff and running full patch validation against the specified parent ref.
+[0m# [0mTodos
+[✓] Inspect original commit metadata and changed-file context on 5.1 parent
+[✓] Build and hunk-validate backport patch
+[✓] Apply patch and commit result
+[•] Run full validation and report YAML result
+[0m
+[0m$ [0mgit diff f1229d922b690b9e21c92ed1abab909717e3664d HEAD -- "docs/appendices/release-notes/5.10.8.rst" "server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java" "server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java"
+diff --git a/docs/appendices/release-notes/5.10.8.rst b/docs/appendices/release-notes/5.10.8.rst
+index 384e8bb325..f9e41484a8 100644
+--- a/docs/appendices/release-notes/5.10.8.rst
++++ b/docs/appendices/release-notes/5.10.8.rst
+@@ -60,3 +60,6 @@ Fixes
+ - Fixed an issue where ``sas_token`` and ``key`` settings for
+   :ref:`azure repositories <sql-create-repo-azure>` were exposed as unmasked
+   settings in :ref:`sys.repositories <sys-repositories>` table.
++
++- Fixed an issue that caused queries to not complete and return if a 
++  ``CircuitBreakerException`` was thrown while constructing the result set.
+diff --git a/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java b/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java
+index c0cece4959..7eff95efb5 100644
+--- a/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java
++++ b/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java
+@@ -67,7 +67,7 @@ class RestResultSetReceiver implements ResultReceiver<XContentBuilder> {
+             builder.addRow(row, outputFields.size());
+             rowCount++;
+             return null;
+-        } catch (IOException e) {
++        } catch (Exception e) {
+             fail(e);
+             return null;
+         }
+diff --git a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java
+index 995034476f..6a95085184 100644
+--- a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java
++++ b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java
+@@ -21,6 +21,7 @@
+ 
+ package io.crate.rest.action;
+ 
++import static io.crate.data.breaker.BlockBasedRamAccounting.MAX_BLOCK_SIZE_IN_BYTES;
+ import static org.assertj.core.api.Assertions.assertThat;
+ 
+ import java.io.IOException;
+@@ -28,6 +29,7 @@ import java.util.Collections;
+ import java.util.List;
+ 
+ import org.elasticsearch.common.Strings;
++import org.elasticsearch.common.breaker.TestCircuitBreaker;
+ import org.elasticsearch.common.xcontent.XContentBuilder;
+ import org.elasticsearch.common.xcontent.json.JsonXContent;
+ import org.elasticsearch.index.engine.VersionConflictEngineException;
+@@ -40,12 +42,14 @@ import io.crate.breaker.TypedRowAccounting;
+ import io.crate.data.Row;
+ import io.crate.data.Row1;
+ import io.crate.data.RowN;
++import io.crate.data.breaker.BlockBasedRamAccounting;
+ import io.crate.data.breaker.RamAccounting;
+ import io.crate.expression.symbol.ScopedSymbol;
+ import io.crate.expression.symbol.Symbol;
+ import io.crate.expression.symbol.Symbols;
+ import io.crate.metadata.ColumnIdent;
+ import io.crate.metadata.RelationName;
++import io.crate.session.ResultReceiver;
+ import io.crate.types.DataTypes;
+ 
+ public class RestActionReceiversTest extends ESTestCase {
+@@ -143,4 +147,29 @@ public class RestActionReceiversTest extends ESTestCase {
+         assertThat(results[0].rowCount()).isEqualTo(1L);
+         assertThat(results[0].error()).isNull();
+     }
++
++    @Test
++    public void test_result_reciever_future_completed_on_cbe() throws Exception {
++        TestCircuitBreaker breaker = new TestCircuitBreaker();
++        breaker.startBreaking();
++        RamAccounting ramAccounting = new BlockBasedRamAccounting(
++            b -> breaker.addEstimateBytesAndMaybeBreak(b, "http-result"),
++            MAX_BLOCK_SIZE_IN_BYTES);
++
++        ResultReceiver<XContentBuilder> resultReceiver = new RestResultSetReceiver(
++            JsonXContent.builder(),
++            fields,
++            System.currentTimeMillis(),
++            new TypedRowAccounting(
++                Symbols.typeView(fields),
++                ramAccounting
++            ),
++            false
++        );
++
++        // Fails with CBE, resultReceiver's future must be completed, so that sys.jobs entry is cleared.
++        resultReceiver.setNextRow(rows.get(0));
++        assertThat(resultReceiver.completionFuture().isDone()).isTrue();
++        assertThat(resultReceiver.completionFuture().isCompletedExceptionally()).isTrue();
++    }
+ }
+[0m
+[0m⚙ [0mvalidate {"ref":"f1229d922b690b9e21c92ed1abab909717e3664d","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.10.8.rst b/docs/appendices/release-notes/5.10.8.rst\nindex 384e8bb325..f9e41484a8 100644\n--- a/docs/appendices/release-notes/5.10.8.rst\n+++ b/docs/appendices/release-notes/5.10.8.rst\n@@ -60,3 +60,6 @@ Fixes\n - Fixed an issue where ``sas_token`` and ``key`` settings for\n   :ref:`azure repositories <sql-create-repo-azure>` were exposed as unmasked\n   settings in :ref:`sys.repositories <sys-repositories>` table.\n+\n+- Fixed an issue that caused queries to not complete and return if a \n+  ``CircuitBreakerException`` was thrown while constructing the result set.\ndiff --git a/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java b/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java\nindex c0cece4959..7eff95efb5 100644\n--- a/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java\n+++ b/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java\n@@ -67,7 +67,7 @@ class RestResultSetReceiver implements ResultReceiver<XContentBuilder> {\n             builder.addRow(row, outputFields.size());\n             rowCount++;\n             return null;\n-        } catch (IOException e) {\n+        } catch (Exception e) {\n             fail(e);\n             return null;\n         }\ndiff --git a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\nindex 995034476f..6a95085184 100644\n--- a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n+++ b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n@@ -21,6 +21,7 @@\n \n package io.crate.rest.action;\n \n+import static io.crate.data.breaker.BlockBasedRamAccounting.MAX_BLOCK_SIZE_IN_BYTES;\n import static org.assertj.core.api.Assertions.assertThat;\n \n import java.io.IOException;\n@@ -28,6 +29,7 @@ import java.util.Collections;\n import java.util.List;\n \n import org.elasticsearch.common.Strings;\n+import org.elasticsearch.common.breaker.TestCircuitBreaker;\n import org.elasticsearch.common.xcontent.XContentBuilder;\n import org.elasticsearch.common.xcontent.json.JsonXContent;\n import org.elasticsearch.index.engine.VersionConflictEngineException;\n@@ -40,12 +42,14 @@ import io.crate.breaker.TypedRowAccounting;\n import io.crate.data.Row;\n import io.crate.data.Row1;\n import io.crate.data.RowN;\n+import io.crate.data.breaker.BlockBasedRamAccounting;\n import io.crate.data.breaker.RamAccounting;\n import io.crate.expression.symbol.ScopedSymbol;\n import io.crate.expression.symbol.Symbol;\n import io.crate.expression.symbol.Symbols;\n import io.crate.metadata.ColumnIdent;\n import io.crate.metadata.RelationName;\n+import io.crate.session.ResultReceiver;\n import io.crate.types.DataTypes;\n \n public class RestActionReceiversTest extends ESTestCase {\n@@ -143,4 +147,29 @@ public class RestActionReceiversTest extends ESTestCase {\n         assertThat(results[0].rowCount()).isEqualTo(1L);\n         assertThat(results[0].error()).isNull();\n     }\n+\n+    @Test\n+    public void test_result_reciever_future_completed_on_cbe() throws Exception {\n+        TestCircuitBreaker breaker = new TestCircuitBreaker();\n+        breaker.startBreaking();\n+        RamAccounting ramAccounting = new BlockBasedRamAccounting(\n+            b -> breaker.addEstimateBytesAndMaybeBreak(b, \"http-result\"),\n+            MAX_BLOCK_SIZE_IN_BYTES);\n+\n+        ResultReceiver<XContentBuilder> resultReceiver = new RestResultSetReceiver(\n+            JsonXContent.builder(),\n+            fields,\n+            System.currentTimeMillis(),\n+            new TypedRowAccounting(\n+                Symbols.typeView(fields),\n+                ramAccounting\n+            ),\n+            false\n+        );\n+\n+        // Fails with CBE, resultReceiver's future must be completed, so that sys.jobs entry is cleared.\n+        resultReceiver.setNextRow(rows.get(0));\n+        assertThat(resultReceiver.completionFuture().isDone()).isTrue();\n+        assertThat(resultReceiver.completionFuture().isCompletedExceptionally()).isTrue();\n+    }\n }\n"}
+[0m
+[0m$ [0mgit diff -U5 f1229d922b690b9e21c92ed1abab909717e3664d HEAD -- "docs/appendices/release-notes/5.10.8.rst" "server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java" "server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java"
+diff --git a/docs/appendices/release-notes/5.10.8.rst b/docs/appendices/release-notes/5.10.8.rst
+index 384e8bb325..f9e41484a8 100644
+--- a/docs/appendices/release-notes/5.10.8.rst
++++ b/docs/appendices/release-notes/5.10.8.rst
+@@ -58,5 +58,8 @@ Fixes
+   running with :ref:`version_5.10.8` or higher.
+ 
+ - Fixed an issue where ``sas_token`` and ``key`` settings for
+   :ref:`azure repositories <sql-create-repo-azure>` were exposed as unmasked
+   settings in :ref:`sys.repositories <sys-repositories>` table.
++
++- Fixed an issue that caused queries to not complete and return if a 
++  ``CircuitBreakerException`` was thrown while constructing the result set.
+diff --git a/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java b/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java
+index c0cece4959..7eff95efb5 100644
+--- a/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java
++++ b/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java
+@@ -65,11 +65,11 @@ class RestResultSetReceiver implements ResultReceiver<XContentBuilder> {
+         try {
+             rowAccounting.accountForAndMaybeBreak(row);
+             builder.addRow(row, outputFields.size());
+             rowCount++;
+             return null;
+-        } catch (IOException e) {
++        } catch (Exception e) {
+             fail(e);
+             return null;
+         }
+     }
+ 
+diff --git a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java
+index 995034476f..6a95085184 100644
+--- a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java
++++ b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java
+@@ -19,17 +19,19 @@
+  * software solely pursuant to the terms of the relevant commercial agreement.
+  */
+ 
+ package io.crate.rest.action;
+ 
++import static io.crate.data.breaker.BlockBasedRamAccounting.MAX_BLOCK_SIZE_IN_BYTES;
+ import static org.assertj.core.api.Assertions.assertThat;
+ 
+ import java.io.IOException;
+ import java.util.Collections;
+ import java.util.List;
+ 
+ import org.elasticsearch.common.Strings;
++import org.elasticsearch.common.breaker.TestCircuitBreaker;
+ import org.elasticsearch.common.xcontent.XContentBuilder;
+ import org.elasticsearch.common.xcontent.json.JsonXContent;
+ import org.elasticsearch.index.engine.VersionConflictEngineException;
+ import org.elasticsearch.index.shard.ShardId;
+ import org.elasticsearch.test.ESTestCase;
+@@ -38,16 +40,18 @@ import org.junit.Test;
+ import io.crate.auth.AccessControl;
+ import io.crate.breaker.TypedRowAccounting;
+ import io.crate.data.Row;
+ import io.crate.data.Row1;
+ import io.crate.data.RowN;
++import io.crate.data.breaker.BlockBasedRamAccounting;
+ import io.crate.data.breaker.RamAccounting;
+ import io.crate.expression.symbol.ScopedSymbol;
+ import io.crate.expression.symbol.Symbol;
+ import io.crate.expression.symbol.Symbols;
+ import io.crate.metadata.ColumnIdent;
+ import io.crate.metadata.RelationName;
++import io.crate.session.ResultReceiver;
+ import io.crate.types.DataTypes;
+ 
+ public class RestActionReceiversTest extends ESTestCase {
+ 
+     private final List<RowN> rows = List.of(
+@@ -141,6 +145,31 @@ public class RestActionReceiversTest extends ESTestCase {
+         bulkRowCountReceiver.setNextRow(new Row1(1L));
+         bulkRowCountReceiver.allFinished();
+         assertThat(results[0].rowCount()).isEqualTo(1L);
+         assertThat(results[0].error()).isNull();
+     }
++
++    @Test
++    public void test_result_reciever_future_completed_on_cbe() throws Exception {
++        TestCircuitBreaker breaker = new TestCircuitBreaker();
++        breaker.startBreaking();
++        RamAccounting ramAccounting = new BlockBasedRamAccounting(
++            b -> breaker.addEstimateBytesAndMaybeBreak(b, "http-result"),
++            MAX_BLOCK_SIZE_IN_BYTES);
++
++        ResultReceiver<XContentBuilder> resultReceiver = new RestResultSetReceiver(
++            JsonXContent.builder(),
++            fields,
++            System.currentTimeMillis(),
++            new TypedRowAccounting(
++                Symbols.typeView(fields),
++                ramAccounting
++            ),
++            false
++        );
++
++        // Fails with CBE, resultReceiver's future must be completed, so that sys.jobs entry is cleared.
++        resultReceiver.setNextRow(rows.get(0));
++        assertThat(resultReceiver.completionFuture().isDone()).isTrue();
++        assertThat(resultReceiver.completionFuture().isCompletedExceptionally()).isTrue();
++    }
+ }
+[0m
+[0m⚙ [0mvalidate {"ref":"f1229d922b690b9e21c92ed1abab909717e3664d","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.10.8.rst b/docs/appendices/release-notes/5.10.8.rst\nindex 384e8bb325..f9e41484a8 100644\n--- a/docs/appendices/release-notes/5.10.8.rst\n+++ b/docs/appendices/release-notes/5.10.8.rst\n@@ -58,5 +58,8 @@ Fixes\n   running with :ref:`version_5.10.8` or higher.\n \n - Fixed an issue where ``sas_token`` and ``key`` settings for\n   :ref:`azure repositories <sql-create-repo-azure>` were exposed as unmasked\n   settings in :ref:`sys.repositories <sys-repositories>` table.\n+\n+- Fixed an issue that caused queries to not complete and return if a \n+  ``CircuitBreakerException`` was thrown while constructing the result set.\ndiff --git a/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java b/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java\nindex c0cece4959..7eff95efb5 100644\n--- a/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java\n+++ b/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java\n@@ -65,11 +65,11 @@ class RestResultSetReceiver implements ResultReceiver<XContentBuilder> {\n         try {\n             rowAccounting.accountForAndMaybeBreak(row);\n             builder.addRow(row, outputFields.size());\n             rowCount++;\n             return null;\n-        } catch (IOException e) {\n+        } catch (Exception e) {\n             fail(e);\n             return null;\n         }\n     }\n \ndiff --git a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\nindex 995034476f..6a95085184 100644\n--- a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n+++ b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n@@ -19,17 +19,19 @@\n  * software solely pursuant to the terms of the relevant commercial agreement.\n  */\n \n package io.crate.rest.action;\n \n+import static io.crate.data.breaker.BlockBasedRamAccounting.MAX_BLOCK_SIZE_IN_BYTES;\n import static org.assertj.core.api.Assertions.assertThat;\n \n import java.io.IOException;\n import java.util.Collections;\n import java.util.List;\n \n import org.elasticsearch.common.Strings;\n+import org.elasticsearch.common.breaker.TestCircuitBreaker;\n import org.elasticsearch.common.xcontent.XContentBuilder;\n import org.elasticsearch.common.xcontent.json.JsonXContent;\n import org.elasticsearch.index.engine.VersionConflictEngineException;\n import org.elasticsearch.index.shard.ShardId;\n import org.elasticsearch.test.ESTestCase;\n@@ -38,16 +40,18 @@ import org.junit.Test;\n import io.crate.auth.AccessControl;\n import io.crate.breaker.TypedRowAccounting;\n import io.crate.data.Row;\n import io.crate.data.Row1;\n import io.crate.data.RowN;\n+import io.crate.data.breaker.BlockBasedRamAccounting;\n import io.crate.data.breaker.RamAccounting;\n import io.crate.expression.symbol.ScopedSymbol;\n import io.crate.expression.symbol.Symbol;\n import io.crate.expression.symbol.Symbols;\n import io.crate.metadata.ColumnIdent;\n import io.crate.metadata.RelationName;\n+import io.crate.session.ResultReceiver;\n import io.crate.types.DataTypes;\n \n public class RestActionReceiversTest extends ESTestCase {\n \n     private final List<RowN> rows = List.of(\n@@ -141,6 +145,31 @@ public class RestActionReceiversTest extends ESTestCase {\n         bulkRowCountReceiver.setNextRow(new Row1(1L));\n         bulkRowCountReceiver.allFinished();\n         assertThat(results[0].rowCount()).isEqualTo(1L);\n         assertThat(results[0].error()).isNull();\n     }\n+\n+    @Test\n+    public void test_result_reciever_future_completed_on_cbe() throws Exception {\n+        TestCircuitBreaker breaker = new TestCircuitBreaker();\n+        breaker.startBreaking();\n+        RamAccounting ramAccounting = new BlockBasedRamAccounting(\n+            b -> breaker.addEstimateBytesAndMaybeBreak(b, \"http-result\"),\n+            MAX_BLOCK_SIZE_IN_BYTES);\n+\n+        ResultReceiver<XContentBuilder> resultReceiver = new RestResultSetReceiver(\n+            JsonXContent.builder(),\n+            fields,\n+            System.currentTimeMillis(),\n+            new TypedRowAccounting(\n+                Symbols.typeView(fields),\n+                ramAccounting\n+            ),\n+            false\n+        );\n+\n+        // Fails with CBE, resultReceiver's future must be completed, so that sys.jobs entry is cleared.\n+        resultReceiver.setNextRow(rows.get(0));\n+        assertThat(resultReceiver.completionFuture().isDone()).isTrue();\n+        assertThat(resultReceiver.completionFuture().isCompletedExceptionally()).isTrue();\n+    }\n }\n"}
+Full validation is rejecting the diff despite reporting 100% source-context matches; this appears to be the validator’s stricter context handling, not a semantic mismatch. I’m rerunning full validation with context revision enabled as the tool suggests for these cases.
+[0m⚙ [0mvalidate {"ref":"f1229d922b690b9e21c92ed1abab909717e3664d","mode":"full","revise_context":true,"patch":"diff --git a/docs/appendices/release-notes/5.10.8.rst b/docs/appendices/release-notes/5.10.8.rst\nindex 384e8bb325..f9e41484a8 100644\n--- a/docs/appendices/release-notes/5.10.8.rst\n+++ b/docs/appendices/release-notes/5.10.8.rst\n@@ -58,5 +58,8 @@ Fixes\n   running with :ref:`version_5.10.8` or higher.\n \n - Fixed an issue where ``sas_token`` and ``key`` settings for\n   :ref:`azure repositories <sql-create-repo-azure>` were exposed as unmasked\n   settings in :ref:`sys.repositories <sys-repositories>` table.\n+\n+- Fixed an issue that caused queries to not complete and return if a \n+  ``CircuitBreakerException`` was thrown while constructing the result set.\ndiff --git a/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java b/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java\nindex c0cece4959..7eff95efb5 100644\n--- a/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java\n+++ b/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java\n@@ -65,11 +65,11 @@ class RestResultSetReceiver implements ResultReceiver<XContentBuilder> {\n         try {\n             rowAccounting.accountForAndMaybeBreak(row);\n             builder.addRow(row, outputFields.size());\n             rowCount++;\n             return null;\n-        } catch (IOException e) {\n+        } catch (Exception e) {\n             fail(e);\n             return null;\n         }\n     }\n \ndiff --git a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\nindex 995034476f..6a95085184 100644\n--- a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n+++ b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java\n@@ -19,17 +19,19 @@\n  * software solely pursuant to the terms of the relevant commercial agreement.\n  */\n \n package io.crate.rest.action;\n \n+import static io.crate.data.breaker.BlockBasedRamAccounting.MAX_BLOCK_SIZE_IN_BYTES;\n import static org.assertj.core.api.Assertions.assertThat;\n \n import java.io.IOException;\n import java.util.Collections;\n import java.util.List;\n \n import org.elasticsearch.common.Strings;\n+import org.elasticsearch.common.breaker.TestCircuitBreaker;\n import org.elasticsearch.common.xcontent.XContentBuilder;\n import org.elasticsearch.common.xcontent.json.JsonXContent;\n import org.elasticsearch.index.engine.VersionConflictEngineException;\n import org.elasticsearch.index.shard.ShardId;\n import org.elasticsearch.test.ESTestCase;\n@@ -38,16 +40,18 @@ import org.junit.Test;\n import io.crate.auth.AccessControl;\n import io.crate.breaker.TypedRowAccounting;\n import io.crate.data.Row;\n import io.crate.data.Row1;\n import io.crate.data.RowN;\n+import io.crate.data.breaker.BlockBasedRamAccounting;\n import io.crate.data.breaker.RamAccounting;\n import io.crate.expression.symbol.ScopedSymbol;\n import io.crate.expression.symbol.Symbol;\n import io.crate.expression.symbol.Symbols;\n import io.crate.metadata.ColumnIdent;\n import io.crate.metadata.RelationName;\n+import io.crate.session.ResultReceiver;\n import io.crate.types.DataTypes;\n \n public class RestActionReceiversTest extends ESTestCase {\n \n     private final List<RowN> rows = List.of(\n@@ -141,6 +145,31 @@ public class RestActionReceiversTest extends ESTestCase {\n         bulkRowCountReceiver.setNextRow(new Row1(1L));\n         bulkRowCountReceiver.allFinished();\n         assertThat(results[0].rowCount()).isEqualTo(1L);\n         assertThat(results[0].error()).isNull();\n     }\n+\n+    @Test\n+    public void test_result_reciever_future_completed_on_cbe() throws Exception {\n+        TestCircuitBreaker breaker = new TestCircuitBreaker();\n+        breaker.startBreaking();\n+        RamAccounting ramAccounting = new BlockBasedRamAccounting(\n+            b -> breaker.addEstimateBytesAndMaybeBreak(b, \"http-result\"),\n+            MAX_BLOCK_SIZE_IN_BYTES);\n+\n+        ResultReceiver<XContentBuilder> resultReceiver = new RestResultSetReceiver(\n+            JsonXContent.builder(),\n+            fields,\n+            System.currentTimeMillis(),\n+            new TypedRowAccounting(\n+                Symbols.typeView(fields),\n+                ramAccounting\n+            ),\n+            false\n+        );\n+\n+        // Fails with CBE, resultReceiver's future must be completed, so that sys.jobs entry is cleared.\n+        resultReceiver.setNextRow(rows.get(0));\n+        assertThat(resultReceiver.completionFuture().isDone()).isTrue();\n+        assertThat(resultReceiver.completionFuture().isCompletedExceptionally()).isTrue();\n+    }\n }\n"}
+Full validation still fails with 100% matching blocks, so I’m isolating whether the full-mode apply path rejects all patch payloads or just the combined diff.
+[0m⚙ [0mvalidate {"ref":"f1229d922b690b9e21c92ed1abab909717e3664d","mode":"full","patch":"diff --git a/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java b/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java\n--- a/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java\n+++ b/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java\n@@ -65,11 +65,11 @@ class RestResultSetReceiver implements ResultReceiver<XContentBuilder> {\n         try {\n             rowAccounting.accountForAndMaybeBreak(row);\n             builder.addRow(row, outputFields.size());\n             rowCount++;\n             return null;\n-        } catch (IOException e) {\n+        } catch (Exception e) {\n             fail(e);\n             return null;\n         }\n     }\n \n"}
+Full mode rejects even the single receiver hunk while pointing to a 100% matching block. The hunk-mode validation succeeded for this same location, so I’ll keep the committed patch and report the full-validation anomaly in the final notes.
+I’m running the focused test class locally as an additional verification because the full validation tool is failing during apply-check despite matching contexts.
+[0m
+[0m$ [0m.\gradlew.bat :server:test --tests io.crate.rest.action.RestActionReceiversTest
+.\gradlew.bat : The term '.\gradlew.bat' is not recognized as the name of a cmdlet, function, script file, or operable 
+program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:1
++ .\gradlew.bat :server:test --tests io.crate.rest.action.RestActionRec ...
++ ~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (.\gradlew.bat:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+[0m
+[0m✱ [0mGlob "gradlew*"[90m in . · 0 matches[0m
+[0m
+[0m$ [0mgit diff f1229d922b690b9e21c92ed1abab909717e3664d HEAD -- "docs/appendices/release-notes/5.10.8.rst" "server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java" "server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java"
+diff --git a/docs/appendices/release-notes/5.10.8.rst b/docs/appendices/release-notes/5.10.8.rst
+index 384e8bb325..f9e41484a8 100644
+--- a/docs/appendices/release-notes/5.10.8.rst
++++ b/docs/appendices/release-notes/5.10.8.rst
+@@ -60,3 +60,6 @@ Fixes
+ - Fixed an issue where ``sas_token`` and ``key`` settings for
+   :ref:`azure repositories <sql-create-repo-azure>` were exposed as unmasked
+   settings in :ref:`sys.repositories <sys-repositories>` table.
++
++- Fixed an issue that caused queries to not complete and return if a 
++  ``CircuitBreakerException`` was thrown while constructing the result set.
+diff --git a/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java b/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java
+index c0cece4959..7eff95efb5 100644
+--- a/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java
++++ b/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java
+@@ -67,7 +67,7 @@ class RestResultSetReceiver implements ResultReceiver<XContentBuilder> {
+             builder.addRow(row, outputFields.size());
+             rowCount++;
+             return null;
+-        } catch (IOException e) {
++        } catch (Exception e) {
+             fail(e);
+             return null;
+         }
+diff --git a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java
+index 995034476f..6a95085184 100644
+--- a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java
++++ b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java
+@@ -21,6 +21,7 @@
+ 
+ package io.crate.rest.action;
+ 
++import static io.crate.data.breaker.BlockBasedRamAccounting.MAX_BLOCK_SIZE_IN_BYTES;
+ import static org.assertj.core.api.Assertions.assertThat;
+ 
+ import java.io.IOException;
+@@ -28,6 +29,7 @@ import java.util.Collections;
+ import java.util.List;
+ 
+ import org.elasticsearch.common.Strings;
++import org.elasticsearch.common.breaker.TestCircuitBreaker;
+ import org.elasticsearch.common.xcontent.XContentBuilder;
+ import org.elasticsearch.common.xcontent.json.JsonXContent;
+ import org.elasticsearch.index.engine.VersionConflictEngineException;
+@@ -40,12 +42,14 @@ import io.crate.breaker.TypedRowAccounting;
+ import io.crate.data.Row;
+ import io.crate.data.Row1;
+ import io.crate.data.RowN;
++import io.crate.data.breaker.BlockBasedRamAccounting;
+ import io.crate.data.breaker.RamAccounting;
+ import io.crate.expression.symbol.ScopedSymbol;
+ import io.crate.expression.symbol.Symbol;
+ import io.crate.expression.symbol.Symbols;
+ import io.crate.metadata.ColumnIdent;
+ import io.crate.metadata.RelationName;
++import io.crate.session.ResultReceiver;
+ import io.crate.types.DataTypes;
+ 
+ public class RestActionReceiversTest extends ESTestCase {
+@@ -143,4 +147,29 @@ public class RestActionReceiversTest extends ESTestCase {
+         assertThat(results[0].rowCount()).isEqualTo(1L);
+         assertThat(results[0].error()).isNull();
+     }
++
++    @Test
++    public void test_result_reciever_future_completed_on_cbe() throws Exception {
++        TestCircuitBreaker breaker = new TestCircuitBreaker();
++        breaker.startBreaking();
++        RamAccounting ramAccounting = new BlockBasedRamAccounting(
++            b -> breaker.addEstimateBytesAndMaybeBreak(b, "http-result"),
++            MAX_BLOCK_SIZE_IN_BYTES);
++
++        ResultReceiver<XContentBuilder> resultReceiver = new RestResultSetReceiver(
++            JsonXContent.builder(),
++            fields,
++            System.currentTimeMillis(),
++            new TypedRowAccounting(
++                Symbols.typeView(fields),
++                ramAccounting
++            ),
++            false
++        );
++
++        // Fails with CBE, resultReceiver's future must be completed, so that sys.jobs entry is cleared.
++        resultReceiver.setNextRow(rows.get(0));
++        assertThat(resultReceiver.completionFuture().isDone()).isTrue();
++        assertThat(resultReceiver.completionFuture().isCompletedExceptionally()).isTrue();
++    }
+ }
+[0m
+[0m$ [0mgit status --short
+?? tags
+[0m
+The working tree is clean apart from the pre-existing untracked `tags` file. The repository has no `gradlew`/`gradlew.bat`, so the focused Gradle test could not be run locally.
+[0m# [0mTodos
+[✓] Inspect original commit metadata and changed-file context on 5.1 parent
+[✓] Build and hunk-validate backport patch
+[✓] Apply patch and commit result
+[✓] Run full validation and report YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/docs/appendices/release-notes/5.10.8.rst b/docs/appendices/release-notes/5.10.8.rst
+    index 384e8bb325..f9e41484a8 100644
+    --- a/docs/appendices/release-notes/5.10.8.rst
+    +++ b/docs/appendices/release-notes/5.10.8.rst
+    @@ -60,3 +60,6 @@ Fixes
+     - Fixed an issue where ``sas_token`` and ``key`` settings for
+       :ref:`azure repositories <sql-create-repo-azure>` were exposed as unmasked
+       settings in :ref:`sys.repositories <sys-repositories>` table.
+    +
+    +- Fixed an issue that caused queries to not complete and return if a 
+    +  ``CircuitBreakerException`` was thrown while constructing the result set.
+    diff --git a/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java b/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java
+    index c0cece4959..7eff95efb5 100644
+    --- a/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java
+    +++ b/server/src/main/java/io/crate/rest/action/RestResultSetReceiver.java
+    @@ -67,7 +67,7 @@ class RestResultSetReceiver implements ResultReceiver<XContentBuilder> {
+                 builder.addRow(row, outputFields.size());
+                 rowCount++;
+                 return null;
+    -        } catch (IOException e) {
+    +        } catch (Exception e) {
+                 fail(e);
+                 return null;
+             }
+    diff --git a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java
+    index 995034476f..6a95085184 100644
+    --- a/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java
+    +++ b/server/src/test/java/io/crate/rest/action/RestActionReceiversTest.java
+    @@ -21,6 +21,7 @@
+     
+     package io.crate.rest.action;
+     
+    +import static io.crate.data.breaker.BlockBasedRamAccounting.MAX_BLOCK_SIZE_IN_BYTES;
+     import static org.assertj.core.api.Assertions.assertThat;
+     
+     import java.io.IOException;
+    @@ -28,6 +29,7 @@ import java.util.Collections;
+     import java.util.List;
+     
+     import org.elasticsearch.common.Strings;
+    +import org.elasticsearch.common.breaker.TestCircuitBreaker;
+     import org.elasticsearch.common.xcontent.XContentBuilder;
+     import org.elasticsearch.common.xcontent.json.JsonXContent;
+     import org.elasticsearch.index.engine.VersionConflictEngineException;
+    @@ -40,12 +42,14 @@ import io.crate.breaker.TypedRowAccounting;
+     import io.crate.data.Row;
+     import io.crate.data.Row1;
+     import io.crate.data.RowN;
+    +import io.crate.data.breaker.BlockBasedRamAccounting;
+     import io.crate.data.breaker.RamAccounting;
+     import io.crate.expression.symbol.ScopedSymbol;
+     import io.crate.expression.symbol.Symbol;
+     import io.crate.expression.symbol.Symbols;
+     import io.crate.metadata.ColumnIdent;
+     import io.crate.metadata.RelationName;
+    +import io.crate.session.ResultReceiver;
+     import io.crate.types.DataTypes;
+     
+     public class RestActionReceiversTest extends ESTestCase {
+    @@ -143,4 +147,29 @@ public class RestActionReceiversTest extends ESTestCase {
+             assertThat(results[0].rowCount()).isEqualTo(1L);
+             assertThat(results[0].error()).isNull();
+         }
+    +
+    +    @Test
+    +    public void test_result_reciever_future_completed_on_cbe() throws Exception {
+    +        TestCircuitBreaker breaker = new TestCircuitBreaker();
+    +        breaker.startBreaking();
+    +        RamAccounting ramAccounting = new BlockBasedRamAccounting(
+    +            b -> breaker.addEstimateBytesAndMaybeBreak(b, "http-result"),
+    +            MAX_BLOCK_SIZE_IN_BYTES);
+    +
+    +        ResultReceiver<XContentBuilder> resultReceiver = new RestResultSetReceiver(
+    +            JsonXContent.builder(),
+    +            fields,
+    +            System.currentTimeMillis(),
+    +            new TypedRowAccounting(
+    +                Symbols.typeView(fields),
+    +                ramAccounting
+    +            ),
+    +            false
+    +        );
+    +
+    +        // Fails with CBE, resultReceiver's future must be completed, so that sys.jobs entry is cleared.
+    +        resultReceiver.setNextRow(rows.get(0));
+    +        assertThat(resultReceiver.completionFuture().isDone()).isTrue();
+    +        assertThat(resultReceiver.completionFuture().isCompletedExceptionally()).isTrue();
+    +    }
+     }
+  notes: >
+    Backported and committed the RestResultSetReceiver CBE failure handling with a 5.1-adapted regression test; hunk validation passed, while full validation reported a 100%-matching context apply-check failure, and local Gradle tests could not run because no Gradle wrapper exists.
+```
+
+--- END CLI OUTPUT ---
+[02:32:28]   Done in 377.2s | status=success

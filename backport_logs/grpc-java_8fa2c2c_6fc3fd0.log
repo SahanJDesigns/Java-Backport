@@ -1,0 +1,145 @@
+[14:13:41] === Row 21: grpc-java  8fa2c2c3 -> 6fc3fd04  [TYPE-I] ===
+[14:13:41]   Resolving parent of backport commit 6fc3fd04...
+[14:13:41]   Backport parent (target ref): 498f717fcb41085c2ba0228a0e6c2d3d3c727877
+[14:13:41]   Extracting new-version patch for 8fa2c2c3...
+[14:13:41]   New-version patch size: 2696 chars
+[14:13:41]   Checking out backport parent 498f717f...
+[14:13:41]   Invoking OpenCode CLI (6587 chars)...
+[14:13:41]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the target ref context for both affected hunks, then validate a minimal patch hunk-by-hunk against `498f717fcb41085c2ba0228a0e6c2d3d3c727877` without switching refs.
+[0m# [0mTodos
+[•] Understand original commit intent and affected hunks
+[ ] Locate equivalent server ping handling code on v1.77.x parent
+[ ] Locate equivalent keepalive tests on v1.77.x parent
+[ ] Construct and hunk-validate unified diff
+[ ] Return YAML backport result
+[0m
+[0m⚙ [0mviewcode {"ref":"498f717fcb41085c2ba0228a0e6c2d3d3c727877","path":"okhttp/src/main/java/io/grpc/okhttp/OkHttpServerTransport.java","startline":930,"endline":980}
+[0m⚙ [0mviewcode {"ref":"498f717fcb41085c2ba0228a0e6c2d3d3c727877","path":"okhttp/src/test/java/io/grpc/okhttp/OkHttpServerTransportTest.java","startline":1240,"endline":1295}
+[0m⚙ [0mgit_show {"ref":"8fa2c2c3c1454d411b1b029f8e83debf02c9bf11"}
+[0m⚙ [0mlocate_symbol {"ref":"498f717fcb41085c2ba0228a0e6c2d3d3c727877","symbol":"keepAliveEnforcer_pingAcceptableFailsWithGoAway"}
+[0m⚙ [0mlocate_symbol {"ref":"498f717fcb41085c2ba0228a0e6c2d3d3c727877","symbol":"ping"}
+The target code is present with the same structure as the original hunk: enforcement currently happens before distinguishing ACK from non-ACK pings, and the tests have the existing keepalive enforcement test immediately before `keepAliveEnforcer_noticesActive`.
+[0m
+[0m# [0mTodos
+[✓] Understand original commit intent and affected hunks
+[•] Locate equivalent server ping handling code on v1.77.x parent
+[ ] Locate equivalent keepalive tests on v1.77.x parent
+[ ] Construct and hunk-validate unified diff
+[ ] Return YAML backport result
+[0m
+[0m⚙ [0mgit_history {"filepath":"okhttp/src/main/java/io/grpc/okhttp/OkHttpServerTransport.java","start_line":953,"end_line":974,"start_commit":"498f717fcb41085c2ba0228a0e6c2d3d3c727877","end_commit":"498f717fcb41085c2ba0228a0e6c2d3d3c727877"}
+`git_history` with identical start/end refs is not a valid range, so I’m using the target’s parent-to-target lineage just to confirm the code location without consulting later master changes.
+[0m
+[0m$ [0mgit rev-parse 498f717fcb41085c2ba0228a0e6c2d3d3c727877^
+9ac12ef8981c1b73cbcc140b9600aa4611cee89a
+[0m
+[0m⚙ [0mgit_history {"filepath":"okhttp/src/main/java/io/grpc/okhttp/OkHttpServerTransport.java","start_line":953,"end_line":974,"start_commit":"9ac12ef8981c1b73cbcc140b9600aa4611cee89a","end_commit":"498f717fcb41085c2ba0228a0e6c2d3d3c727877"}
+[0m⚙ [0mgit_history {"filepath":"okhttp/src/test/java/io/grpc/okhttp/OkHttpServerTransportTest.java","start_line":1240,"end_line":1270,"start_commit":"9ac12ef8981c1b73cbcc140b9600aa4611cee89a","end_commit":"498f717fcb41085c2ba0228a0e6c2d3d3c727877"}
+[0m⚙ [0mlocate_symbol {"ref":"498f717fcb41085c2ba0228a0e6c2d3d3c727877","symbol":"keepAliveEnforcer_noticesActive"}
+[0m⚙ [0mlocate_symbol {"ref":"498f717fcb41085c2ba0228a0e6c2d3d3c727877","symbol":"OkHttpServerTransport"}
+Symbol lookup confirms `OkHttpServerTransport` is in the same file. The second symbol lookup hit a stale `.git/index.lock` created by tooling, but the relevant test block is already located from `viewcode`.
+[0m
+[0m# [0mTodos
+[✓] Understand original commit intent and affected hunks
+[✓] Locate equivalent server ping handling code on v1.77.x parent
+[•] Locate equivalent keepalive tests on v1.77.x parent
+[ ] Construct and hunk-validate unified diff
+[ ] Return YAML backport result
+[0m
+[0m⚙ [0mviewcode {"ref":"498f717fcb41085c2ba0228a0e6c2d3d3c727877","path":"okhttp/src/test/java/io/grpc/okhttp/OkHttpServerTransportTest.java","startline":1210,"endline":1278}
+I found the exact insertion point: `keepAliveEnforcer_initialIdle` is present and matches the upstream test context, so this is a direct TYPE-I backport with no structural adaptation needed.
+[0m
+[0m# [0mTodos
+[✓] Understand original commit intent and affected hunks
+[✓] Locate equivalent server ping handling code on v1.77.x parent
+[✓] Locate equivalent keepalive tests on v1.77.x parent
+[•] Construct and hunk-validate unified diff
+[ ] Return YAML backport result
+[0m
+I’m validating the two hunks separately now: first the server ping enforcement move, then the regression test insertion.
+[0m⚙ [0mvalidate {"ref":"498f717fcb41085c2ba0228a0e6c2d3d3c727877","mode":"hunk","patch":"diff --git a/okhttp/src/main/java/io/grpc/okhttp/OkHttpServerTransport.java b/okhttp/src/main/java/io/grpc/okhttp/OkHttpServerTransport.java\n--- a/okhttp/src/main/java/io/grpc/okhttp/OkHttpServerTransport.java\n+++ b/okhttp/src/main/java/io/grpc/okhttp/OkHttpServerTransport.java\n@@ -951,13 +951,13 @@ final class OkHttpServerTransport implements ServerTransport,\n \n     @Override\n     public void ping(boolean ack, int payload1, int payload2) {\n-      if (!keepAliveEnforcer.pingAcceptable()) {\n-        abruptShutdown(ErrorCode.ENHANCE_YOUR_CALM, \"too_many_pings\",\n-            Status.RESOURCE_EXHAUSTED.withDescription(\"Too many pings from client\"), false);\n-        return;\n-      }\n       long payload = (((long) payload1) << 32) | (payload2 & 0xffffffffL);\n       if (!ack) {\n+        if (!keepAliveEnforcer.pingAcceptable()) {\n+          abruptShutdown(ErrorCode.ENHANCE_YOUR_CALM, \"too_many_pings\",\n+              Status.RESOURCE_EXHAUSTED.withDescription(\"Too many pings from client\"), false);\n+          return;\n+        }\n         frameLogger.logPing(OkHttpFrameLogger.Direction.INBOUND, payload);\n         synchronized (lock) {\n           frameWriter.ping(true, payload1, payload2);\n"}
+The server transport hunk applies cleanly.
+[0m⚙ [0mvalidate {"ref":"498f717fcb41085c2ba0228a0e6c2d3d3c727877","mode":"hunk","patch":"diff --git a/okhttp/src/test/java/io/grpc/okhttp/OkHttpServerTransportTest.java b/okhttp/src/test/java/io/grpc/okhttp/OkHttpServerTransportTest.java\n--- a/okhttp/src/test/java/io/grpc/okhttp/OkHttpServerTransportTest.java\n+++ b/okhttp/src/test/java/io/grpc/okhttp/OkHttpServerTransportTest.java\n@@ -1245,6 +1245,31 @@ public class OkHttpServerTransportTest {\n     verify(clientFramesRead).goAway(0, ErrorCode.ENHANCE_YOUR_CALM,\n         ByteString.encodeString(\"too_many_pings\", GrpcUtil.US_ASCII));\n   }\n \n+  @Test\n+  public void keepAliveEnforcer_doesNotEnforcePingAcks() throws Exception {\n+    serverBuilder.permitKeepAliveTime(1, TimeUnit.HOURS)\n+        .permitKeepAliveWithoutCalls(true);\n+    initTransport();\n+    handshake();\n+\n+    for (int i = 0; i < KeepAliveEnforcer.MAX_PING_STRIKES + 2; i++) {\n+      int serverPingId = 0xDEAD + i;\n+      clientFrameWriter.ping(true, serverPingId, 0);\n+      clientFrameWriter.flush();\n+    }\n+\n+    for (int i = 0; i < KeepAliveEnforcer.MAX_PING_STRIKES; i++) {\n+      pingPong();\n+    }\n+\n+    pingPongId++;\n+    clientFrameWriter.ping(false, pingPongId, 0);\n+    clientFrameWriter.flush();\n+    assertThat(clientFrameReader.nextFrame(clientFramesRead)).isTrue();\n+    verify(clientFramesRead).goAway(0, ErrorCode.ENHANCE_YOUR_CALM,\n+        ByteString.encodeString(\"too_many_pings\", GrpcUtil.US_ASCII));\n+  }\n+\n   @Test\n   public void keepAliveEnforcer_noticesActive() throws Exception {\n     serverBuilder.permitKeepAliveTime(0, TimeUnit.SECONDS)\n"}
+Both hunks validate cleanly against the requested target ref; per instructions I’m skipping full validation.
+[0m
+[0m# [0mTodos
+[✓] Understand original commit intent and affected hunks
+[✓] Locate equivalent server ping handling code on v1.77.x parent
+[✓] Locate equivalent keepalive tests on v1.77.x parent
+[✓] Construct and hunk-validate unified diff
+[•] Return YAML backport result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/okhttp/src/main/java/io/grpc/okhttp/OkHttpServerTransport.java b/okhttp/src/main/java/io/grpc/okhttp/OkHttpServerTransport.java
+    --- a/okhttp/src/main/java/io/grpc/okhttp/OkHttpServerTransport.java
+    +++ b/okhttp/src/main/java/io/grpc/okhttp/OkHttpServerTransport.java
+    @@ -951,13 +951,13 @@ final class OkHttpServerTransport implements ServerTransport,
+     
+         @Override
+         public void ping(boolean ack, int payload1, int payload2) {
+    -      if (!keepAliveEnforcer.pingAcceptable()) {
+    -        abruptShutdown(ErrorCode.ENHANCE_YOUR_CALM, "too_many_pings",
+    -            Status.RESOURCE_EXHAUSTED.withDescription("Too many pings from client"), false);
+    -        return;
+    -      }
+           long payload = (((long) payload1) << 32) | (payload2 & 0xffffffffL);
+           if (!ack) {
+    +        if (!keepAliveEnforcer.pingAcceptable()) {
+    +          abruptShutdown(ErrorCode.ENHANCE_YOUR_CALM, "too_many_pings",
+    +              Status.RESOURCE_EXHAUSTED.withDescription("Too many pings from client"), false);
+    +          return;
+    +        }
+             frameLogger.logPing(OkHttpFrameLogger.Direction.INBOUND, payload);
+             synchronized (lock) {
+               frameWriter.ping(true, payload1, payload2);
+    diff --git a/okhttp/src/test/java/io/grpc/okhttp/OkHttpServerTransportTest.java b/okhttp/src/test/java/io/grpc/okhttp/OkHttpServerTransportTest.java
+    --- a/okhttp/src/test/java/io/grpc/okhttp/OkHttpServerTransportTest.java
+    +++ b/okhttp/src/test/java/io/grpc/okhttp/OkHttpServerTransportTest.java
+    @@ -1245,6 +1245,31 @@ public class OkHttpServerTransportTest {
+         verify(clientFramesRead).goAway(0, ErrorCode.ENHANCE_YOUR_CALM,
+             ByteString.encodeString("too_many_pings", GrpcUtil.US_ASCII));
+       }
+     
+    +  @Test
+    +  public void keepAliveEnforcer_doesNotEnforcePingAcks() throws Exception {
+    +    serverBuilder.permitKeepAliveTime(1, TimeUnit.HOURS)
+    +        .permitKeepAliveWithoutCalls(true);
+    +    initTransport();
+    +    handshake();
+    +
+    +    for (int i = 0; i < KeepAliveEnforcer.MAX_PING_STRIKES + 2; i++) {
+    +      int serverPingId = 0xDEAD + i;
+    +      clientFrameWriter.ping(true, serverPingId, 0);
+    +      clientFrameWriter.flush();
+    +    }
+    +
+    +    for (int i = 0; i < KeepAliveEnforcer.MAX_PING_STRIKES; i++) {
+    +      pingPong();
+    +    }
+    +
+    +    pingPongId++;
+    +    clientFrameWriter.ping(false, pingPongId, 0);
+    +    clientFrameWriter.flush();
+    +    assertThat(clientFrameReader.nextFrame(clientFramesRead)).isTrue();
+    +    verify(clientFramesRead).goAway(0, ErrorCode.ENHANCE_YOUR_CALM,
+    +        ByteString.encodeString("too_many_pings", GrpcUtil.US_ASCII));
+    +  }
+    +
+       @Test
+       public void keepAliveEnforcer_noticesActive() throws Exception {
+         serverBuilder.permitKeepAliveTime(0, TimeUnit.SECONDS)
+  notes: >
+    Direct TYPE-I backport: moved keepalive enforcement to non-ACK pings only and added the regression test; both hunks validated cleanly.
+```
+
+--- END CLI OUTPUT ---
+[14:16:03]   Done in 141.8s | status=success

@@ -1,0 +1,190 @@
+[13:38:00] === Row 11: graylog  b9ebea9a -> 358d917d  [TYPE-I] ===
+[13:38:00]   Resolving parent of backport commit 358d917d...
+[13:38:00]   Backport parent (target ref): cd6f3427725bf835a1ab1c72cdf4f3230439581e
+[13:38:00]   Extracting new-version patch for b9ebea9a...
+[13:38:01]   New-version patch size: 6320 chars
+[13:38:01]   Checking out backport parent cd6f3427...
+[13:38:01]   Invoking OpenCode CLI (10179 chars)...
+[13:38:01]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the 6.0 context for the changed class and test, then construct and hunk-validate a minimal backport diff against the specified parent ref.
+[0m# [0mTodos
+[•] Inspect original commit metadata and 6.0 target code context
+[ ] Construct unified backport patch adapted to 6.0
+[ ] Validate each patch hunk applies against target ref
+[ ] Return final YAML result
+[0m
+[0m⚙ [0mviewcode {"ref":"cd6f3427725bf835a1ab1c72cdf4f3230439581e","path":"graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java","startline":1,"endline":230}
+[0m⚙ [0mviewcode {"ref":"cd6f3427725bf835a1ab1c72cdf4f3230439581e","path":"graylog2-server/src/test/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValueTest.java","startline":1,"endline":220}
+[0m⚙ [0mgit_show {"ref":"b9ebea9aa1b309d82b020eb3c54fa36f042edbf5"}
+[0m⚙ [0mlocate_symbol {"ref":"cd6f3427725bf835a1ab1c72cdf4f3230439581e","symbol":"KeyValue"}
+The target 6.0 `KeyValue` implementation matches the original patch context closely; the descriptor also needs the new parameter so the function argument is registered. I’m checking lineage/context once more, then I’ll validate the assembled hunks.
+[0m⚙ [0mgit_history {"filepath":"graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java","start_line":45,"end_line":160,"start_commit":"cd6f3427725bf835a1ab1c72cdf4f3230439581e","end_commit":"cd6f3427725bf835a1ab1c72cdf4f3230439581e"}
+[0m⚙ [0mgit_history {"filepath":"graylog2-server/src/test/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValueTest.java","start_line":120,"end_line":141,"start_commit":"cd6f3427725bf835a1ab1c72cdf4f3230439581e","end_commit":"cd6f3427725bf835a1ab1c72cdf4f3230439581e"}
+[0m⚙ [0mviewcode {"ref":"cd6f3427725bf835a1ab1c72cdf4f3230439581e","path":"graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java","startline":100,"endline":260}
+`git_history` cannot produce a range when start and end are the same target commit, but symbol lookup and direct target-file context confirm the class/test locations are unchanged on 6.0.
+[0m✱ [0mGlob "changelog/unreleased/*"[90m in . · 2 matches[0m
+I’m using the provided diff as the source of truth and keeping the backport minimal, including the changelog, parameter wiring in `evaluate`, matcher implementation, and the regression test.
+[0m⚙ [0mvalidate {"ref":"cd6f3427725bf835a1ab1c72cdf4f3230439581e","mode":"hunk","patch":"diff --git a/changelog/unreleased/pr-21456.toml b/changelog/unreleased/pr-21456.toml\nnew file mode 100644\nindex 0000000000..d3276fa24e\n--- /dev/null\n+++ b/changelog/unreleased/pr-21456.toml\n@@ -0,0 +1,5 @@\n+type = \"added\"\n+message = \"Added escape character handling to the key_value pipeline function.\"\n+\n+pulls = [\"21456\"]\n+issues = [\"graylog-plugin-enterprise#9552\"]\n"}
+[0m⚙ [0mvalidate {"ref":"cd6f3427725bf835a1ab1c72cdf4f3230439581e","mode":"hunk","patch":"diff --git a/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java b/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java\nindex c63006db6d..2ba304b9f2 100644\n--- a/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java\n+++ b/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java\n@@ -81,7 +88,10 @@ public class KeyValue extends AbstractFunction<Map<String, String>> {\n         final CharMatcher kvPairsMatcher = splitParam.optional(args, context).orElse(CharMatcher.whitespace());\n         final CharMatcher kvDelimMatcher = valueSplitParam.optional(args, context).orElse(CharMatcher.anyOf(\"=\"));\n \n-        Splitter outerSplitter = Splitter.on(DelimiterCharMatcher.withQuoteHandling(kvPairsMatcher))\n+        final boolean allowEscaping = useEscapeCharacter.optional(args, context).orElse(false);\n+        Splitter outerSplitter = Splitter.on(\n+                        allowEscaping ? DelimiterCharMatcher.withQuoteAndEscapeHandling(kvPairsMatcher) : DelimiterCharMatcher.withQuoteHandling(kvPairsMatcher)\n+                )\n                 .omitEmptyStrings()\n                 .trimResults();\n \n"}
+[0m⚙ [0mvalidate {"ref":"cd6f3427725bf835a1ab1c72cdf4f3230439581e","mode":"hunk","patch":"diff --git a/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java b/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java\nindex c63006db6d..2ba304b9f2 100644\n--- a/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java\n+++ b/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java\n@@ -51,6 +51,8 @@ public class KeyValue extends AbstractFunction<Map<String, String>> {\n     private final ParameterDescriptor<String, String> duplicateHandlingParam;\n     private final ParameterDescriptor<String, CharMatcher> trimCharactersParam;\n     private final ParameterDescriptor<String, CharMatcher> trimValueCharactersParam;\n+    private final ParameterDescriptor<Boolean, Boolean> useEscapeCharacter;\n+\n \n     public KeyValue() {\n         valueParam = string(\"value\").ruleBuilderVariable().description(\"The string to extract key/value pairs from\").build();\n"}
+[0m⚙ [0mvalidate {"ref":"cd6f3427725bf835a1ab1c72cdf4f3230439581e","mode":"hunk","patch":"diff --git a/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java b/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java\nindex c63006db6d..2ba304b9f2 100644\n--- a/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java\n+++ b/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java\n@@ -70,6 +72,11 @@ public class KeyValue extends AbstractFunction<Map<String, String>> {\n                 .optional()\n                 .description(\"The characters to trim from values, default is not to trim\")\n                 .build();\n+        useEscapeCharacter = bool(\"use_escape_char\").\n+                optional()\n+                .description(\"Whether to make use of the escape character '\\\\' or treat it as a normal character, defaults to false treating '\\\\' as a normal character.\")\n+                .defaultValue(Optional.of(false))\n+                .build();\n     }\n \n     @Override\n"}
+[0m⚙ [0mvalidate {"ref":"cd6f3427725bf835a1ab1c72cdf4f3230439581e","mode":"hunk","patch":"diff --git a/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java b/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java\nindex c63006db6d..2ba304b9f2 100644\n--- a/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java\n+++ b/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java\n@@ -139,6 +149,20 @@ public class KeyValue extends AbstractFunction<Map<String, String>> {\n                     .and(charMatcher);\n         }\n \n+        /**\n+         * An implementation that doesn't split when the given delimiter char matcher appears in double or single quotes\n+         * or after the escape char '\\'.\n+         *\n+         * @param charMatcher the char matcher\n+         * @return a char matcher that can handle double, single quotes, and escape characters\n+         */\n+        static CharMatcher withQuoteAndEscapeHandling(CharMatcher charMatcher) {\n+            return new DelimiterCharMatcher('\"')\n+                    .and(new DelimiterCharMatcher('\\''))\n+                    .and(new NotEscapedCharMatcher())\n+                    .and(charMatcher);\n+        }\n+\n         private DelimiterCharMatcher(char wrapperChar) {\n             this.wrapperChar = wrapperChar;\n         }\n"}
+[0m⚙ [0mvalidate {"ref":"cd6f3427725bf835a1ab1c72cdf4f3230439581e","mode":"hunk","patch":"diff --git a/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java b/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java\nindex c63006db6d..2ba304b9f2 100644\n--- a/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java\n+++ b/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java\n@@ -152,6 +176,26 @@ public class KeyValue extends AbstractFunction<Map<String, String>> {\n         }\n     }\n \n+    private static class NotEscapedCharMatcher extends CharMatcher {\n+        private char lastChar = '\\u0000';\n+\n+        @Override\n+        public boolean matches(char c) {\n+            if (lastChar == '\\u0000') {\n+                lastChar = c;\n+                return true;\n+            } else {\n+                if (lastChar == '\\\\') {\n+                    lastChar = c;\n+                    return false;\n+                } else {\n+                    lastChar = c;\n+                    return true;\n+                }\n+            }\n+        }\n+    }\n+\n     private static class MapSplitter {\n \n         private final Splitter outerSplitter;\n"}
+[0m⚙ [0mvalidate {"ref":"cd6f3427725bf835a1ab1c72cdf4f3230439581e","mode":"hunk","patch":"diff --git a/graylog2-server/src/test/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValueTest.java b/graylog2-server/src/test/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValueTest.java\nindex 534195acbc..5b82b7bfa6 100644\n--- a/graylog2-server/src/test/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValueTest.java\n+++ b/graylog2-server/src/test/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValueTest.java\n@@ -137,4 +137,25 @@ class KeyValueTest {\n \n         assertThat(result).containsExactlyInAnyOrderEntriesOf(expectedResult);\n     }\n+\n+    @Test\n+    void testEscapeHandling() {\n+        final Map<String, Expression> arguments = Map.of(\n+                \"value\", new StringExpression(new CommonToken(0), \"field1=value1,dn=CN=Network Automation User\\\\,OU=Service Accounts\\\\,OU=GR\\\\,OU=Region\\\\,DC=company\\\\,DC=local,field3=value3\"),\n+                \"kv_delimiters\", new StringExpression(new CommonToken(0), \"=\"),\n+                \"delimiters\", new StringExpression(new CommonToken(0), \",\"),\n+                \"allow_dup_keys\", new BooleanExpression(new CommonToken(0), true),\n+                \"use_escape_char\", new BooleanExpression(new CommonToken(0), true),\n+                \"handle_dup_keys\", new StringExpression(new CommonToken(0), \",\")\n+        );\n+\n+        Map<String, String> result = classUnderTest.evaluate(new FunctionArgs(classUnderTest, arguments), evaluationContext);\n+\n+        Map<String, String> expectedResult = new HashMap<>();\n+        expectedResult.put(\"field1\", \"value1\");\n+        expectedResult.put(\"dn\", \"CN=Network Automation User\\\\,OU=Service Accounts\\\\,OU=GR\\\\,OU=Region\\\\,DC=company\\\\,DC=local\");\n+        expectedResult.put(\"field3\", \"value3\");\n+\n+        assertThat(result).containsExactlyInAnyOrderEntriesOf(expectedResult);\n+    }\n }\n"}
+All individual hunks validated successfully against `cd6f3427725bf835a1ab1c72cdf4f3230439581e`; I’m doing one combined apply check in hunk mode only, not full validation.
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and 6.0 target code context
+[✓] Construct unified backport patch adapted to 6.0
+[•] Validate each patch hunk applies against target ref
+[ ] Return final YAML result
+[0m
+[0m⚙ [0mvalidate {"ref":"cd6f3427725bf835a1ab1c72cdf4f3230439581e","mode":"hunk","patch":"diff --git a/changelog/unreleased/pr-21456.toml b/changelog/unreleased/pr-21456.toml\nnew file mode 100644\nindex 0000000000..d3276fa24e\n--- /dev/null\n+++ b/changelog/unreleased/pr-21456.toml\n@@ -0,0 +1,5 @@\n+type = \"added\"\n+message = \"Added escape character handling to the key_value pipeline function.\"\n+\n+pulls = [\"21456\"]\n+issues = [\"graylog-plugin-enterprise#9552\"]\ndiff --git a/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java b/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java\nindex c63006db6d..2ba304b9f2 100644\n--- a/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java\n+++ b/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java\n@@ -51,6 +51,8 @@ public class KeyValue extends AbstractFunction<Map<String, String>> {\n     private final ParameterDescriptor<String, String> duplicateHandlingParam;\n     private final ParameterDescriptor<String, CharMatcher> trimCharactersParam;\n     private final ParameterDescriptor<String, CharMatcher> trimValueCharactersParam;\n+    private final ParameterDescriptor<Boolean, Boolean> useEscapeCharacter;\n+\n \n     public KeyValue() {\n         valueParam = string(\"value\").ruleBuilderVariable().description(\"The string to extract key/value pairs from\").build();\n@@ -70,6 +72,11 @@ public class KeyValue extends AbstractFunction<Map<String, String>> {\n                 .optional()\n                 .description(\"The characters to trim from values, default is not to trim\")\n                 .build();\n+        useEscapeCharacter = bool(\"use_escape_char\").\n+                optional()\n+                .description(\"Whether to make use of the escape character '\\\\' or treat it as a normal character, defaults to false treating '\\\\' as a normal character.\")\n+                .defaultValue(Optional.of(false))\n+                .build();\n     }\n \n     @Override\n@@ -81,7 +88,10 @@ public class KeyValue extends AbstractFunction<Map<String, String>> {\n         final CharMatcher kvPairsMatcher = splitParam.optional(args, context).orElse(CharMatcher.whitespace());\n         final CharMatcher kvDelimMatcher = valueSplitParam.optional(args, context).orElse(CharMatcher.anyOf(\"=\"));\n \n-        Splitter outerSplitter = Splitter.on(DelimiterCharMatcher.withQuoteHandling(kvPairsMatcher))\n+        final boolean allowEscaping = useEscapeCharacter.optional(args, context).orElse(false);\n+        Splitter outerSplitter = Splitter.on(\n+                        allowEscaping ? DelimiterCharMatcher.withQuoteAndEscapeHandling(kvPairsMatcher) : DelimiterCharMatcher.withQuoteHandling(kvPairsMatcher)\n+                )\n                 .omitEmptyStrings()\n                 .trimResults();\n \n@@ -139,6 +149,20 @@ public class KeyValue extends AbstractFunction<Map<String, String>> {\n                     .and(charMatcher);\n         }\n \n+        /**\n+         * An implementation that doesn't split when the given delimiter char matcher appears in double or single quotes\n+         * or after the escape char '\\'.\n+         *\n+         * @param charMatcher the char matcher\n+         * @return a char matcher that can handle double, single quotes, and escape characters\n+         */\n+        static CharMatcher withQuoteAndEscapeHandling(CharMatcher charMatcher) {\n+            return new DelimiterCharMatcher('\"')\n+                    .and(new DelimiterCharMatcher('\\''))\n+                    .and(new NotEscapedCharMatcher())\n+                    .and(charMatcher);\n+        }\n+\n         private DelimiterCharMatcher(char wrapperChar) {\n             this.wrapperChar = wrapperChar;\n         }\n@@ -152,6 +176,26 @@ public class KeyValue extends AbstractFunction<Map<String, String>> {\n         }\n     }\n \n+    private static class NotEscapedCharMatcher extends CharMatcher {\n+        private char lastChar = '\\u0000';\n+\n+        @Override\n+        public boolean matches(char c) {\n+            if (lastChar == '\\u0000') {\n+                lastChar = c;\n+                return true;\n+            } else {\n+                if (lastChar == '\\\\') {\n+                    lastChar = c;\n+                    return false;\n+                } else {\n+                    lastChar = c;\n+                    return true;\n+                }\n+            }\n+        }\n+    }\n+\n     private static class MapSplitter {\n \n         private final Splitter outerSplitter;\ndiff --git a/graylog2-server/src/test/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValueTest.java b/graylog2-server/src/test/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValueTest.java\nindex 534195acbc..5b82b7bfa6 100644\n--- a/graylog2-server/src/test/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValueTest.java\n+++ b/graylog2-server/src/test/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValueTest.java\n@@ -137,4 +137,25 @@ class KeyValueTest {\n \n         assertThat(result).containsExactlyInAnyOrderEntriesOf(expectedResult);\n     }\n+\n+    @Test\n+    void testEscapeHandling() {\n+        final Map<String, Expression> arguments = Map.of(\n+                \"value\", new StringExpression(new CommonToken(0), \"field1=value1,dn=CN=Network Automation User\\\\,OU=Service Accounts\\\\,OU=GR\\\\,OU=Region\\\\,DC=company\\\\,DC=local,field3=value3\"),\n+                \"kv_delimiters\", new StringExpression(new CommonToken(0), \"=\"),\n+                \"delimiters\", new StringExpression(new CommonToken(0), \",\"),\n+                \"allow_dup_keys\", new BooleanExpression(new CommonToken(0), true),\n+                \"use_escape_char\", new BooleanExpression(new CommonToken(0), true),\n+                \"handle_dup_keys\", new StringExpression(new CommonToken(0), \",\")\n+        );\n+\n+        Map<String, String> result = classUnderTest.evaluate(new FunctionArgs(classUnderTest, arguments), evaluationContext);\n+\n+        Map<String, String> expectedResult = new HashMap<>();\n+        expectedResult.put(\"field1\", \"value1\");\n+        expectedResult.put(\"dn\", \"CN=Network Automation User\\\\,OU=Service Accounts\\\\,OU=GR\\\\,OU=Region\\\\,DC=company\\\\,DC=local\");\n+        expectedResult.put(\"field3\", \"value3\");\n+\n+        assertThat(result).containsExactlyInAnyOrderEntriesOf(expectedResult);\n+    }\n }\n"}
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and 6.0 target code context
+[✓] Construct unified backport patch adapted to 6.0
+[✓] Validate each patch hunk applies against target ref
+[•] Return final YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/changelog/unreleased/pr-21456.toml b/changelog/unreleased/pr-21456.toml
+    new file mode 100644
+    index 0000000000..d3276fa24e
+    --- /dev/null
+    +++ b/changelog/unreleased/pr-21456.toml
+    @@ -0,0 +1,5 @@
+    +type = "added"
+    +message = "Added escape character handling to the key_value pipeline function."
+    +
+    +pulls = ["21456"]
+    +issues = ["graylog-plugin-enterprise#9552"]
+    diff --git a/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java b/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java
+    index c63006db6d..2ba304b9f2 100644
+    --- a/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java
+    +++ b/graylog2-server/src/main/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValue.java
+    @@ -51,6 +51,8 @@ public class KeyValue extends AbstractFunction<Map<String, String>> {
+         private final ParameterDescriptor<String, String> duplicateHandlingParam;
+         private final ParameterDescriptor<String, CharMatcher> trimCharactersParam;
+         private final ParameterDescriptor<String, CharMatcher> trimValueCharactersParam;
+    +    private final ParameterDescriptor<Boolean, Boolean> useEscapeCharacter;
+    +
+     
+         public KeyValue() {
+             valueParam = string("value").ruleBuilderVariable().description("The string to extract key/value pairs from").build();
+    @@ -70,6 +72,11 @@ public class KeyValue extends AbstractFunction<Map<String, String>> {
+                     .optional()
+                     .description("The characters to trim from values, default is not to trim")
+                     .build();
+    +        useEscapeCharacter = bool("use_escape_char").
+    +                optional()
+    +                .description("Whether to make use of the escape character '\\' or treat it as a normal character, defaults to false treating '\\' as a normal character.")
+    +                .defaultValue(Optional.of(false))
+    +                .build();
+         }
+     
+         @Override
+    @@ -81,7 +88,10 @@ public class KeyValue extends AbstractFunction<Map<String, String>> {
+             final CharMatcher kvPairsMatcher = splitParam.optional(args, context).orElse(CharMatcher.whitespace());
+             final CharMatcher kvDelimMatcher = valueSplitParam.optional(args, context).orElse(CharMatcher.anyOf("="));
+     
+    -        Splitter outerSplitter = Splitter.on(DelimiterCharMatcher.withQuoteHandling(kvPairsMatcher))
+    +        final boolean allowEscaping = useEscapeCharacter.optional(args, context).orElse(false);
+    +        Splitter outerSplitter = Splitter.on(
+    +                        allowEscaping ? DelimiterCharMatcher.withQuoteAndEscapeHandling(kvPairsMatcher) : DelimiterCharMatcher.withQuoteHandling(kvPairsMatcher)
+    +                )
+                     .omitEmptyStrings()
+                     .trimResults();
+     
+    @@ -139,6 +149,20 @@ public class KeyValue extends AbstractFunction<Map<String, String>> {
+                         .and(charMatcher);
+             }
+     
+    +        /**
+    +         * An implementation that doesn't split when the given delimiter char matcher appears in double or single quotes
+    +         * or after the escape char '\'.
+    +         *
+    +         * @param charMatcher the char matcher
+    +         * @return a char matcher that can handle double, single quotes, and escape characters
+    +         */
+    +        static CharMatcher withQuoteAndEscapeHandling(CharMatcher charMatcher) {
+    +            return new DelimiterCharMatcher('"')
+    +                    .and(new DelimiterCharMatcher('\''))
+    +                    .and(new NotEscapedCharMatcher())
+    +                    .and(charMatcher);
+    +        }
+    +
+             private DelimiterCharMatcher(char wrapperChar) {
+                 this.wrapperChar = wrapperChar;
+             }
+    @@ -152,6 +176,26 @@ public class KeyValue extends AbstractFunction<Map<String, String>> {
+             }
+         }
+     
+    +    private static class NotEscapedCharMatcher extends CharMatcher {
+    +        private char lastChar = '\u0000';
+    +
+    +        @Override
+    +        public boolean matches(char c) {
+    +            if (lastChar == '\u0000') {
+    +                lastChar = c;
+    +                return true;
+    +            } else {
+    +                if (lastChar == '\\') {
+    +                    lastChar = c;
+    +                    return false;
+    +                } else {
+    +                    lastChar = c;
+    +                    return true;
+    +                }
+    +            }
+    +        }
+    +    }
+    +
+         private static class MapSplitter {
+     
+             private final Splitter outerSplitter;
+    diff --git a/graylog2-server/src/test/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValueTest.java b/graylog2-server/src/test/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValueTest.java
+    index 534195acbc..5b82b7bfa6 100644
+    --- a/graylog2-server/src/test/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValueTest.java
+    +++ b/graylog2-server/src/test/java/org/graylog/plugins/pipelineprocessor/functions/strings/KeyValueTest.java
+    @@ -137,4 +137,25 @@ class KeyValueTest {
+     
+             assertThat(result).containsExactlyInAnyOrderEntriesOf(expectedResult);
+         }
+    +
+    +    @Test
+    +    void testEscapeHandling() {
+    +        final Map<String, Expression> arguments = Map.of(
+    +                "value", new StringExpression(new CommonToken(0), "field1=value1,dn=CN=Network Automation User\\,OU=Service Accounts\\,OU=GR\\,OU=Region\\,DC=company\\,DC=local,field3=value3"),
+    +                "kv_delimiters", new StringExpression(new CommonToken(0), "="),
+    +                "delimiters", new StringExpression(new CommonToken(0), ","),
+    +                "allow_dup_keys", new BooleanExpression(new CommonToken(0), true),
+    +                "use_escape_char", new BooleanExpression(new CommonToken(0), true),
+    +                "handle_dup_keys", new StringExpression(new CommonToken(0), ",")
+    +        );
+    +
+    +        Map<String, String> result = classUnderTest.evaluate(new FunctionArgs(classUnderTest, arguments), evaluationContext);
+    +
+    +        Map<String, String> expectedResult = new HashMap<>();
+    +        expectedResult.put("field1", "value1");
+    +        expectedResult.put("dn", "CN=Network Automation User\\,OU=Service Accounts\\,OU=GR\\,OU=Region\\,DC=company\\,DC=local");
+    +        expectedResult.put("field3", "value3");
+    +
+    +        assertThat(result).containsExactlyInAnyOrderEntriesOf(expectedResult);
+    +    }
+     }
+  notes: >
+    Backported the key_value use_escape_char option, escape-aware delimiter matcher, changelog entry, and regression test; all hunks validated in hunk mode against the target ref.
+```
+
+--- END CLI OUTPUT ---
+[13:41:23]   Done in 202.5s | status=success

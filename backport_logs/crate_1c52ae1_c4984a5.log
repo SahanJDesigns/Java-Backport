@@ -1,0 +1,279 @@
+[11:49:34] === Row 1: crate  1c52ae11 -> c4984a5c  [TYPE-V] ===
+[11:49:34]   Resolving parent of backport commit c4984a5c...
+[11:49:34]   Backport parent (target ref): e6be1d75676a52c458eb6188d126ea5e1d96fd11
+[11:49:34]   Extracting new-version patch for 1c52ae11...
+[11:49:34]   New-version patch size: 10071 chars
+[11:49:34]   Checking out backport parent e6be1d75...
+[11:49:36]   Invoking OpenCode CLI (13926 chars)...
+[11:49:36]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll map the provided master diff onto the current `5.5` ref, checking the target files and symbols first, then validate the resulting hunks individually without changing branches.
+[0m⚙ [0mgit_show {"ref":"1c52ae11779a1eec20070ad25df8c89056cdb41d"}
+[0m⚙ [0mviewcode {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","path":"server/src/main/java/io/crate/analyze/where/EqualityExtractor.java","startline":90,"endline":375}
+[0m⚙ [0mviewcode {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","path":"server/src/main/java/io/crate/planner/WhereClauseOptimizer.java","startline":35,"endline":230}
+[0m⚙ [0mviewcode {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","path":"server/src/test/java/io/crate/planner/WhereClauseOptimizerTest.java","startline":1,"endline":230}
+[0m⚙ [0mviewcode {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","path":"server/src/test/java/io/crate/planner/SelectPlannerTest.java","startline":110,"endline":135}
+[0m⚙ [0mviewcode {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","path":"docs/appendices/release-notes/5.5.3.rst","startline":40,"endline":70}
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/planner/WhereClauseOptimizer.java","start_line":153,"end_line":210,"start_commit":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","end_commit":"e6be1d75676a52c458eb6188d126ea5e1d96fd11"}
+[0m⚙ [0mlocate_symbol {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","symbol":"Optimizer"}
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/analyze/where/EqualityExtractor.java","start_line":112,"end_line":155,"start_commit":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","end_commit":"e6be1d75676a52c458eb6188d126ea5e1d96fd11"}
+[0m⚙ [0mlocate_symbol {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","symbol":"optimizeCasts"}
+The target classes and test scaffolding are present on `5.5`. One symbol lookup hit a stale `.git/index.lock` during parallel tool access, but the needed `Optimizer` symbol was found at `server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java`.
+[0m⚙ [0mlocate_symbol {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","symbol":"QueriedSelectRelation"}
+[0m⚙ [0mviewcode {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","path":"server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java","startline":1,"endline":140}
+[0m⚙ [0mlocate_symbol {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","symbol":"AnalyzedDeleteStatement"}
+On this `5.5` ref, `Optimizer.optimizeCasts` takes a `PlannerContext` instead of `(TransactionContext, NodeContext)`, so the backport must either adapt the optimizer invocation or use the lower-level optimizer constructor with equivalent rules.
+[0m⚙ [0mviewcode {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","path":"server/src/main/java/io/crate/planner/PlannerContext.java","startline":1,"endline":180}
+[0m✱ [0mGrep "new Optimizer\("[90m in server/src/main/java · 3 matches[0m
+[0m✱ [0mGrep "optimizeCasts\("[90m in . · 10 matches[0m
+[0m✱ [0mGrep "WhereClauseOptimizer\.optimize\("[90m in server/src/main/java · 3 matches[0m
+[0m✱ [0mGrep "WhereClauseOptimizer\.optimize\("[90m in server/src/test · 1 match[0m
+[0m⚙ [0mviewcode {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","path":"server/src/main/java/io/crate/planner/statement/DeletePlanner.java","startline":170,"endline":215}
+[0m⚙ [0mviewcode {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","path":"server/src/main/java/io/crate/planner/operators/Collect.java","startline":275,"endline":310}
+I’m going to keep `WhereClauseOptimizer.optimize`’s existing public signature stable and instantiate the relevant cast optimizer rules locally, because changing the signature would ripple through planner callers beyond the original patch’s intent.
+[0m⚙ [0mviewcode {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","path":"server/src/main/java/io/crate/planner/statement/DeletePlanner.java","startline":70,"endline":105}
+[0m⚙ [0mviewcode {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","path":"server/src/main/java/io/crate/planner/consumer/UpdatePlanner.java","startline":120,"endline":150}
+[0m⚙ [0mviewcode {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","path":"server/src/main/java/io/crate/planner/optimizer/rule/OptimizeCollectWhereClauseAccess.java","startline":60,"endline":90}
+[0m⚙ [0mviewcode {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","path":"server/src/main/java/io/crate/analyze/AnalyzedDeleteStatement.java","startline":1,"endline":80}
+[0m⚙ [0mviewcode {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","path":"server/src/main/java/io/crate/metadata/TransactionContext.java","startline":1,"endline":80}
+The `5.5` optimizer internals require `CoordinatorTxnCtx`, while `WhereClauseOptimizer` currently accepts the broader `TransactionContext`. I’ll avoid broad signature changes and use the cast only at the local cast-optimization point, matching existing caller behavior where planner contexts supply coordinator transaction contexts.
+I’m constructing the backport patch now. It ports the release note, normalization and cast-optimization behavior, expected `_id` doc key rendering, and expands `WhereClauseOptimizerTest` to cover select and delete with implicit casts.
+[0m⚙ [0mviewcode {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","path":"server/src/main/java/io/crate/metadata/CoordinatorTxnCtx.java","startline":1,"endline":120}
+[0m⚙ [0mvalidate {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.5.3.rst b/docs/appendices/release-notes/5.5.3.rst\n--- a/docs/appendices/release-notes/5.5.3.rst\n+++ b/docs/appendices/release-notes/5.5.3.rst\n@@ -49,6 +49,13 @@ See the :ref:`version_5.5.0` release notes for a full list of changes in the\n Fixes\n =====\n \n+- Fixed an issue, that led to no results being returned when trying to filter on\n+  a :ref:`PRIMARY KEY <constraints-primary-key>` column with an implicit cast.\n+  For example::\n+\n+    CREATE TABLE tbl(a string PRIMARY KEY);\n+    SELECT * FROM tbl WHERE a = 10;\n+\n - Rejected :ref:`renaming <sql-alter-table-rename-to>` of views and tables if\n   the target table or view already exists, and return an error message.\n   Previously, such a rename was allowed which caused the existing view or table\n"}
+[0m⚙ [0mvalidate {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java b/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java\n--- a/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java\n+++ b/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java\n@@ -117,7 +117,9 @@ public class EqualityExtractor {\n                                      boolean shortCircuitOnMatchPredicateUnknown,\n                                      @Nullable TransactionContext transactionContext) {\n         var context = new ProxyInjectingVisitor.Context(columns);\n-        Symbol proxiedTree = symbol.accept(ProxyInjectingVisitor.INSTANCE, context);\n+        // Normalize the query so that any casts on literals are evaluated\n+        var normalizedQuery = normalizer.normalize(symbol, transactionContext);\n+        Symbol proxiedTree = normalizedQuery.accept(ProxyInjectingVisitor.INSTANCE, context);\n \n         // Match cannot execute without Lucene\n         if (shortCircuitOnMatchPredicateUnknown && context.unknowns.size() == 1) {\n@@ -295,7 +297,7 @@ public class EqualityExtractor {\n         @Override\n         public void writeTo(StreamOutput out) throws IOException {\n             throw new UnsupportedOperationException(\"writeTo not supported for \" +\n-                                                    EqProxy.class.getSimpleName());\n+                EqProxy.class.getSimpleName());\n         }\n \n         public String forDisplay() {\n@@ -352,7 +354,7 @@ public class EqualityExtractor {\n \n         static class Context {\n \n-            private LinkedHashMap<ColumnIdent, Comparison> comparisons;\n+            private final LinkedHashMap<ColumnIdent, Comparison> comparisons;\n             private boolean proxyBelow;\n             private final Set<Symbol> unknowns = new HashSet<>();\n \n"}
+The release-note and `EqualityExtractor` hunks apply cleanly against the target ref. Next I’m validating the adapted optimizer API hunk and the `WhereClauseOptimizer` changes.
+[0m⚙ [0mvalidate {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java b/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java\n--- a/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java\n+++ b/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java\n@@ -51,8 +51,13 @@ import io.crate.planner.optimizer.symbol.rule.SwapCastsInLikeOperators;\n public class Optimizer {\n \n     public static Symbol optimizeCasts(Symbol query, PlannerContext plannerContext) {\n+        return optimizeCasts(query, plannerContext.transactionContext(), plannerContext.nodeContext());\n+    }\n+\n+    public static Symbol optimizeCasts(Symbol query, CoordinatorTxnCtx coordinatorTxnCtx, NodeContext nodeCtx) {\n         Optimizer optimizer = new Optimizer(\n-            plannerContext.transactionContext(),\n-            plannerContext.nodeContext(),\n+            coordinatorTxnCtx,\n+            nodeCtx,\n             List.of(\n                 SwapCastsInComparisonOperators::new,\n                 SwapCastsInLikeOperators::new,\n"}
+[0m⚙ [0mvalidate {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","mode":"hunk","patch":"--- a/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java\n+++ b/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java\n@@ -51,11 +51,16 @@ import io.crate.planner.optimizer.symbol.rule.SwapCastsInLikeOperators;\n public class Optimizer {\n \n     public static Symbol optimizeCasts(Symbol query, PlannerContext plannerContext) {\n+        return optimizeCasts(query, plannerContext.transactionContext(), plannerContext.nodeContext());\n+    }\n+\n+    public static Symbol optimizeCasts(Symbol query, CoordinatorTxnCtx coordinatorTxnCtx, NodeContext nodeCtx) {\n         Optimizer optimizer = new Optimizer(\n-            plannerContext.transactionContext(),\n-            plannerContext.nodeContext(),\n+            coordinatorTxnCtx,\n+            nodeCtx,\n             List.of(\n                 SwapCastsInComparisonOperators::new,\n                 SwapCastsInLikeOperators::new,\n                 MoveReferenceCastToLiteralCastOnAnyOperatorsWhenRightIsReference::new,\n"}
+[0m⚙ [0mvalidate {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java b/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java\n--- a/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java\n+++ b/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java\n@@ -51,10 +51,15 @@ import io.crate.planner.optimizer.symbol.rule.SwapCastsInLikeOperators;\n public class Optimizer {\n \n     public static Symbol optimizeCasts(Symbol query, PlannerContext plannerContext) {\n+        return optimizeCasts(query, plannerContext.transactionContext(), plannerContext.nodeContext());\n+    }\n+\n+    public static Symbol optimizeCasts(Symbol query, CoordinatorTxnCtx coordinatorTxnCtx, NodeContext nodeCtx) {\n         Optimizer optimizer = new Optimizer(\n-            plannerContext.transactionContext(),\n-            plannerContext.nodeContext(),\n+            coordinatorTxnCtx,\n+            nodeCtx,\n             List.of(\n                 SwapCastsInComparisonOperators::new,\n                 SwapCastsInLikeOperators::new,\n"}
+[0m⚙ [0mvalidate {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java b/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java\n--- a/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java\n+++ b/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java\n@@ -51,10 +51,13 @@ import io.crate.planner.optimizer.symbol.rule.SwapCastsInLikeOperators;\n public class Optimizer {\n \n     public static Symbol optimizeCasts(Symbol query, PlannerContext plannerContext) {\n+        return optimizeCasts(query, plannerContext.transactionContext(), plannerContext.nodeContext());\n+    }\n+\n+    public static Symbol optimizeCasts(Symbol query, CoordinatorTxnCtx coordinatorTxnCtx, NodeContext nodeCtx) {\n         Optimizer optimizer = new Optimizer(\n-            plannerContext.transactionContext(),\n-            plannerContext.nodeContext(),\n+            coordinatorTxnCtx,\n+            nodeCtx,\n             List.of(\n                 SwapCastsInComparisonOperators::new,\n                 SwapCastsInLikeOperators::new,\n                 MoveReferenceCastToLiteralCastOnAnyOperatorsWhenRightIsReference::new,\n"}
+[0m⚙ [0mvalidate {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java b/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java\n--- a/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java\n+++ b/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java\n@@ -53,6 +53,11 @@ public class Optimizer {\n     public static Symbol optimizeCasts(Symbol query, PlannerContext plannerContext) {\n+        return optimizeCasts(query, plannerContext.transactionContext(), plannerContext.nodeContext());\n+    }\n+\n+    public static Symbol optimizeCasts(Symbol query, CoordinatorTxnCtx coordinatorTxnCtx, NodeContext nodeCtx) {\n         Optimizer optimizer = new Optimizer(\n-            plannerContext.transactionContext(),\n-            plannerContext.nodeContext(),\n+            coordinatorTxnCtx,\n+            nodeCtx,\n             List.of(\n"}
+[0m⚙ [0mvalidate {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java b/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java\n--- a/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java\n+++ b/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java\n@@ -53,5 +53,8 @@ public class Optimizer {\n     public static Symbol optimizeCasts(Symbol query, PlannerContext plannerContext) {\n+        return optimizeCasts(query, plannerContext.transactionContext(), plannerContext.nodeContext());\n+    }\n+\n+    public static Symbol optimizeCasts(Symbol query, CoordinatorTxnCtx coordinatorTxnCtx, NodeContext nodeCtx) {\n         Optimizer optimizer = new Optimizer(\n-            plannerContext.transactionContext(),\n-            plannerContext.nodeContext(),\n+            coordinatorTxnCtx,\n+            nodeCtx,\n             List.of(\n"}
+[0m⚙ [0mvalidate {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java b/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java\n--- a/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java\n+++ b/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java\n@@ -53,5 +53,9 @@ public class Optimizer {\n     public static Symbol optimizeCasts(Symbol query, PlannerContext plannerContext) {\n+        return optimizeCasts(query, plannerContext.transactionContext(), plannerContext.nodeContext());\n+    }\n+\n+    public static Symbol optimizeCasts(Symbol query, CoordinatorTxnCtx coordinatorTxnCtx, NodeContext nodeCtx) {\n         Optimizer optimizer = new Optimizer(\n-            plannerContext.transactionContext(),\n-            plannerContext.nodeContext(),\n+            coordinatorTxnCtx,\n+            nodeCtx,\n             List.of(\n"}
+[0m⚙ [0mvalidate {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/planner/WhereClauseOptimizer.java b/server/src/main/java/io/crate/planner/WhereClauseOptimizer.java\n--- a/server/src/main/java/io/crate/planner/WhereClauseOptimizer.java\n+++ b/server/src/main/java/io/crate/planner/WhereClauseOptimizer.java\n@@ -49,6 +49,7 @@ import io.crate.metadata.doc.DocSysColumns;\n import io.crate.metadata.doc.DocTableInfo;\n import io.crate.planner.operators.SubQueryAndParamBinder;\n import io.crate.planner.operators.SubQueryResults;\n+import io.crate.planner.optimizer.symbol.Optimizer;\n \n /**\n  * Used to analyze a query for primaryKey/partition \"direct access\" possibilities.\n@@ -165,11 +166,15 @@ public final class WhereClauseOptimizer {\n \n         EqualityExtractor eqExtractor = new EqualityExtractor(normalizer);\n \n-        EqMatches pkMatches = eqExtractor.extractMatches(pkCols, query, txnCtx);\n+        // ExpressionAnalyzer will \"blindly\" add cast to the column, to match the datatype of the literal.\n+        // To be able to properly extract pkMatches (and therefore dockeys), so that the cast is moved to the literal,\n+        // we need to optimize the casts, before the extraction of pkMatches (and the dockeys after that)\n+        var optimizedCastsQuery = Optimizer.optimizeCasts(query, (CoordinatorTxnCtx) txnCtx, nodeCtx);\n+        EqMatches pkMatches = eqExtractor.extractMatches(pkCols, optimizedCastsQuery, txnCtx);\n         Set<Symbol> clusteredBy = Collections.emptySet();\n         if (table.clusteredBy() != null) {\n             EqualityExtractor.EqMatches clusteredByMatches = eqExtractor.extractParentMatches(\n-                Collections.singletonList(table.clusteredBy()), query, txnCtx);\n+                Collections.singletonList(table.clusteredBy()), optimizedCastsQuery, txnCtx);\n             List<List<Symbol>> clusteredBySymbols = clusteredByMatches.matches();\n             if (clusteredBySymbols != null) {\n                 clusteredBy = new HashSet<>(clusteredBySymbols.size());\n@@ -185,7 +190,7 @@ public final class WhereClauseOptimizer {\n                     table.primaryKey().size() == 1 && table.clusteredBy().equals(table.primaryKey().get(0))));\n \n         if (pkMatches.matches() == null && shouldUseDocKeys) {\n-            pkMatches = eqExtractor.extractMatches(List.of(DocSysColumns.ID), query, txnCtx);\n+            pkMatches = eqExtractor.extractMatches(List.of(DocSysColumns.ID), optimizedCastsQuery, txnCtx);\n         }\n \n         if (pkMatches.matches() == null) {\n@@ -202,7 +207,7 @@ public final class WhereClauseOptimizer {\n                                   partitionIndicesWithinPks);\n         }\n         EqMatches partitionMatches = table.isPartitioned()\n-            ? eqExtractor.extractMatches(table.partitionedBy(), query, txnCtx)\n+            ? eqExtractor.extractMatches(table.partitionedBy(), optimizedCastsQuery, txnCtx)\n             : EqMatches.NONE;\n \n         WhereClauseValidator.validate(query);\n"}
+The adapted optimizer hunk and `WhereClauseOptimizer` hunk both apply cleanly. I’m validating the remaining test hunks now.
+[0m⚙ [0mvalidate {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/planner/SelectPlannerTest.java b/server/src/test/java/io/crate/planner/SelectPlannerTest.java\n--- a/server/src/test/java/io/crate/planner/SelectPlannerTest.java\n+++ b/server/src/test/java/io/crate/planner/SelectPlannerTest.java\n@@ -126,7 +126,7 @@ public class SelectPlannerTest extends CrateDummyClusterServiceUnitTest {\n \n         LogicalPlan plan = e.logicalPlan(\"select name from users where _id = 1\");\n         assertThat(plan).isEqualTo(\n-            \"Get[doc.users | name | DocKeys{1} | (_id = 1)]\");\n+            \"Get[doc.users | name | DocKeys{'1'} | (_id = 1)]\");\n     }\n \n     @Test\n"}
+The `SelectPlannerTest` expectation hunk applies cleanly. The `WhereClauseOptimizerTest` backport needs small context adaptation because this branch uses `List.get(0)` rather than the newer `getFirst()` API.
+[0m⚙ [0mvalidate {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/planner/WhereClauseOptimizerTest.java b/server/src/test/java/io/crate/planner/WhereClauseOptimizerTest.java\n--- a/server/src/test/java/io/crate/planner/WhereClauseOptimizerTest.java\n+++ b/server/src/test/java/io/crate/planner/WhereClauseOptimizerTest.java\n@@ -30,9 +30,12 @@ import java.util.List;\n import org.junit.Before;\n import org.junit.Test;\n \n+import io.crate.analyze.AnalyzedDeleteStatement;\n+import io.crate.analyze.AnalyzedStatement;\n import io.crate.analyze.QueriedSelectRelation;\n import io.crate.analyze.relations.DocTableRelation;\n import io.crate.expression.eval.EvaluatingNormalizer;\n+import io.crate.expression.symbol.Symbol;\n import io.crate.metadata.PartitionName;\n import io.crate.metadata.RelationName;\n import io.crate.metadata.RowGranularity;\n@@ -46,6 +49,7 @@ public class WhereClauseOptimizerTest extends CrateDummyClusterServiceUnitTest {\n     @Before\n     public void setUpExecutor() throws Exception {\n         e = SQLExecutor.builder(clusterService)\n+            .addTable(\"create table t_pk(a string primary key)\")\n             .addTable(\"create table bystring (name string primary key, score double) \" +\n                       \"clustered by (name) \")\n             .addTable(\"create table clustered_by_only (x int) clustered by (x)\")\n@@ -78,8 +82,19 @@ public class WhereClauseOptimizerTest extends CrateDummyClusterServiceUnitTest {\n     }\n \n     private WhereClauseOptimizer.DetailedQuery optimize(String statement) {\n-        QueriedSelectRelation queriedTable = e.analyze(statement);\n-        DocTableRelation table = ((DocTableRelation) queriedTable.from().get(0));\n+        AnalyzedStatement stmt = e.analyze(statement);\n+        DocTableRelation table;\n+        Symbol where;\n+        if (stmt instanceof QueriedSelectRelation qsr) {\n+            table = (DocTableRelation) qsr.from().get(0);\n+            where = qsr.where();\n+        } else if (stmt instanceof AnalyzedDeleteStatement ads) {\n+            table = ads.relation();\n+            where = ads.query();\n+        } else {\n+            throw new IllegalArgumentException(\"Neither a select or a delete statement is provided\");\n+        }\n+\n         EvaluatingNormalizer normalizer = new EvaluatingNormalizer(\n             e.nodeCtx,\n             RowGranularity.CLUSTER,\n@@ -88,7 +103,7 @@ public class WhereClauseOptimizerTest extends CrateDummyClusterServiceUnitTest {\n         );\n         return WhereClauseOptimizer.optimize(\n             normalizer,\n-            queriedTable.where(),\n+            where,\n             table.tableInfo(),\n             e.getPlannerContext(clusterService.state()).transactionContext(),\n             e.nodeCtx\n@@ -184,4 +199,20 @@ public class WhereClauseOptimizerTest extends CrateDummyClusterServiceUnitTest {\n             \"((doc.partdatebin.ts > 1682899200000::bigint) AND (month AS date_bin('P28D'::interval, ts, 0::bigint) >= 1681344000000::bigint))\"\n         );\n     }\n+\n+    @Test\n+    public void test_filter_on_pk_with_implicit_cast() {\n+        WhereClauseOptimizer.DetailedQuery query = optimize(\"select * from t_pk where a = 10 OR a = true\");\n+        assertThat(query.docKeys()).hasToString(\"Optional[DocKeys{'10'; 't'}]\");\n+        query = optimize(\"delete from t_pk where a = 10 OR a = true\");\n+        assertThat(query.docKeys()).hasToString(\"Optional[DocKeys{'10'; 't'}]\");\n+    }\n+\n+    @Test\n+    public void test_filter_on_id_with_implicit_cast() {\n+        WhereClauseOptimizer.DetailedQuery query = optimize(\"select * from t_pk where _id = 10 OR _id = true\");\n+        assertThat(query.docKeys()).hasToString(\"Optional[DocKeys{'10'; 't'}]\");\n+        query = optimize(\"delete from t_pk where _id = 10 OR _id = true\");\n+        assertThat(query.docKeys()).hasToString(\"Optional[DocKeys{'10'; 't'}]\");\n+    }\n }\n"}
+[0m⚙ [0mviewcode {"ref":"e6be1d75676a52c458eb6188d126ea5e1d96fd11","path":"server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java","startline":49,"endline":70}
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/docs/appendices/release-notes/5.5.3.rst b/docs/appendices/release-notes/5.5.3.rst
+    --- a/docs/appendices/release-notes/5.5.3.rst
+    +++ b/docs/appendices/release-notes/5.5.3.rst
+    @@ -49,6 +49,13 @@ See the :ref:`version_5.5.0` release notes for a full list of changes in the
+     Fixes
+     =====
+     
+    +- Fixed an issue, that led to no results being returned when trying to filter on
+    +  a :ref:`PRIMARY KEY <constraints-primary-key>` column with an implicit cast.
+    +  For example::
+    +
+    +    CREATE TABLE tbl(a string PRIMARY KEY);
+    +    SELECT * FROM tbl WHERE a = 10;
+    +
+     - Rejected :ref:`renaming <sql-alter-table-rename-to>` of views and tables if
+       the target table or view already exists, and return an error message.
+       Previously, such a rename was allowed which caused the existing view or table
+    diff --git a/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java b/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java
+    --- a/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java
+    +++ b/server/src/main/java/io/crate/analyze/where/EqualityExtractor.java
+    @@ -117,7 +117,9 @@ public class EqualityExtractor {
+                                          boolean shortCircuitOnMatchPredicateUnknown,
+                                          @Nullable TransactionContext transactionContext) {
+             var context = new ProxyInjectingVisitor.Context(columns);
+    -        Symbol proxiedTree = symbol.accept(ProxyInjectingVisitor.INSTANCE, context);
+    +        // Normalize the query so that any casts on literals are evaluated
+    +        var normalizedQuery = normalizer.normalize(symbol, transactionContext);
+    +        Symbol proxiedTree = normalizedQuery.accept(ProxyInjectingVisitor.INSTANCE, context);
+     
+             // Match cannot execute without Lucene
+             if (shortCircuitOnMatchPredicateUnknown && context.unknowns.size() == 1) {
+    @@ -295,7 +297,7 @@ public class EqualityExtractor {
+             @Override
+             public void writeTo(StreamOutput out) throws IOException {
+                 throw new UnsupportedOperationException("writeTo not supported for " +
+    -                                                    EqProxy.class.getSimpleName());
+    +                EqProxy.class.getSimpleName());
+             }
+     
+             public String forDisplay() {
+    @@ -352,7 +354,7 @@ public class EqualityExtractor {
+     
+             static class Context {
+     
+    -            private LinkedHashMap<ColumnIdent, Comparison> comparisons;
+    +            private final LinkedHashMap<ColumnIdent, Comparison> comparisons;
+                 private boolean proxyBelow;
+                 private final Set<Symbol> unknowns = new HashSet<>();
+     
+    diff --git a/server/src/main/java/io/crate/planner/WhereClauseOptimizer.java b/server/src/main/java/io/crate/planner/WhereClauseOptimizer.java
+    --- a/server/src/main/java/io/crate/planner/WhereClauseOptimizer.java
+    +++ b/server/src/main/java/io/crate/planner/WhereClauseOptimizer.java
+    @@ -49,6 +49,7 @@ import io.crate.metadata.doc.DocSysColumns;
+     import io.crate.metadata.doc.DocTableInfo;
+     import io.crate.planner.operators.SubQueryAndParamBinder;
+     import io.crate.planner.operators.SubQueryResults;
+    +import io.crate.planner.optimizer.symbol.Optimizer;
+     
+     /**
+      * Used to analyze a query for primaryKey/partition "direct access" possibilities.
+    @@ -165,11 +166,15 @@ public final class WhereClauseOptimizer {
+     
+             EqualityExtractor eqExtractor = new EqualityExtractor(normalizer);
+     
+    -        EqMatches pkMatches = eqExtractor.extractMatches(pkCols, query, txnCtx);
+    +        // ExpressionAnalyzer will "blindly" add cast to the column, to match the datatype of the literal.
+    +        // To be able to properly extract pkMatches (and therefore dockeys), so that the cast is moved to the literal,
+    +        // we need to optimize the casts, before the extraction of pkMatches (and the dockeys after that)
+    +        var optimizedCastsQuery = Optimizer.optimizeCasts(query, (CoordinatorTxnCtx) txnCtx, nodeCtx);
+    +        EqMatches pkMatches = eqExtractor.extractMatches(pkCols, optimizedCastsQuery, txnCtx);
+             Set<Symbol> clusteredBy = Collections.emptySet();
+             if (table.clusteredBy() != null) {
+                 EqualityExtractor.EqMatches clusteredByMatches = eqExtractor.extractParentMatches(
+    -                Collections.singletonList(table.clusteredBy()), query, txnCtx);
+    +                Collections.singletonList(table.clusteredBy()), optimizedCastsQuery, txnCtx);
+                 List<List<Symbol>> clusteredBySymbols = clusteredByMatches.matches();
+                 if (clusteredBySymbols != null) {
+                     clusteredBy = new HashSet<>(clusteredBySymbols.size());
+    @@ -185,7 +190,7 @@ public final class WhereClauseOptimizer {
+                         table.primaryKey().size() == 1 && table.clusteredBy().equals(table.primaryKey().get(0))));
+     
+             if (pkMatches.matches() == null && shouldUseDocKeys) {
+    -            pkMatches = eqExtractor.extractMatches(List.of(DocSysColumns.ID), query, txnCtx);
+    +            pkMatches = eqExtractor.extractMatches(List.of(DocSysColumns.ID), optimizedCastsQuery, txnCtx);
+             }
+     
+             if (pkMatches.matches() == null) {
+    @@ -202,7 +207,7 @@ public final class WhereClauseOptimizer {
+                                       partitionIndicesWithinPks);
+             }
+             EqMatches partitionMatches = table.isPartitioned()
+    -            ? eqExtractor.extractMatches(table.partitionedBy(), query, txnCtx)
+    +            ? eqExtractor.extractMatches(table.partitionedBy(), optimizedCastsQuery, txnCtx)
+                 : EqMatches.NONE;
+     
+             WhereClauseValidator.validate(query);
+    diff --git a/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java b/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java
+    --- a/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java
+    +++ b/server/src/main/java/io/crate/planner/optimizer/symbol/Optimizer.java
+    @@ -51,15 +51,19 @@ import io.crate.planner.optimizer.symbol.rule.SwapCastsInLikeOperators;
+     public class Optimizer {
+     
+         public static Symbol optimizeCasts(Symbol query, PlannerContext plannerContext) {
+    +        return optimizeCasts(query, plannerContext.transactionContext(), plannerContext.nodeContext());
+    +    }
+    +
+    +    public static Symbol optimizeCasts(Symbol query, CoordinatorTxnCtx coordinatorTxnCtx, NodeContext nodeCtx) {
+             Optimizer optimizer = new Optimizer(
+    -            plannerContext.transactionContext(),
+    -            plannerContext.nodeContext(),
+    +            coordinatorTxnCtx,
+    +            nodeCtx,
+                 List.of(
+                     SwapCastsInComparisonOperators::new,
+                     SwapCastsInLikeOperators::new,
+                     MoveReferenceCastToLiteralCastOnAnyOperatorsWhenRightIsReference::new,
+                     MoveReferenceCastToLiteralCastOnAnyOperatorsWhenLeftIsReference::new,
+                     MoveSubscriptOnReferenceCastToLiteralCastInsideOperators::new,
+                     MoveArrayLengthOnReferenceCastToLiteralCastInsideOperators::new,
+                     SimplifyEqualsOperationOnIdenticalReferences::new
+    diff --git a/server/src/test/java/io/crate/planner/SelectPlannerTest.java b/server/src/test/java/io/crate/planner/SelectPlannerTest.java
+    --- a/server/src/test/java/io/crate/planner/SelectPlannerTest.java
+    +++ b/server/src/test/java/io/crate/planner/SelectPlannerTest.java
+    @@ -126,7 +126,7 @@ public class SelectPlannerTest extends CrateDummyClusterServiceUnitTest {
+     
+             LogicalPlan plan = e.logicalPlan("select name from users where _id = 1");
+             assertThat(plan).isEqualTo(
+    -            "Get[doc.users | name | DocKeys{1} | (_id = 1)]");
+    +            "Get[doc.users | name | DocKeys{'1'} | (_id = 1)]");
+         }
+     
+         @Test
+    diff --git a/server/src/test/java/io/crate/planner/WhereClauseOptimizerTest.java b/server/src/test/java/io/crate/planner/WhereClauseOptimizerTest.java
+    --- a/server/src/test/java/io/crate/planner/WhereClauseOptimizerTest.java
+    +++ b/server/src/test/java/io/crate/planner/WhereClauseOptimizerTest.java
+    @@ -30,9 +30,12 @@ import java.util.List;
+     import org.junit.Before;
+     import org.junit.Test;
+     
+    +import io.crate.analyze.AnalyzedDeleteStatement;
+    +import io.crate.analyze.AnalyzedStatement;
+     import io.crate.analyze.QueriedSelectRelation;
+     import io.crate.analyze.relations.DocTableRelation;
+     import io.crate.expression.eval.EvaluatingNormalizer;
+    +import io.crate.expression.symbol.Symbol;
+     import io.crate.metadata.PartitionName;
+     import io.crate.metadata.RelationName;
+     import io.crate.metadata.RowGranularity;
+    @@ -46,6 +49,7 @@ public class WhereClauseOptimizerTest extends CrateDummyClusterServiceUnitTest {
+         @Before
+         public void setUpExecutor() throws Exception {
+             e = SQLExecutor.builder(clusterService)
+    +            .addTable("create table t_pk(a string primary key)")
+                 .addTable("create table bystring (name string primary key, score double) " +
+                           "clustered by (name) ")
+                 .addTable("create table clustered_by_only (x int) clustered by (x)")
+    @@ -78,8 +82,19 @@ public class WhereClauseOptimizerTest extends CrateDummyClusterServiceUnitTest {
+         }
+     
+         private WhereClauseOptimizer.DetailedQuery optimize(String statement) {
+    -        QueriedSelectRelation queriedTable = e.analyze(statement);
+    -        DocTableRelation table = ((DocTableRelation) queriedTable.from().get(0));
+    +        AnalyzedStatement stmt = e.analyze(statement);
+    +        DocTableRelation table;
+    +        Symbol where;
+    +        if (stmt instanceof QueriedSelectRelation qsr) {
+    +            table = (DocTableRelation) qsr.from().get(0);
+    +            where = qsr.where();
+    +        } else if (stmt instanceof AnalyzedDeleteStatement ads) {
+    +            table = ads.relation();
+    +            where = ads.query();
+    +        } else {
+    +            throw new IllegalArgumentException("Neither a select or a delete statement is provided");
+    +        }
+    +
+             EvaluatingNormalizer normalizer = new EvaluatingNormalizer(
+                 e.nodeCtx,
+                 RowGranularity.CLUSTER,
+    @@ -88,7 +103,7 @@ public class WhereClauseOptimizerTest extends CrateDummyClusterServiceUnitTest {
+             );
+             return WhereClauseOptimizer.optimize(
+                 normalizer,
+    -            queriedTable.where(),
+    +            where,
+                 table.tableInfo(),
+                 e.getPlannerContext(clusterService.state()).transactionContext(),
+                 e.nodeCtx
+    @@ -184,4 +199,20 @@ public class WhereClauseOptimizerTest extends CrateDummyClusterServiceUnitTest {
+                 "((doc.partdatebin.ts > 1682899200000::bigint) AND (month AS date_bin('P28D'::interval, ts, 0::bigint) >= 1681344000000::bigint))"
+             );
+         }
+    +
+    +    @Test
+    +    public void test_filter_on_pk_with_implicit_cast() {
+    +        WhereClauseOptimizer.DetailedQuery query = optimize("select * from t_pk where a = 10 OR a = true");
+    +        assertThat(query.docKeys()).hasToString("Optional[DocKeys{'10'; 't'}]");
+    +        query = optimize("delete from t_pk where a = 10 OR a = true");
+    +        assertThat(query.docKeys()).hasToString("Optional[DocKeys{'10'; 't'}]");
+    +    }
+    +
+    +    @Test
+    +    public void test_filter_on_id_with_implicit_cast() {
+    +        WhereClauseOptimizer.DetailedQuery query = optimize("select * from t_pk where _id = 10 OR _id = true");
+    +        assertThat(query.docKeys()).hasToString("Optional[DocKeys{'10'; 't'}]");
+    +        query = optimize("delete from t_pk where _id = 10 OR _id = true");
+    +        assertThat(query.docKeys()).hasToString("Optional[DocKeys{'10'; 't'}]");
+    +    }
+     }
+  notes: >
+    Backported the implicit-cast primary-key/doc-key fix to 5.5, adding a small Optimizer overload needed by the older API; all hunks were validated individually and full validation was skipped as requested.
+```
+
+--- END CLI OUTPUT ---
+[11:56:39]   Done in 424.2s | status=success

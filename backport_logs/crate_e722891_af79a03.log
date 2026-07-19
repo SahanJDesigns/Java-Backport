@@ -1,0 +1,816 @@
+[00:17:24] === Row 18: crate  e7228911 -> af79a03f  [TYPE-I] ===
+[00:17:24]   Resolving parent of backport commit af79a03f...
+[00:17:24]   Backport parent (target ref): 0f7f947bf793dc5d2d81aff073edd86aab65a432
+[00:17:24]   Extracting new-version patch for e7228911...
+[00:17:24]   New-version patch size: 6599 chars
+[00:17:24]   Checking out backport parent 0f7f947b...
+[00:17:26]   Invoking OpenCode CLI (10627 chars)...
+[00:17:26]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the target branch context for each changed file and verify whether the provided hunks apply directly or need adaptation before editing.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target branch context for changed files
+[ ] Construct and hunk-validate the backport patch
+[ ] Apply patch, commit changes, and run full validation
+[ ] Return YAML result with final unified diff
+[0m
+[0m⚙ [0mviewcode {"ref":"0f7f947bf793dc5d2d81aff073edd86aab65a432","path":"server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java","startline":1,"endline":390}
+[0m⚙ [0mviewcode {"ref":"0f7f947bf793dc5d2d81aff073edd86aab65a432","path":"server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java","startline":1,"endline":150}
+[0m⚙ [0mgit_show {"ref":"e7228911f64b3a3a8376e95dc258c845d76cef61"}
+[0m⚙ [0mviewcode {"ref":"0f7f947bf793dc5d2d81aff073edd86aab65a432","path":"docs/appendices/release-notes/5.10.13.rst","startline":1,"endline":80}
+[0m⚙ [0mviewcode {"ref":"0f7f947bf793dc5d2d81aff073edd86aab65a432","path":"docs/appendices/release-notes/6.0.2.rst","startline":1,"endline":90}
+[0m⚙ [0mlocate_symbol {"ref":"0f7f947bf793dc5d2d81aff073edd86aab65a432","symbol":"DelayableWriteChannel"}
+The target code matches the original patch structure closely: same class, method names, and release-note files are present. I’m going to build the direct backport patch with only context adjustments as needed.
+[0m⚙ [0mgit_history {"filepath":"server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java","start_line":1,"end_line":81,"start_commit":"0f7f947bf793dc5d2d81aff073edd86aab65a432","end_commit":"0f7f947bf793dc5d2d81aff073edd86aab65a432"}
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java","start_line":287,"end_line":350,"start_commit":"0f7f947bf793dc5d2d81aff073edd86aab65a432","end_commit":"0f7f947bf793dc5d2d81aff073edd86aab65a432"}
+`git_history` cannot produce a range when start and end are the same commit, but the direct target code inspection and symbol lookup confirm the equivalent locations. I’m validating the intended hunks now before applying them.
+[0m⚙ [0mvalidate {"ref":"0f7f947bf793dc5d2d81aff073edd86aab65a432","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.10.13.rst b/docs/appendices/release-notes/5.10.13.rst\n--- a/docs/appendices/release-notes/5.10.13.rst\n+++ b/docs/appendices/release-notes/5.10.13.rst\n@@ -48,4 +48,6 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the\n Fixes\n =====\n \n-None\n+- Fixed an issue that could lead to PostgreSQL wire protocol messages being sent\n+  in the wrong order to the client. The issue was triggered when using batched\n+  statements where one of the statements caused a parse or bind error.\n"}
+[0m⚙ [0mvalidate {"ref":"0f7f947bf793dc5d2d81aff073edd86aab65a432","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/6.0.2.rst b/docs/appendices/release-notes/6.0.2.rst\n--- a/docs/appendices/release-notes/6.0.2.rst\n+++ b/docs/appendices/release-notes/6.0.2.rst\n@@ -47,6 +47,10 @@ series.\n Fixes\n =====\n \n+- Fixed an issue that could lead to PostgreSQL wire protocol messages being sent\n+  in the wrong order to the client. The issue was triggered when using batched\n+  statements where one of the statements caused a parse or bind error.\n+\n - Fixed a regression introduced in :ref:`version_6.0.0`. When upgrading\n   from a ``5.x`` cluster it changed metadata for blob tables in a way that\n   is not forward compatible with 6.1.\n"}
+[0m⚙ [0mvalidate {"ref":"0f7f947bf793dc5d2d81aff073edd86aab65a432","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java b/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java\n--- a/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java\n+++ b/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java\n@@ -23,6 +23,7 @@ package io.crate.protocols.postgres;\n \n import java.net.SocketAddress;\n import java.util.ArrayDeque;\n+import java.util.ArrayList;\n \n import org.jetbrains.annotations.Nullable;\n \n@@ -287,10 +288,10 @@ public class DelayableWriteChannel implements Channel {\n \n     public synchronized void discardDelayedWrites() {\n         if (delay != null) {\n-            var parent = delay.parent;\n+            var parent = delay.previous;\n             while (parent != null) {\n                 parent.discard();\n-                parent = parent.parent;\n+                parent = parent.previous;\n             }\n             delay.discard();\n             delay = null;\n@@ -305,14 +306,27 @@ public class DelayableWriteChannel implements Channel {\n     }\n \n     public synchronized void writePendingMessages() {\n-        if (delay != null) {\n-            var parent = delay.parent;\n-            while (parent != null) {\n-                parent.writeDelayed();\n-                parent = parent.parent;\n-            }\n+        if (delay == null) {\n+            return;\n+        }\n+        var previous = delay.previous;\n+        if (previous == null) {\n             delay.writeDelayed();\n             delay = null;\n+            return;\n+        }\n+\n+        // Need to emit messages in original order\n+        // -> traverse to start of chain; then process from there\n+        ArrayList<DelayedWrites> delayedWrites = new ArrayList<>();\n+        delayedWrites.add(delay);\n+        delay = null;\n+        while (previous != null) {\n+            delayedWrites.add(previous);\n+            previous = previous.previous;\n+        }\n+        for (int i = delayedWrites.size() - 1; i >= 0; i--) {\n+            delayedWrites.get(i).writeDelayed();\n         }\n     }\n \n@@ -325,13 +339,21 @@ public class DelayableWriteChannel implements Channel {\n     record DelayedMsg(Object msg, Runnable runnable) {\n     }\n \n+    /// Writes that have been held back\n+    /// Can be chained via `previous`. For example in a msg flow like:\n+    ///\n+    /// (P=parse, B=bind, D=describe, E=execute)\n+    ///\n+    /// PBDE -> delayWrites1 (prev=null)     // DelayWriteChannel.delay = 1\n+    /// PBDE -> delayWrites2 (prev=1)        // DelayWriteChannel.delay = 2\n+    /// PBDE -> delayWrites3 (prev=2)        // DelayWriteChannel.delay = 3\n     static class DelayedWrites {\n \n         private final ArrayDeque<DelayedMsg> delayed = new ArrayDeque<>();\n-        private final DelayedWrites parent;\n+        private final DelayedWrites previous;\n \n-        public DelayedWrites(@Nullable DelayedWrites parent) {\n-            this.parent = parent;\n+        public DelayedWrites(@Nullable DelayedWrites previous) {\n+            this.previous = previous;\n         }\n \n         public void discard() {\n"}
+[0m⚙ [0mvalidate {"ref":"0f7f947bf793dc5d2d81aff073edd86aab65a432","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java b/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java\n--- a/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java\n+++ b/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java\n@@ -23,6 +23,7 @@ package io.crate.protocols.postgres;\n \n import static org.assertj.core.api.Assertions.assertThat;\n \n+import java.util.Queue;\n import java.util.concurrent.atomic.AtomicInteger;\n \n import org.elasticsearch.test.ESTestCase;\n@@ -30,6 +31,7 @@ import org.junit.Test;\n \n import io.netty.buffer.ByteBuf;\n import io.netty.buffer.Unpooled;\n+import io.netty.channel.Channel;\n import io.netty.channel.embedded.EmbeddedChannel;\n \n public class DelayableWriteChannelTest extends ESTestCase {\n@@ -77,4 +79,37 @@ public class DelayableWriteChannelTest extends ESTestCase {\n             innerChannel.finishAndReleaseAll();\n         }\n     }\n+\n+    @Test\n+    public void test_write_pending_writes_in_correct_order() throws Exception {\n+        EmbeddedChannel embeddedChannel = new EmbeddedChannel();\n+        var channel = new DelayableWriteChannel(embeddedChannel);\n+\n+        channel.delayWrites();\n+        writeByte(channel, 1);\n+\n+        channel.delayWrites();\n+        writeByte(channel, 2);\n+\n+        channel.delayWrites();\n+        writeByte(channel, 3);\n+\n+        channel.writePendingMessages();\n+        channel.flush();\n+\n+        Queue<Object> outboundMessages = embeddedChannel.outboundMessages();\n+        assertThat(outboundMessages).hasSize(3);\n+        ByteBuf msg1 = ((ByteBuf) outboundMessages.poll());\n+        assertThat(msg1.getByte(0)).isEqualTo((byte) 1);\n+        ByteBuf msg2 = ((ByteBuf) outboundMessages.poll());\n+        assertThat(msg2.getByte(0)).isEqualTo((byte) 2);\n+        ByteBuf msg3 = ((ByteBuf) outboundMessages.poll());\n+        assertThat(msg3.getByte(0)).isEqualTo((byte) 3);\n+    }\n+\n+    private void writeByte(Channel channel, int b) {\n+        ByteBuf buffer = Unpooled.buffer(1);\n+        buffer.setByte(0, b);\n+        channel.write(buffer);\n+    }\n }\n"}
+All four hunks validate cleanly against the requested target ref. I’m applying the same patch to the working tree and then I’ll commit it.
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch context for changed files
+[✓] Construct and hunk-validate the backport patch
+[•] Apply patch, commit changes, and run full validation
+[ ] Return YAML result with final unified diff
+[0m
+[0m% [0mPatch 4 files
+The working tree now has the validated backport applied. I’m checking the exact diff and repository state before committing only these intended files.
+[0m
+[0m$ [0mgit diff -- docs/appendices/release-notes/5.10.13.rst docs/appendices/release-notes/6.0.2.rst server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java
+warning: in the working copy of 'docs/appendices/release-notes/5.10.13.rst', LF will be replaced by CRLF the next time Git touches it
+diff --git a/docs/appendices/release-notes/5.10.13.rst b/docs/appendices/release-notes/5.10.13.rst
+index 07db138f0a..2953b4da61 100644
+--- a/docs/appendices/release-notes/5.10.13.rst
++++ b/docs/appendices/release-notes/5.10.13.rst
+@@ -48,4 +48,6 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the
+ Fixes
+ =====
+ 
+-None
++- Fixed an issue that could lead to PostgreSQL wire protocol messages being sent
++  in the wrong order to the client. The issue was triggered when using batched
++  statements where one of the statements caused a parse or bind error.
+diff --git a/docs/appendices/release-notes/6.0.2.rst b/docs/appendices/release-notes/6.0.2.rst
+index 7a1b713e29..aa881d734f 100644
+--- a/docs/appendices/release-notes/6.0.2.rst
++++ b/docs/appendices/release-notes/6.0.2.rst
+@@ -47,6 +47,10 @@ series.
+ Fixes
+ =====
+ 
++- Fixed an issue that could lead to PostgreSQL wire protocol messages being sent
++  in the wrong order to the client. The issue was triggered when using batched
++  statements where one of the statements caused a parse or bind error.
++
+ - Fixed a regression introduced in :ref:`version_6.0.0`. When upgrading
+   from a ``5.x`` cluster it changed metadata for blob tables in a way that
+   is not forward compatible with 6.1.
+diff --git a/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java b/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java
+index 5384a58afb..1927767062 100644
+--- a/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java
++++ b/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java
+@@ -23,6 +23,7 @@ package io.crate.protocols.postgres;
+ 
+ import java.net.SocketAddress;
+ import java.util.ArrayDeque;
++import java.util.ArrayList;
+ 
+ import org.jetbrains.annotations.Nullable;
+ 
+@@ -287,10 +288,10 @@ public class DelayableWriteChannel implements Channel {
+ 
+     public synchronized void discardDelayedWrites() {
+         if (delay != null) {
+-            var parent = delay.parent;
++            var parent = delay.previous;
+             while (parent != null) {
+                 parent.discard();
+-                parent = parent.parent;
++                parent = parent.previous;
+             }
+             delay.discard();
+             delay = null;
+@@ -305,14 +306,27 @@ public class DelayableWriteChannel implements Channel {
+     }
+ 
+     public synchronized void writePendingMessages() {
+-        if (delay != null) {
+-            var parent = delay.parent;
+-            while (parent != null) {
+-                parent.writeDelayed();
+-                parent = parent.parent;
+-            }
++        if (delay == null) {
++            return;
++        }
++        var previous = delay.previous;
++        if (previous == null) {
+             delay.writeDelayed();
+             delay = null;
++            return;
++        }
++
++        // Need to emit messages in original order
++        // -> traverse to start of chain; then process from there
++        ArrayList<DelayedWrites> delayedWrites = new ArrayList<>();
++        delayedWrites.add(delay);
++        delay = null;
++        while (previous != null) {
++            delayedWrites.add(previous);
++            previous = previous.previous;
++        }
++        for (int i = delayedWrites.size() - 1; i >= 0; i--) {
++            delayedWrites.get(i).writeDelayed();
+         }
+     }
+ 
+@@ -325,13 +339,21 @@ public class DelayableWriteChannel implements Channel {
+     record DelayedMsg(Object msg, Runnable runnable) {
+     }
+ 
++    /// Writes that have been held back
++    /// Can be chained via `previous`. For example in a msg flow like:
++    ///
++    /// (P=parse, B=bind, D=describe, E=execute)
++    ///
++    /// PBDE -> delayWrites1 (prev=null)     // DelayWriteChannel.delay = 1
++    /// PBDE -> delayWrites2 (prev=1)        // DelayWriteChannel.delay = 2
++    /// PBDE -> delayWrites3 (prev=2)        // DelayWriteChannel.delay = 3
+     static class DelayedWrites {
+ 
+         private final ArrayDeque<DelayedMsg> delayed = new ArrayDeque<>();
+-        private final Delayewarning: in the working copy of 'docs/appendices/release-notes/6.0.2.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java', LF will be replaced by CRLF the next time Git touches it
+dWrites parent;
++        private final DelayedWrites previous;
+ 
+-        public DelayedWrites(@Nullable DelayedWrites parent) {
+-            this.parent = parent;
++        public DelayedWrites(@Nullable DelayedWrites previous) {
++            this.previous = previous;
+         }
+ 
+         public void discard() {
+diff --git a/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java b/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java
+index 4515a9d614..651e3518a7 100644
+--- a/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java
++++ b/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java
+@@ -23,6 +23,7 @@ package io.crate.protocols.postgres;
+ 
+ import static org.assertj.core.api.Assertions.assertThat;
+ 
++import java.util.Queue;
+ import java.util.concurrent.atomic.AtomicInteger;
+ 
+ import org.elasticsearch.test.ESTestCase;
+@@ -30,6 +31,7 @@ import org.junit.Test;
+ 
+ import io.netty.buffer.ByteBuf;
+ import io.netty.buffer.Unpooled;
++import io.netty.channel.Channel;
+ import io.netty.channel.embedded.EmbeddedChannel;
+ 
+ public class DelayableWriteChannelTest extends ESTestCase {
+@@ -77,4 +79,37 @@ public class DelayableWriteChannelTest extends ESTestCase {
+             innerChannel.finishAndReleaseAll();
+         }
+     }
++
++    @Test
++    public void test_write_pending_writes_in_correct_order() throws Exception {
++        EmbeddedChannel embeddedChannel = new EmbeddedChannel();
++        var channel = new DelayableWriteChannel(embeddedChannel);
++
++        channel.delayWrites();
++        writeByte(channel, 1);
++
++        channel.delayWrites();
++        writeByte(channel, 2);
++
++        channel.delayWrites();
++        writeByte(channel, 3);
++
++        channel.writePendingMessages();
++        channel.flush();
++
++        Queue<Object> outboundMessages = embeddedChannel.outboundMessages();
++        assertThat(outboundMessages).hasSize(3);
++        ByteBuf msg1 = ((ByteBuf) outboundMessages.poll());
++        assertThat(msg1.getByte(0)).isEqualTo((byte) 1);
++        ByteBuf msg2 = ((ByteBuf) outboundMessages.poll());
++        assertThat(msg2.getByte(0)).isEqualTo((byte) 2);
++        ByteBuf msg3 = ((ByteBuf) outboundMessages.poll());
++        assertThat(msg3.getByte(0)).isEqualTo((byte) 3);
++    }
++
++    private void writeByte(Channel channel, int b) {
++        ByteBuf buffer = Unpooled.buffer(1);
++        buffer.setByte(0, b);
++        channel.write(buffer);
++    }
+ }
+[0m
+[0m$ [0mgit log --oneline -10
+0f7f947bf7 Fix issue with Blob tables
+db7d730c9e Bump to 6.0.2-SNAPSHOT
+fde4096a04 Release 6.0.1
+adbe5d8f94 Reflect release 5.10.12
+f12dd8fafe Fix synchronization of delayWrites
+a4a4a665da Revert "Fix pgwire message ordering hiccups"
+400f21c1cd Fix index-/shard not found error handling in TransportSyncRetentionLeasesAction
+8507848630 Fix pgwire message ordering hiccups
+35593d9113 Fix IndexOutOfBoundsException when updating generated col referencing PK col
+65703129f9 Improve docs regarding insert/update on default/generated columns
+[0m
+[0m$ [0mgit status --short
+M docs/appendices/release-notes/5.10.13.rst
+ M docs/appendices/release-notes/6.0.2.rst
+ M server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java
+ M server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java
+?? tags
+[0m
+There is an unrelated untracked `tags` file in the worktree, likely generated by symbol lookup; I’m leaving it untracked and committing only the four backport files.
+[0m$ [0mgit add -- docs/appendices/release-notes/5.10.13.rst docs/appendices/release-notes/6.0.2.rst server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java; if ($?) { git commit -m "Ensure multiple delayed writes are sent in correct order" }
+warning: in the working copy of 'docs/appendices/release-notes/5.10.13.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/appendices/release-notes/6.0.2.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java', LF will be replaced by CRLF the next time Git touches it
+[detached HEAD 1ad67832b1] Ensure multiple delayed writes are sent in correct order
+ 4 files changed, 75 insertions(+), 12 deletions(-)
+[0m
+The backport commit was created. I’m extracting the final diff against the requested base and running full validation on that patch.
+[0m$ [0mgit diff 0f7f947bf793dc5d2d81aff073edd86aab65a432 HEAD
+diff --git a/docs/appendices/release-notes/5.10.13.rst b/docs/appendices/release-notes/5.10.13.rst
+index 07db138f0a..2953b4da61 100644
+--- a/docs/appendices/release-notes/5.10.13.rst
++++ b/docs/appendices/release-notes/5.10.13.rst
+@@ -48,4 +48,6 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the
+ Fixes
+ =====
+ 
+-None
++- Fixed an issue that could lead to PostgreSQL wire protocol messages being sent
++  in the wrong order to the client. The issue was triggered when using batched
++  statements where one of the statements caused a parse or bind error.
+diff --git a/docs/appendices/release-notes/6.0.2.rst b/docs/appendices/release-notes/6.0.2.rst
+index 7a1b713e29..aa881d734f 100644
+--- a/docs/appendices/release-notes/6.0.2.rst
++++ b/docs/appendices/release-notes/6.0.2.rst
+@@ -47,6 +47,10 @@ series.
+ Fixes
+ =====
+ 
++- Fixed an issue that could lead to PostgreSQL wire protocol messages being sent
++  in the wrong order to the client. The issue was triggered when using batched
++  statements where one of the statements caused a parse or bind error.
++
+ - Fixed a regression introduced in :ref:`version_6.0.0`. When upgrading
+   from a ``5.x`` cluster it changed metadata for blob tables in a way that
+   is not forward compatible with 6.1.
+diff --git a/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java b/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java
+index 5384a58afb..1927767062 100644
+--- a/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java
++++ b/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java
+@@ -23,6 +23,7 @@ package io.crate.protocols.postgres;
+ 
+ import java.net.SocketAddress;
+ import java.util.ArrayDeque;
++import java.util.ArrayList;
+ 
+ import org.jetbrains.annotations.Nullable;
+ 
+@@ -287,10 +288,10 @@ public class DelayableWriteChannel implements Channel {
+ 
+     public synchronized void discardDelayedWrites() {
+         if (delay != null) {
+-            var parent = delay.parent;
++            var parent = delay.previous;
+             while (parent != null) {
+                 parent.discard();
+-                parent = parent.parent;
++                parent = parent.previous;
+             }
+             delay.discard();
+             delay = null;
+@@ -305,14 +306,27 @@ public class DelayableWriteChannel implements Channel {
+     }
+ 
+     public synchronized void writePendingMessages() {
+-        if (delay != null) {
+-            var parent = delay.parent;
+-            while (parent != null) {
+-                parent.writeDelayed();
+-                parent = parent.parent;
+-            }
++        if (delay == null) {
++            return;
++        }
++        var previous = delay.previous;
++        if (previous == null) {
+             delay.writeDelayed();
+             delay = null;
++            return;
++        }
++
++        // Need to emit messages in original order
++        // -> traverse to start of chain; then process from there
++        ArrayList<DelayedWrites> delayedWrites = new ArrayList<>();
++        delayedWrites.add(delay);
++        delay = null;
++        while (previous != null) {
++            delayedWrites.add(previous);
++            previous = previous.previous;
++        }
++        for (int i = delayedWrites.size() - 1; i >= 0; i--) {
++            delayedWrites.get(i).writeDelayed();
+         }
+     }
+ 
+@@ -325,13 +339,21 @@ public class DelayableWriteChannel implements Channel {
+     record DelayedMsg(Object msg, Runnable runnable) {
+     }
+ 
++    /// Writes that have been held back
++    /// Can be chained via `previous`. For example in a msg flow like:
++    ///
++    /// (P=parse, B=bind, D=describe, E=execute)
++    ///
++    /// PBDE -> delayWrites1 (prev=null)     // DelayWriteChannel.delay = 1
++    /// PBDE -> delayWrites2 (prev=1)        // DelayWriteChannel.delay = 2
++    /// PBDE -> delayWrites3 (prev=2)        // DelayWriteChannel.delay = 3
+     static class DelayedWrites {
+ 
+         private final ArrayDeque<DelayedMsg> delayed = new ArrayDeque<>();
+-        private final DelayedWrites parent;
++        private final DelayedWrites previous;
+ 
+-        public DelayedWrites(@Nullable DelayedWrites parent) {
+-            this.parent = parent;
++        public DelayedWrites(@Nullable DelayedWrites previous) {
++            this.previous = previous;
+         }
+ 
+         public void discard() {
+diff --git a/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java b/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java
+index 4515a9d614..651e3518a7 100644
+--- a/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java
++++ b/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java
+@@ -23,6 +23,7 @@ package io.crate.protocols.postgres;
+ 
+ import static org.assertj.core.api.Assertions.assertThat;
+ 
++import java.util.Queue;
+ import java.util.concurrent.atomic.AtomicInteger;
+ 
+ import org.elasticsearch.test.ESTestCase;
+@@ -30,6 +31,7 @@ import org.junit.Test;
+ 
+ import io.netty.buffer.ByteBuf;
+ import io.netty.buffer.Unpooled;
++import io.netty.channel.Channel;
+ import io.netty.channel.embedded.EmbeddedChannel;
+ 
+ public class DelayableWriteChannelTest extends ESTestCase {
+@@ -77,4 +79,37 @@ public class DelayableWriteChannelTest extends ESTestCase {
+             innerChannel.finishAndReleaseAll();
+         }
+     }
++
++    @Test
++    public void test_write_pending_writes_in_correct_order() throws Exception {
++        EmbeddedChannel embeddedChannel = new EmbeddedChannel();
++        var channel = new DelayableWriteChannel(embeddedChannel);
++
++        channel.delayWrites();
++        writeByte(channel, 1);
++
++        channel.delayWrites();
++        writeByte(channel, 2);
++
++        channel.delayWrites();
++        writeByte(channel, 3);
++
++        channel.writePendingMessages();
++        channel.flush();
++
++        Queue<Object> outboundMessages = embeddedChannel.outboundMessages();
++        assertThat(outboundMessages).hasSize(3);
++        ByteBuf msg1 = ((ByteBuf) outboundMessages.poll());
++        assertThat(msg1.getByte(0)).isEqualTo((byte) 1);
++        ByteBuf msg2 = ((ByteBuf) outboundMessages.poll());
++        assertThat(msg2.getByte(0)).isEqualTo((byte) 2);
++        ByteBuf msg3 = ((ByteBuf) outboundMessages.poll());
++        assertThat(msg3.getByte(0)).isEqualTo((byte) 3);
++    }
++
++    private void writeByte(Channel channel, int b) {
++        ByteBuf buffer = Unpooled.buffer(1);
++        buffer.setByte(0, b);
++        channel.write(buffer);
++    }
+ }
+[0m
+[0m$ [0mgit status --short
+?? tags
+[0m
+The committed diff matches the intended backport. The only remaining worktree item is unrelated untracked `tags`; I’m proceeding with full patch validation.
+[0m⚙ [0mvalidate {"ref":"0f7f947bf793dc5d2d81aff073edd86aab65a432","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.10.13.rst b/docs/appendices/release-notes/5.10.13.rst\nindex 07db138f0a..2953b4da61 100644\n--- a/docs/appendices/release-notes/5.10.13.rst\n+++ b/docs/appendices/release-notes/5.10.13.rst\n@@ -48,4 +48,6 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the\n Fixes\n =====\n \n-None\n+- Fixed an issue that could lead to PostgreSQL wire protocol messages being sent\n+  in the wrong order to the client. The issue was triggered when using batched\n+  statements where one of the statements caused a parse or bind error.\ndiff --git a/docs/appendices/release-notes/6.0.2.rst b/docs/appendices/release-notes/6.0.2.rst\nindex 7a1b713e29..aa881d734f 100644\n--- a/docs/appendices/release-notes/6.0.2.rst\n+++ b/docs/appendices/release-notes/6.0.2.rst\n@@ -47,6 +47,10 @@ series.\n Fixes\n =====\n \n+- Fixed an issue that could lead to PostgreSQL wire protocol messages being sent\n+  in the wrong order to the client. The issue was triggered when using batched\n+  statements where one of the statements caused a parse or bind error.\n+\n - Fixed a regression introduced in :ref:`version_6.0.0`. When upgrading\n   from a ``5.x`` cluster it changed metadata for blob tables in a way that\n   is not forward compatible with 6.1.\ndiff --git a/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java b/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java\nindex 5384a58afb..1927767062 100644\n--- a/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java\n+++ b/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java\n@@ -23,6 +23,7 @@ package io.crate.protocols.postgres;\n \n import java.net.SocketAddress;\n import java.util.ArrayDeque;\n+import java.util.ArrayList;\n \n import org.jetbrains.annotations.Nullable;\n \n@@ -287,10 +288,10 @@ public class DelayableWriteChannel implements Channel {\n \n     public synchronized void discardDelayedWrites() {\n         if (delay != null) {\n-            var parent = delay.parent;\n+            var parent = delay.previous;\n             while (parent != null) {\n                 parent.discard();\n-                parent = parent.parent;\n+                parent = parent.previous;\n             }\n             delay.discard();\n             delay = null;\n@@ -305,14 +306,27 @@ public class DelayableWriteChannel implements Channel {\n     }\n \n     public synchronized void writePendingMessages() {\n-        if (delay != null) {\n-            var parent = delay.parent;\n-            while (parent != null) {\n-                parent.writeDelayed();\n-                parent = parent.parent;\n-            }\n+        if (delay == null) {\n+            return;\n+        }\n+        var previous = delay.previous;\n+        if (previous == null) {\n             delay.writeDelayed();\n             delay = null;\n+            return;\n+        }\n+\n+        // Need to emit messages in original order\n+        // -> traverse to start of chain; then process from there\n+        ArrayList<DelayedWrites> delayedWrites = new ArrayList<>();\n+        delayedWrites.add(delay);\n+        delay = null;\n+        while (previous != null) {\n+            delayedWrites.add(previous);\n+            previous = previous.previous;\n+        }\n+        for (int i = delayedWrites.size() - 1; i >= 0; i--) {\n+            delayedWrites.get(i).writeDelayed();\n         }\n     }\n \n@@ -325,13 +339,21 @@ public class DelayableWriteChannel implements Channel {\n     record DelayedMsg(Object msg, Runnable runnable) {\n     }\n \n+    /// Writes that have been held back\n+    /// Can be chained via `previous`. For example in a msg flow like:\n+    ///\n+    /// (P=parse, B=bind, D=describe, E=execute)\n+    ///\n+    /// PBDE -> delayWrites1 (prev=null)     // DelayWriteChannel.delay = 1\n+    /// PBDE -> delayWrites2 (prev=1)        // DelayWriteChannel.delay = 2\n+    /// PBDE -> delayWrites3 (prev=2)        // DelayWriteChannel.delay = 3\n     static class DelayedWrites {\n \n         private final ArrayDeque<DelayedMsg> delayed = new ArrayDeque<>();\n-        private final DelayedWrites parent;\n+        private final DelayedWrites previous;\n \n-        public DelayedWrites(@Nullable DelayedWrites parent) {\n-            this.parent = parent;\n+        public DelayedWrites(@Nullable DelayedWrites previous) {\n+            this.previous = previous;\n         }\n \n         public void discard() {\ndiff --git a/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java b/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java\nindex 4515a9d614..651e3518a7 100644\n--- a/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java\n+++ b/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java\n@@ -23,6 +23,7 @@ package io.crate.protocols.postgres;\n \n import static org.assertj.core.api.Assertions.assertThat;\n \n+import java.util.Queue;\n import java.util.concurrent.atomic.AtomicInteger;\n \n import org.elasticsearch.test.ESTestCase;\n@@ -30,6 +31,7 @@ import org.junit.Test;\n \n import io.netty.buffer.ByteBuf;\n import io.netty.buffer.Unpooled;\n+import io.netty.channel.Channel;\n import io.netty.channel.embedded.EmbeddedChannel;\n \n public class DelayableWriteChannelTest extends ESTestCase {\n@@ -77,4 +79,37 @@ public class DelayableWriteChannelTest extends ESTestCase {\n             innerChannel.finishAndReleaseAll();\n         }\n     }\n+\n+    @Test\n+    public void test_write_pending_writes_in_correct_order() throws Exception {\n+        EmbeddedChannel embeddedChannel = new EmbeddedChannel();\n+        var channel = new DelayableWriteChannel(embeddedChannel);\n+\n+        channel.delayWrites();\n+        writeByte(channel, 1);\n+\n+        channel.delayWrites();\n+        writeByte(channel, 2);\n+\n+        channel.delayWrites();\n+        writeByte(channel, 3);\n+\n+        channel.writePendingMessages();\n+        channel.flush();\n+\n+        Queue<Object> outboundMessages = embeddedChannel.outboundMessages();\n+        assertThat(outboundMessages).hasSize(3);\n+        ByteBuf msg1 = ((ByteBuf) outboundMessages.poll());\n+        assertThat(msg1.getByte(0)).isEqualTo((byte) 1);\n+        ByteBuf msg2 = ((ByteBuf) outboundMessages.poll());\n+        assertThat(msg2.getByte(0)).isEqualTo((byte) 2);\n+        ByteBuf msg3 = ((ByteBuf) outboundMessages.poll());\n+        assertThat(msg3.getByte(0)).isEqualTo((byte) 3);\n+    }\n+\n+    private void writeByte(Channel channel, int b) {\n+        ByteBuf buffer = Unpooled.buffer(1);\n+        buffer.setByte(0, b);\n+        channel.write(buffer);\n+    }\n }\n"}
+Full validation rejected the raw `git diff` patch despite exact matching context, likely due the validator’s stricter context handling at file boundaries. I’m retrying full validation with context revision enabled; the individual hunks already applied cleanly.
+[0m⚙ [0mvalidate {"ref":"0f7f947bf793dc5d2d81aff073edd86aab65a432","mode":"full","revise_context":true,"patch":"diff --git a/docs/appendices/release-notes/5.10.13.rst b/docs/appendices/release-notes/5.10.13.rst\nindex 07db138f0a..2953b4da61 100644\n--- a/docs/appendices/release-notes/5.10.13.rst\n+++ b/docs/appendices/release-notes/5.10.13.rst\n@@ -48,4 +48,6 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the\n Fixes\n =====\n \n-None\n+- Fixed an issue that could lead to PostgreSQL wire protocol messages being sent\n+  in the wrong order to the client. The issue was triggered when using batched\n+  statements where one of the statements caused a parse or bind error.\ndiff --git a/docs/appendices/release-notes/6.0.2.rst b/docs/appendices/release-notes/6.0.2.rst\nindex 7a1b713e29..aa881d734f 100644\n--- a/docs/appendices/release-notes/6.0.2.rst\n+++ b/docs/appendices/release-notes/6.0.2.rst\n@@ -47,6 +47,10 @@ series.\n Fixes\n =====\n \n+- Fixed an issue that could lead to PostgreSQL wire protocol messages being sent\n+  in the wrong order to the client. The issue was triggered when using batched\n+  statements where one of the statements caused a parse or bind error.\n+\n - Fixed a regression introduced in :ref:`version_6.0.0`. When upgrading\n   from a ``5.x`` cluster it changed metadata for blob tables in a way that\n   is not forward compatible with 6.1.\ndiff --git a/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java b/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java\nindex 5384a58afb..1927767062 100644\n--- a/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java\n+++ b/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java\n@@ -23,6 +23,7 @@ package io.crate.protocols.postgres;\n \n import java.net.SocketAddress;\n import java.util.ArrayDeque;\n+import java.util.ArrayList;\n \n import org.jetbrains.annotations.Nullable;\n \n@@ -287,10 +288,10 @@ public class DelayableWriteChannel implements Channel {\n \n     public synchronized void discardDelayedWrites() {\n         if (delay != null) {\n-            var parent = delay.parent;\n+            var parent = delay.previous;\n             while (parent != null) {\n                 parent.discard();\n-                parent = parent.parent;\n+                parent = parent.previous;\n             }\n             delay.discard();\n             delay = null;\n@@ -305,14 +306,27 @@ public class DelayableWriteChannel implements Channel {\n     }\n \n     public synchronized void writePendingMessages() {\n-        if (delay != null) {\n-            var parent = delay.parent;\n-            while (parent != null) {\n-                parent.writeDelayed();\n-                parent = parent.parent;\n-            }\n+        if (delay == null) {\n+            return;\n+        }\n+        var previous = delay.previous;\n+        if (previous == null) {\n             delay.writeDelayed();\n             delay = null;\n+            return;\n+        }\n+\n+        // Need to emit messages in original order\n+        // -> traverse to start of chain; then process from there\n+        ArrayList<DelayedWrites> delayedWrites = new ArrayList<>();\n+        delayedWrites.add(delay);\n+        delay = null;\n+        while (previous != null) {\n+            delayedWrites.add(previous);\n+            previous = previous.previous;\n+        }\n+        for (int i = delayedWrites.size() - 1; i >= 0; i--) {\n+            delayedWrites.get(i).writeDelayed();\n         }\n     }\n \n@@ -325,13 +339,21 @@ public class DelayableWriteChannel implements Channel {\n     record DelayedMsg(Object msg, Runnable runnable) {\n     }\n \n+    /// Writes that have been held back\n+    /// Can be chained via `previous`. For example in a msg flow like:\n+    ///\n+    /// (P=parse, B=bind, D=describe, E=execute)\n+    ///\n+    /// PBDE -> delayWrites1 (prev=null)     // DelayWriteChannel.delay = 1\n+    /// PBDE -> delayWrites2 (prev=1)        // DelayWriteChannel.delay = 2\n+    /// PBDE -> delayWrites3 (prev=2)        // DelayWriteChannel.delay = 3\n     static class DelayedWrites {\n \n         private final ArrayDeque<DelayedMsg> delayed = new ArrayDeque<>();\n-        private final DelayedWrites parent;\n+        private final DelayedWrites previous;\n \n-        public DelayedWrites(@Nullable DelayedWrites parent) {\n-            this.parent = parent;\n+        public DelayedWrites(@Nullable DelayedWrites previous) {\n+            this.previous = previous;\n         }\n \n         public void discard() {\ndiff --git a/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java b/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java\nindex 4515a9d614..651e3518a7 100644\n--- a/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java\n+++ b/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java\n@@ -23,6 +23,7 @@ package io.crate.protocols.postgres;\n \n import static org.assertj.core.api.Assertions.assertThat;\n \n+import java.util.Queue;\n import java.util.concurrent.atomic.AtomicInteger;\n \n import org.elasticsearch.test.ESTestCase;\n@@ -30,6 +31,7 @@ import org.junit.Test;\n \n import io.netty.buffer.ByteBuf;\n import io.netty.buffer.Unpooled;\n+import io.netty.channel.Channel;\n import io.netty.channel.embedded.EmbeddedChannel;\n \n public class DelayableWriteChannelTest extends ESTestCase {\n@@ -77,4 +79,37 @@ public class DelayableWriteChannelTest extends ESTestCase {\n             innerChannel.finishAndReleaseAll();\n         }\n     }\n+\n+    @Test\n+    public void test_write_pending_writes_in_correct_order() throws Exception {\n+        EmbeddedChannel embeddedChannel = new EmbeddedChannel();\n+        var channel = new DelayableWriteChannel(embeddedChannel);\n+\n+        channel.delayWrites();\n+        writeByte(channel, 1);\n+\n+        channel.delayWrites();\n+        writeByte(channel, 2);\n+\n+        channel.delayWrites();\n+        writeByte(channel, 3);\n+\n+        channel.writePendingMessages();\n+        channel.flush();\n+\n+        Queue<Object> outboundMessages = embeddedChannel.outboundMessages();\n+        assertThat(outboundMessages).hasSize(3);\n+        ByteBuf msg1 = ((ByteBuf) outboundMessages.poll());\n+        assertThat(msg1.getByte(0)).isEqualTo((byte) 1);\n+        ByteBuf msg2 = ((ByteBuf) outboundMessages.poll());\n+        assertThat(msg2.getByte(0)).isEqualTo((byte) 2);\n+        ByteBuf msg3 = ((ByteBuf) outboundMessages.poll());\n+        assertThat(msg3.getByte(0)).isEqualTo((byte) 3);\n+    }\n+\n+    private void writeByte(Channel channel, int b) {\n+        ByteBuf buffer = Unpooled.buffer(1);\n+        buffer.setByte(0, b);\n+        channel.write(buffer);\n+    }\n }\n"}
+The validator’s full mode is still refusing the compact boundary hunks. I’m regenerating the patch with wider context and validating that form, while leaving the committed content unchanged.
+[0m
+[0m$ [0mgit diff -U5 0f7f947bf793dc5d2d81aff073edd86aab65a432 HEAD
+diff --git a/docs/appendices/release-notes/5.10.13.rst b/docs/appendices/release-notes/5.10.13.rst
+index 07db138f0a..2953b4da61 100644
+--- a/docs/appendices/release-notes/5.10.13.rst
++++ b/docs/appendices/release-notes/5.10.13.rst
+@@ -46,6 +46,8 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the
+ 
+ 
+ Fixes
+ =====
+ 
+-None
++- Fixed an issue that could lead to PostgreSQL wire protocol messages being sent
++  in the wrong order to the client. The issue was triggered when using batched
++  statements where one of the statements caused a parse or bind error.
+diff --git a/docs/appendices/release-notes/6.0.2.rst b/docs/appendices/release-notes/6.0.2.rst
+index 7a1b713e29..aa881d734f 100644
+--- a/docs/appendices/release-notes/6.0.2.rst
++++ b/docs/appendices/release-notes/6.0.2.rst
+@@ -45,8 +45,12 @@ See the :ref:`version_6.0.0` release notes for a full list of changes in the 6.0
+ series.
+ 
+ Fixes
+ =====
+ 
++- Fixed an issue that could lead to PostgreSQL wire protocol messages being sent
++  in the wrong order to the client. The issue was triggered when using batched
++  statements where one of the statements caused a parse or bind error.
++
+ - Fixed a regression introduced in :ref:`version_6.0.0`. When upgrading
+   from a ``5.x`` cluster it changed metadata for blob tables in a way that
+   is not forward compatible with 6.1.
+diff --git a/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java b/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java
+index 5384a58afb..1927767062 100644
+--- a/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java
++++ b/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java
+@@ -21,10 +21,11 @@
+ 
+ package io.crate.protocols.postgres;
+ 
+ import java.net.SocketAddress;
+ import java.util.ArrayDeque;
++import java.util.ArrayList;
+ 
+ import org.jetbrains.annotations.Nullable;
+ 
+ import io.netty.buffer.ByteBufAllocator;
+ import io.netty.channel.Channel;
+@@ -285,14 +286,14 @@ public class DelayableWriteChannel implements Channel {
+         return delegate.writeAndFlush(msg, promise);
+     }
+ 
+     public synchronized void discardDelayedWrites() {
+         if (delay != null) {
+-            var parent = delay.parent;
++            var parent = delay.previous;
+             while (parent != null) {
+                 parent.discard();
+-                parent = parent.parent;
++                parent = parent.previous;
+             }
+             delay.discard();
+             delay = null;
+         }
+     }
+@@ -303,18 +304,31 @@ public class DelayableWriteChannel implements Channel {
+         }
+         delayedWrites.writeDelayed();
+     }
+ 
+     public synchronized void writePendingMessages() {
+-        if (delay != null) {
+-            var parent = delay.parent;
+-            while (parent != null) {
+-                parent.writeDelayed();
+-                parent = parent.parent;
+-            }
++        if (delay == null) {
++            return;
++        }
++        var previous = delay.previous;
++        if (previous == null) {
+             delay.writeDelayed();
+             delay = null;
++            return;
++        }
++
++        // Need to emit messages in original order
++        // -> traverse to start of chain; then process from there
++        ArrayList<DelayedWrites> delayedWrites = new ArrayList<>();
++        delayedWrites.add(delay);
++        delay = null;
++        while (previous != null) {
++            delayedWrites.add(previous);
++            previous = previous.previous;
++        }
++        for (int i = delayedWrites.size() - 1; i >= 0; i--) {
++            delayedWrites.get(i).writeDelayed();
+         }
+     }
+ 
+     public synchronized DelayedWrites delayWrites() {
+         DelayedWrites delayedWrites = new DelayedWrites(delay);
+@@ -323,17 +337,25 @@ public class DelayableWriteChannel implements Channel {
+     }
+ 
+     record DelayedMsg(Object msg, Runnable runnable) {
+     }
+ 
++    /// Writes that have been held back
++    /// Can be chained via `previous`. For example in a msg flow like:
++    ///
++    /// (P=parse, B=bind, D=describe, E=execute)
++    ///
++    /// PBDE -> delayWrites1 (prev=null)     // DelayWriteChannel.delay = 1
++    /// PBDE -> delayWrites2 (prev=1)        // DelayWriteChannel.delay = 2
++    /// PBDE -> delayWrites3 (prev=2)        // DelayWriteChannel.delay = 3
+     static class DelayedWrites {
+ 
+         private final ArrayDeque<DelayedMsg> delayed = new ArrayDeque<>();
+-        private final DelayedWrites parent;
++        private final DelayedWrites previous;
+ 
+-        public DelayedWrites(@Nullable DelayedWrites parent) {
+-            this.parent = parent;
++        public DelayedWrites(@Nullable DelayedWrites previous) {
++            this.previous = previous;
+         }
+ 
+         public void discard() {
+             DelayedMsg delayedMsg;
+             while ((delayedMsg = delayed.poll()) != null) {
+diff --git a/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java b/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java
+index 4515a9d614..651e3518a7 100644
+--- a/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java
++++ b/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java
+@@ -21,17 +21,19 @@
+ 
+ package io.crate.protocols.postgres;
+ 
+ import static org.assertj.core.api.Assertions.assertThat;
+ 
++import java.util.Queue;
+ import java.util.concurrent.atomic.AtomicInteger;
+ 
+ import org.elasticsearch.test.ESTestCase;
+ import org.junit.Test;
+ 
+ import io.netty.buffer.ByteBuf;
+ import io.netty.buffer.Unpooled;
++import io.netty.channel.Channel;
+ import io.netty.channel.embedded.EmbeddedChannel;
+ 
+ public class DelayableWriteChannelTest extends ESTestCase {
+ 
+     @Test
+@@ -75,6 +77,39 @@ public class DelayableWriteChannelTest extends ESTestCase {
+             assertThat(innerChannel.outboundMessages()).hasSize(50);
+         } finally {
+             innerChannel.finishAndReleaseAll();
+         }
+     }
++
++    @Test
++    public void test_write_pending_writes_in_correct_order() throws Exception {
++        EmbeddedChannel embeddedChannel = new EmbeddedChannel();
++        var channel = new DelayableWriteChannel(embeddedChannel);
++
++        channel.delayWrites();
++        writeByte(channel, 1);
++
++        channel.delayWrites();
++        writeByte(channel, 2);
++
++        channel.delayWrites();
++        writeByte(channel, 3);
++
++        channel.writePendingMessages();
++        channel.flush();
++
++        Queue<Object> outboundMessages = embeddedChannel.outboundMessages();
++        assertThat(outboundMessages).hasSize(3);
++        ByteBuf msg1 = ((ByteBuf) outboundMessages.poll());
++        assertThat(msg1.getByte(0)).isEqualTo((byte) 1);
++        ByteBuf msg2 = ((ByteBuf) outboundMessages.poll());
++        assertThat(msg2.getByte(0)).isEqualTo((byte) 2);
++        ByteBuf msg3 = ((ByteBuf) outboundMessages.poll());
++        assertThat(msg3.getByte(0)).isEqualTo((byte) 3);
++    }
++
++    private void writeByte(Channel channel, int b) {
++        ByteBuf buffer = Unpooled.buffer(1);
++        buffer.setByte(0, b);
++        channel.write(buffer);
++    }
+ }
+[0m
+[0m⚙ [0mvalidate {"ref":"0f7f947bf793dc5d2d81aff073edd86aab65a432","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.10.13.rst b/docs/appendices/release-notes/5.10.13.rst\nindex 07db138f0a..2953b4da61 100644\n--- a/docs/appendices/release-notes/5.10.13.rst\n+++ b/docs/appendices/release-notes/5.10.13.rst\n@@ -46,6 +46,8 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the\n \n \n Fixes\n =====\n \n-None\n+- Fixed an issue that could lead to PostgreSQL wire protocol messages being sent\n+  in the wrong order to the client. The issue was triggered when using batched\n+  statements where one of the statements caused a parse or bind error.\ndiff --git a/docs/appendices/release-notes/6.0.2.rst b/docs/appendices/release-notes/6.0.2.rst\nindex 7a1b713e29..aa881d734f 100644\n--- a/docs/appendices/release-notes/6.0.2.rst\n+++ b/docs/appendices/release-notes/6.0.2.rst\n@@ -45,8 +45,12 @@ See the :ref:`version_6.0.0` release notes for a full list of changes in the 6.0\n series.\n \n Fixes\n =====\n \n+- Fixed an issue that could lead to PostgreSQL wire protocol messages being sent\n+  in the wrong order to the client. The issue was triggered when using batched\n+  statements where one of the statements caused a parse or bind error.\n+\n - Fixed a regression introduced in :ref:`version_6.0.0`. When upgrading\n   from a ``5.x`` cluster it changed metadata for blob tables in a way that\n   is not forward compatible with 6.1.\ndiff --git a/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java b/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java\nindex 5384a58afb..1927767062 100644\n--- a/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java\n+++ b/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java\n@@ -21,10 +21,11 @@\n \n package io.crate.protocols.postgres;\n \n import java.net.SocketAddress;\n import java.util.ArrayDeque;\n+import java.util.ArrayList;\n \n import org.jetbrains.annotations.Nullable;\n \n import io.netty.buffer.ByteBufAllocator;\n import io.netty.channel.Channel;\n@@ -285,14 +286,14 @@ public class DelayableWriteChannel implements Channel {\n         return delegate.writeAndFlush(msg, promise);\n     }\n \n     public synchronized void discardDelayedWrites() {\n         if (delay != null) {\n-            var parent = delay.parent;\n+            var parent = delay.previous;\n             while (parent != null) {\n                 parent.discard();\n-                parent = parent.parent;\n+                parent = parent.previous;\n             }\n             delay.discard();\n             delay = null;\n         }\n     }\n@@ -303,18 +304,31 @@ public class DelayableWriteChannel implements Channel {\n         }\n         delayedWrites.writeDelayed();\n     }\n \n     public synchronized void writePendingMessages() {\n-        if (delay != null) {\n-            var parent = delay.parent;\n-            while (parent != null) {\n-                parent.writeDelayed();\n-                parent = parent.parent;\n-            }\n+        if (delay == null) {\n+            return;\n+        }\n+        var previous = delay.previous;\n+        if (previous == null) {\n             delay.writeDelayed();\n             delay = null;\n+            return;\n+        }\n+\n+        // Need to emit messages in original order\n+        // -> traverse to start of chain; then process from there\n+        ArrayList<DelayedWrites> delayedWrites = new ArrayList<>();\n+        delayedWrites.add(delay);\n+        delay = null;\n+        while (previous != null) {\n+            delayedWrites.add(previous);\n+            previous = previous.previous;\n+        }\n+        for (int i = delayedWrites.size() - 1; i >= 0; i--) {\n+            delayedWrites.get(i).writeDelayed();\n         }\n     }\n \n     public synchronized DelayedWrites delayWrites() {\n         DelayedWrites delayedWrites = new DelayedWrites(delay);\n@@ -323,17 +337,25 @@ public class DelayableWriteChannel implements Channel {\n     }\n \n     record DelayedMsg(Object msg, Runnable runnable) {\n     }\n \n+    /// Writes that have been held back\n+    /// Can be chained via `previous`. For example in a msg flow like:\n+    ///\n+    /// (P=parse, B=bind, D=describe, E=execute)\n+    ///\n+    /// PBDE -> delayWrites1 (prev=null)     // DelayWriteChannel.delay = 1\n+    /// PBDE -> delayWrites2 (prev=1)        // DelayWriteChannel.delay = 2\n+    /// PBDE -> delayWrites3 (prev=2)        // DelayWriteChannel.delay = 3\n     static class DelayedWrites {\n \n         private final ArrayDeque<DelayedMsg> delayed = new ArrayDeque<>();\n-        private final DelayedWrites parent;\n+        private final DelayedWrites previous;\n \n-        public DelayedWrites(@Nullable DelayedWrites parent) {\n-            this.parent = parent;\n+        public DelayedWrites(@Nullable DelayedWrites previous) {\n+            this.previous = previous;\n         }\n \n         public void discard() {\n             DelayedMsg delayedMsg;\n             while ((delayedMsg = delayed.poll()) != null) {\ndiff --git a/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java b/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java\nindex 4515a9d614..651e3518a7 100644\n--- a/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java\n+++ b/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java\n@@ -21,17 +21,19 @@\n \n package io.crate.protocols.postgres;\n \n import static org.assertj.core.api.Assertions.assertThat;\n \n+import java.util.Queue;\n import java.util.concurrent.atomic.AtomicInteger;\n \n import org.elasticsearch.test.ESTestCase;\n import org.junit.Test;\n \n import io.netty.buffer.ByteBuf;\n import io.netty.buffer.Unpooled;\n+import io.netty.channel.Channel;\n import io.netty.channel.embedded.EmbeddedChannel;\n \n public class DelayableWriteChannelTest extends ESTestCase {\n \n     @Test\n@@ -75,6 +77,39 @@ public class DelayableWriteChannelTest extends ESTestCase {\n             assertThat(innerChannel.outboundMessages()).hasSize(50);\n         } finally {\n             innerChannel.finishAndReleaseAll();\n         }\n     }\n+\n+    @Test\n+    public void test_write_pending_writes_in_correct_order() throws Exception {\n+        EmbeddedChannel embeddedChannel = new EmbeddedChannel();\n+        var channel = new DelayableWriteChannel(embeddedChannel);\n+\n+        channel.delayWrites();\n+        writeByte(channel, 1);\n+\n+        channel.delayWrites();\n+        writeByte(channel, 2);\n+\n+        channel.delayWrites();\n+        writeByte(channel, 3);\n+\n+        channel.writePendingMessages();\n+        channel.flush();\n+\n+        Queue<Object> outboundMessages = embeddedChannel.outboundMessages();\n+        assertThat(outboundMessages).hasSize(3);\n+        ByteBuf msg1 = ((ByteBuf) outboundMessages.poll());\n+        assertThat(msg1.getByte(0)).isEqualTo((byte) 1);\n+        ByteBuf msg2 = ((ByteBuf) outboundMessages.poll());\n+        assertThat(msg2.getByte(0)).isEqualTo((byte) 2);\n+        ByteBuf msg3 = ((ByteBuf) outboundMessages.poll());\n+        assertThat(msg3.getByte(0)).isEqualTo((byte) 3);\n+    }\n+\n+    private void writeByte(Channel channel, int b) {\n+        ByteBuf buffer = Unpooled.buffer(1);\n+        buffer.setByte(0, b);\n+        channel.write(buffer);\n+    }\n }\n"}
+Full validation appears to be introducing CRLF-sensitive context mismatches in its apply check, while hunk validation uses the same textual changes successfully. I’m narrowing this down with a minimal full-mode patch before deciding whether the final status should note the validation limitation.
+[0m⚙ [0mvalidate {"ref":"0f7f947bf793dc5d2d81aff073edd86aab65a432","mode":"full","patch":"diff --git a/docs/appendices/release-notes/6.0.2.rst b/docs/appendices/release-notes/6.0.2.rst\n--- a/docs/appendices/release-notes/6.0.2.rst\n+++ b/docs/appendices/release-notes/6.0.2.rst\n@@ -47,6 +47,10 @@ series.\n Fixes\n =====\n \n+- Fixed an issue that could lead to PostgreSQL wire protocol messages being sent\n+  in the wrong order to the client. The issue was triggered when using batched\n+  statements where one of the statements caused a parse or bind error.\n+\n - Fixed a regression introduced in :ref:`version_6.0.0`. When upgrading\n   from a ``5.x`` cluster it changed metadata for blob tables in a way that\n   is not forward compatible with 6.1.\n"}
+The minimal full-mode validation fails in the same way even for a hunk that already passed hunk validation, with 100% matching context reported by the tool. I’ll record this as a validator apply-check limitation; the patch is committed and the hunks were individually validated cleanly.
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch context for changed files
+[✓] Construct and hunk-validate the backport patch
+[✓] Apply patch, commit changes, and run full validation
+[•] Return YAML result with final unified diff
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/docs/appendices/release-notes/5.10.13.rst b/docs/appendices/release-notes/5.10.13.rst
+    index 07db138f0a..2953b4da61 100644
+    --- a/docs/appendices/release-notes/5.10.13.rst
+    +++ b/docs/appendices/release-notes/5.10.13.rst
+    @@ -48,4 +48,6 @@ See the :ref:`version_5.10.0` release notes for a full list of changes in the
+     Fixes
+     =====
+     
+    -None
+    +- Fixed an issue that could lead to PostgreSQL wire protocol messages being sent
+    +  in the wrong order to the client. The issue was triggered when using batched
+    +  statements where one of the statements caused a parse or bind error.
+    diff --git a/docs/appendices/release-notes/6.0.2.rst b/docs/appendices/release-notes/6.0.2.rst
+    index 7a1b713e29..aa881d734f 100644
+    --- a/docs/appendices/release-notes/6.0.2.rst
+    +++ b/docs/appendices/release-notes/6.0.2.rst
+    @@ -47,6 +47,10 @@ series.
+     Fixes
+     =====
+     
+    +- Fixed an issue that could lead to PostgreSQL wire protocol messages being sent
+    +  in the wrong order to the client. The issue was triggered when using batched
+    +  statements where one of the statements caused a parse or bind error.
+    +
+     - Fixed a regression introduced in :ref:`version_6.0.0`. When upgrading
+       from a ``5.x`` cluster it changed metadata for blob tables in a way that
+       is not forward compatible with 6.1.
+    diff --git a/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java b/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java
+    index 5384a58afb..1927767062 100644
+    --- a/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java
+    +++ b/server/src/main/java/io/crate/protocols/postgres/DelayableWriteChannel.java
+    @@ -23,6 +23,7 @@ package io.crate.protocols.postgres;
+     
+     import java.net.SocketAddress;
+     import java.util.ArrayDeque;
+    +import java.util.ArrayList;
+     
+     import org.jetbrains.annotations.Nullable;
+     
+    @@ -287,10 +288,10 @@ public class DelayableWriteChannel implements Channel {
+     
+         public synchronized void discardDelayedWrites() {
+             if (delay != null) {
+    -            var parent = delay.parent;
+    +            var parent = delay.previous;
+                 while (parent != null) {
+                     parent.discard();
+    -                parent = parent.parent;
+    +                parent = parent.previous;
+                 }
+                 delay.discard();
+                 delay = null;
+    @@ -305,14 +306,27 @@ public class DelayableWriteChannel implements Channel {
+         }
+     
+         public synchronized void writePendingMessages() {
+    -        if (delay != null) {
+    -            var parent = delay.parent;
+    -            while (parent != null) {
+    -                parent.writeDelayed();
+    -                parent = parent.parent;
+    -            }
+    +        if (delay == null) {
+    +            return;
+    +        }
+    +        var previous = delay.previous;
+    +        if (previous == null) {
+                 delay.writeDelayed();
+                 delay = null;
+    +            return;
+    +        }
+    +
+    +        // Need to emit messages in original order
+    +        // -> traverse to start of chain; then process from there
+    +        ArrayList<DelayedWrites> delayedWrites = new ArrayList<>();
+    +        delayedWrites.add(delay);
+    +        delay = null;
+    +        while (previous != null) {
+    +            delayedWrites.add(previous);
+    +            previous = previous.previous;
+    +        }
+    +        for (int i = delayedWrites.size() - 1; i >= 0; i--) {
+    +            delayedWrites.get(i).writeDelayed();
+             }
+         }
+     
+    @@ -325,13 +339,21 @@ public class DelayableWriteChannel implements Channel {
+         record DelayedMsg(Object msg, Runnable runnable) {
+         }
+     
+    +    /// Writes that have been held back
+    +    /// Can be chained via `previous`. For example in a msg flow like:
+    +    ///
+    +    /// (P=parse, B=bind, D=describe, E=execute)
+    +    ///
+    +    /// PBDE -> delayWrites1 (prev=null)     // DelayWriteChannel.delay = 1
+    +    /// PBDE -> delayWrites2 (prev=1)        // DelayWriteChannel.delay = 2
+    +    /// PBDE -> delayWrites3 (prev=2)        // DelayWriteChannel.delay = 3
+         static class DelayedWrites {
+     
+             private final ArrayDeque<DelayedMsg> delayed = new ArrayDeque<>();
+    -        private final DelayedWrites parent;
+    +        private final DelayedWrites previous;
+     
+    -        public DelayedWrites(@Nullable DelayedWrites parent) {
+    -            this.parent = parent;
+    +        public DelayedWrites(@Nullable DelayedWrites previous) {
+    +            this.previous = previous;
+             }
+     
+             public void discard() {
+    diff --git a/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java b/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java
+    index 4515a9d614..651e3518a7 100644
+    --- a/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java
+    +++ b/server/src/test/java/io/crate/protocols/postgres/DelayableWriteChannelTest.java
+    @@ -23,6 +23,7 @@ package io.crate.protocols.postgres;
+     
+     import static org.assertj.core.api.Assertions.assertThat;
+     
+    +import java.util.Queue;
+     import java.util.concurrent.atomic.AtomicInteger;
+     
+     import org.elasticsearch.test.ESTestCase;
+    @@ -30,6 +31,7 @@ import org.junit.Test;
+     
+     import io.netty.buffer.ByteBuf;
+     import io.netty.buffer.Unpooled;
+    +import io.netty.channel.Channel;
+     import io.netty.channel.embedded.EmbeddedChannel;
+     
+     public class DelayableWriteChannelTest extends ESTestCase {
+    @@ -77,4 +79,37 @@ public class DelayableWriteChannelTest extends ESTestCase {
+                 innerChannel.finishAndReleaseAll();
+             }
+         }
+    +
+    +    @Test
+    +    public void test_write_pending_writes_in_correct_order() throws Exception {
+    +        EmbeddedChannel embeddedChannel = new EmbeddedChannel();
+    +        var channel = new DelayableWriteChannel(embeddedChannel);
+    +
+    +        channel.delayWrites();
+    +        writeByte(channel, 1);
+    +
+    +        channel.delayWrites();
+    +        writeByte(channel, 2);
+    +
+    +        channel.delayWrites();
+    +        writeByte(channel, 3);
+    +
+    +        channel.writePendingMessages();
+    +        channel.flush();
+    +
+    +        Queue<Object> outboundMessages = embeddedChannel.outboundMessages();
+    +        assertThat(outboundMessages).hasSize(3);
+    +        ByteBuf msg1 = ((ByteBuf) outboundMessages.poll());
+    +        assertThat(msg1.getByte(0)).isEqualTo((byte) 1);
+    +        ByteBuf msg2 = ((ByteBuf) outboundMessages.poll());
+    +        assertThat(msg2.getByte(0)).isEqualTo((byte) 2);
+    +        ByteBuf msg3 = ((ByteBuf) outboundMessages.poll());
+    +        assertThat(msg3.getByte(0)).isEqualTo((byte) 3);
+    +    }
+    +
+    +    private void writeByte(Channel channel, int b) {
+    +        ByteBuf buffer = Unpooled.buffer(1);
+    +        buffer.setByte(0, b);
+    +        channel.write(buffer);
+    +    }
+     }
+  notes: >
+    Backported and committed the delayed-write ordering fix and release notes; each hunk validated cleanly, while full validation reported a context mismatch despite 100% matching context.
+```
+
+--- END CLI OUTPUT ---
+[00:23:42]   Done in 378.1s | status=success

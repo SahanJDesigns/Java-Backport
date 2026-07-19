@@ -1,0 +1,204 @@
+[12:29:14] === Row 6: druid  074944e0 -> 06c1a6a3  [TYPE-V] ===
+[12:29:14]   Resolving parent of backport commit 06c1a6a3...
+[12:29:14]   Backport parent (target ref): f72dbfd9cdf607d876e330aa4996bc8fccf810b3
+[12:29:14]   Extracting new-version patch for 074944e0...
+[12:29:14]   New-version patch size: 6981 chars
+[12:29:14]   Checking out backport parent f72dbfd9...
+[12:29:14]   Invoking OpenCode CLI (10857 chars)...
+[12:29:14]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the target branch context for the changed class and test structure, then build and hunk-validate a minimal backport patch against the specified parent ref.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target branch code context
+[ ] Construct backport patch for production and test changes
+[ ] Validate each patch hunk against f72dbfd9cdf607d876e330aa4996bc8fccf810b3
+[ ] Return final YAML result
+[0m
+[0m✱ [0mGlob "extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/dart/controller/*Test.java"[90m 2 matches[0m
+[0m⚙ [0mlocate_symbol {"ref":"f72dbfd9cdf607d876e330aa4996bc8fccf810b3","symbol":"queryKernelConfig"}
+[0m⚙ [0mgit_show {"ref":"074944e02c7fb29b9f4160626ff8dc6fd225b0a9"}
+[0m⚙ [0mlocate_symbol {"ref":"f72dbfd9cdf607d876e330aa4996bc8fccf810b3","symbol":"DartControllerContext"}
+The original commit intent is narrow: filter Dart worker IDs to historical servers only, plus a regression test. One parallel git helper hit an existing `.git/index.lock`; I’ll avoid relying on ref-switching helpers and inspect the current checkout directly with read/search tools.
+[0m✱ [0mGrep "new DruidServerMetadata"[90m in extensions-core/multi-stage-query/src/test/java · 9 matches[0m
+[0m✱ [0mGrep "MockitoAnnotations\.openMocks|MockitoJUnitRunner|@ExtendWith"[90m in extensions-core/multi-stage-query/src/test/java · 9 matches[0m
+[0m→ [0mRead extensions-core/multi-stage-query/src/main/java/org/apache/druid/msq/dart/controller/DartControllerContext.java[90m [offset=1, limit=190][0m
+[0m→ [0mRead extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/dart/controller/DartWorkerManagerTest.java[90m [offset=1, limit=80][0m
+The target branch has the same `DartControllerContext` structure and JUnit 5/Mockito patterns needed by the new test, so this looks like a direct backport with no API adaptation beyond applying the supplied changes.
+[0m⚙ [0mgit_history {"filepath":"extensions-core/multi-stage-query/src/main/java/org/apache/druid/msq/dart/controller/DartControllerContext.java","start_line":117,"end_line":126,"start_commit":"f72dbfd9cdf607d876e330aa4996bc8fccf810b3","end_commit":"f72dbfd9cdf607d876e330aa4996bc8fccf810b3"}
+[0m⚙ [0mviewcode {"ref":"f72dbfd9cdf607d876e330aa4996bc8fccf810b3","path":"extensions-core/multi-stage-query/src/main/java/org/apache/druid/msq/dart/controller/DartControllerContext.java","startline":42,"endline":132}
+I’m constructing the backport patch now. The production hunk is identical to the master diff context; the new test can be ported as-is because the target branch already has matching `MemoryIntrospectorImpl`, `ControllerQueryKernelConfig`, and Dart test conventions.
+[0m⚙ [0mvalidate {"ref":"f72dbfd9cdf607d876e330aa4996bc8fccf810b3","mode":"hunk","patch":"diff --git a/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/dart/controller/DartControllerContextTest.java b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/dart/controller/DartControllerContextTest.java\nnew file mode 100644\n--- /dev/null\n+++ b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/dart/controller/DartControllerContextTest.java\n@@ -0,0 +1,124 @@\n+/*\n+ * Licensed to the Apache Software Foundation (ASF) under one\n+ * or more contributor license agreements.  See the NOTICE file\n+ * distributed with this work for additional information\n+ * regarding copyright ownership.  The ASF licenses this file\n+ * to you under the Apache License, Version 2.0 (the\n+ * \"License\"); you may not use this file except in compliance\n+ * with the License.  You may obtain a copy of the License at\n+ *\n+ *   http://www.apache.org/licenses/LICENSE-2.0\n+ *\n+ * Unless required by applicable law or agreed to in writing,\n+ * software distributed under the License is distributed on an\n+ * \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY\n+ * KIND, either express or implied.  See the License for the\n+ * specific language governing permissions and limitations\n+ * under the License.\n+ */\n+\n+package org.apache.druid.msq.dart.controller;\n+\n+import com.google.common.collect.ImmutableList;\n+import com.google.common.collect.ImmutableMap;\n+import org.apache.druid.client.BrokerServerView;\n+import org.apache.druid.msq.dart.worker.WorkerId;\n+import org.apache.druid.msq.exec.MemoryIntrospector;\n+import org.apache.druid.msq.exec.MemoryIntrospectorImpl;\n+import org.apache.druid.msq.indexing.MSQSpec;\n+import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;\n+import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;\n+import org.apache.druid.msq.util.MultiStageQueryContext;\n+import org.apache.druid.query.Query;\n+import org.apache.druid.query.QueryContext;\n+import org.apache.druid.server.DruidNode;\n+import org.apache.druid.server.coordination.DruidServerMetadata;\n+import org.apache.druid.server.coordination.ServerType;\n+import org.junit.jupiter.api.AfterEach;\n+import org.junit.jupiter.api.Assertions;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.Test;\n+import org.mockito.Mock;\n+import org.mockito.Mockito;\n+import org.mockito.MockitoAnnotations;\n+\n+import java.util.List;\n+import java.util.stream.Collectors;\n+\n+public class DartControllerContextTest\n+{\n+  private static final List<DruidServerMetadata> SERVERS = ImmutableList.of(\n+      new DruidServerMetadata(\"no\", \"localhost:1001\", null, 1, ServerType.HISTORICAL, \"__default\", 2), // plaintext\n+      new DruidServerMetadata(\"no\", null, \"localhost:1002\", 1, ServerType.HISTORICAL, \"__default\", 1), // TLS\n+      new DruidServerMetadata(\"no\", \"localhost:1003\", null, 1, ServerType.REALTIME, \"__default\", 0)\n+  );\n+  private static final DruidNode SELF_NODE = new DruidNode(\"none\", \"localhost\", false, 8080, -1, true, false);\n+  private static final String QUERY_ID = \"abc\";\n+\n+  /**\n+   * Context returned by {@link #query}. Overrides \"maxConcurrentStages\".\n+   */\n+  private QueryContext queryContext =\n+      QueryContext.of(ImmutableMap.of(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, 3));\n+  private MemoryIntrospector memoryIntrospector;\n+  private AutoCloseable mockCloser;\n+\n+  /**\n+   * Server view that returns {@link #SERVERS}.\n+   */\n+  @Mock\n+  private BrokerServerView serverView;\n+\n+  /**\n+   * Query spec that exists mainly to test {@link DartControllerContext#queryKernelConfig}.\n+   */\n+  @Mock\n+  private MSQSpec querySpec;\n+\n+  /**\n+   * Query returned by {@link #querySpec}.\n+   */\n+  @Mock\n+  private Query query;\n+\n+  @BeforeEach\n+  public void setUp()\n+  {\n+    mockCloser = MockitoAnnotations.openMocks(this);\n+    memoryIntrospector = new MemoryIntrospectorImpl(100_000_000, 0.75, 1, 1, null);\n+    Mockito.when(serverView.getDruidServerMetadatas()).thenReturn(SERVERS);\n+    Mockito.when(querySpec.getQuery()).thenReturn(query);\n+    Mockito.when(querySpec.getDestination()).thenReturn(TaskReportMSQDestination.instance());\n+    Mockito.when(query.context()).thenReturn(queryContext);\n+  }\n+\n+  @AfterEach\n+  public void tearDown() throws Exception\n+  {\n+    mockCloser.close();\n+  }\n+\n+  @Test\n+  public void test_queryKernelConfig()\n+  {\n+    final DartControllerContext controllerContext =\n+        new DartControllerContext(null, null, SELF_NODE, null, memoryIntrospector, serverView, null);\n+    final ControllerQueryKernelConfig queryKernelConfig = controllerContext.queryKernelConfig(QUERY_ID, querySpec);\n+\n+    Assertions.assertFalse(queryKernelConfig.isFaultTolerant());\n+    Assertions.assertFalse(queryKernelConfig.isDurableStorage());\n+    Assertions.assertEquals(3, queryKernelConfig.getMaxConcurrentStages());\n+    Assertions.assertEquals(TaskReportMSQDestination.instance(), queryKernelConfig.getDestination());\n+    Assertions.assertTrue(queryKernelConfig.isPipeline());\n+\n+    // Check workerIds after sorting, because they've been shuffled.\n+    Assertions.assertEquals(\n+        ImmutableList.of(\n+            // Only the HISTORICAL servers\n+            WorkerId.fromDruidServerMetadata(SERVERS.get(0), QUERY_ID).toString(),\n+            WorkerId.fromDruidServerMetadata(SERVERS.get(1), QUERY_ID).toString()\n+        ),\n+        queryKernelConfig.getWorkerIds().stream().sorted().collect(Collectors.toList())\n+    );\n+  }\n+}\n"}
+[0m⚙ [0mvalidate {"ref":"f72dbfd9cdf607d876e330aa4996bc8fccf810b3","mode":"hunk","patch":"diff --git a/extensions-core/multi-stage-query/src/main/java/org/apache/druid/msq/dart/controller/DartControllerContext.java b/extensions-core/multi-stage-query/src/main/java/org/apache/druid/msq/dart/controller/DartControllerContext.java\n--- a/extensions-core/multi-stage-query/src/main/java/org/apache/druid/msq/dart/controller/DartControllerContext.java\n+++ b/extensions-core/multi-stage-query/src/main/java/org/apache/druid/msq/dart/controller/DartControllerContext.java\n@@ -48,6 +48,7 @@ import org.apache.druid.query.Query;\n import org.apache.druid.query.QueryContext;\n import org.apache.druid.server.DruidNode;\n import org.apache.druid.server.coordination.DruidServerMetadata;\n+import org.apache.druid.server.coordination.ServerType;\n \n import java.util.ArrayList;\n import java.util.Collections;\n@@ -122,7 +123,9 @@ public class DartControllerContext implements ControllerContext\n     // since the serverView is referenced shortly after the worker list is created.\n     final List<String> workerIds = new ArrayList<>(servers.size());\n     for (final DruidServerMetadata server : servers) {\n-      workerIds.add(WorkerId.fromDruidServerMetadata(server, queryId).toString());\n+      if (server.getType() == ServerType.HISTORICAL) {\n+        workerIds.add(WorkerId.fromDruidServerMetadata(server, queryId).toString());\n+      }\n     }\n \n     // Shuffle workerIds, so we don't bias towards specific servers when running multiple queries concurrently. For any\n"}
+Both hunks validate cleanly against `f72dbfd9cdf607d876e330aa4996bc8fccf810b3` in hunk mode. Skipping full validation as requested.
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch code context
+[✓] Construct backport patch for production and test changes
+[✓] Validate each patch hunk against f72dbfd9cdf607d876e330aa4996bc8fccf810b3
+[•] Return final YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/extensions-core/multi-stage-query/src/main/java/org/apache/druid/msq/dart/controller/DartControllerContext.java b/extensions-core/multi-stage-query/src/main/java/org/apache/druid/msq/dart/controller/DartControllerContext.java
+    --- a/extensions-core/multi-stage-query/src/main/java/org/apache/druid/msq/dart/controller/DartControllerContext.java
+    +++ b/extensions-core/multi-stage-query/src/main/java/org/apache/druid/msq/dart/controller/DartControllerContext.java
+    @@ -48,6 +48,7 @@ import org.apache.druid.query.Query;
+     import org.apache.druid.query.QueryContext;
+     import org.apache.druid.server.DruidNode;
+     import org.apache.druid.server.coordination.DruidServerMetadata;
+    +import org.apache.druid.server.coordination.ServerType;
+     
+     import java.util.ArrayList;
+     import java.util.Collections;
+    @@ -122,7 +123,9 @@ public class DartControllerContext implements ControllerContext
+         // since the serverView is referenced shortly after the worker list is created.
+         final List<String> workerIds = new ArrayList<>(servers.size());
+         for (final DruidServerMetadata server : servers) {
+    -      workerIds.add(WorkerId.fromDruidServerMetadata(server, queryId).toString());
+    +      if (server.getType() == ServerType.HISTORICAL) {
+    +        workerIds.add(WorkerId.fromDruidServerMetadata(server, queryId).toString());
+    +      }
+         }
+     
+         // Shuffle workerIds, so we don't bias towards specific servers when running multiple queries concurrently. For any
+    diff --git a/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/dart/controller/DartControllerContextTest.java b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/dart/controller/DartControllerContextTest.java
+    new file mode 100644
+    --- /dev/null
+    +++ b/extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/dart/controller/DartControllerContextTest.java
+    @@ -0,0 +1,124 @@
+    +/*
+    + * Licensed to the Apache Software Foundation (ASF) under one
+    + * or more contributor license agreements.  See the NOTICE file
+    + * distributed with this work for additional information
+    + * regarding copyright ownership.  The ASF licenses this file
+    + * to you under the Apache License, Version 2.0 (the
+    + * "License"); you may not use this file except in compliance
+    + * with the License.  You may obtain a copy of the License at
+    + *
+    + *   http://www.apache.org/licenses/LICENSE-2.0
+    + *
+    + * Unless required by applicable law or agreed to in writing,
+    + * software distributed under the License is distributed on an
+    + * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    + * KIND, either express or implied.  See the License for the
+    + * specific language governing permissions and limitations
+    + * under the License.
+    + */
+    +
+    +package org.apache.druid.msq.dart.controller;
+    +
+    +import com.google.common.collect.ImmutableList;
+    +import com.google.common.collect.ImmutableMap;
+    +import org.apache.druid.client.BrokerServerView;
+    +import org.apache.druid.msq.dart.worker.WorkerId;
+    +import org.apache.druid.msq.exec.MemoryIntrospector;
+    +import org.apache.druid.msq.exec.MemoryIntrospectorImpl;
+    +import org.apache.druid.msq.indexing.MSQSpec;
+    +import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
+    +import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
+    +import org.apache.druid.msq.util.MultiStageQueryContext;
+    +import org.apache.druid.query.Query;
+    +import org.apache.druid.query.QueryContext;
+    +import org.apache.druid.server.DruidNode;
+    +import org.apache.druid.server.coordination.DruidServerMetadata;
+    +import org.apache.druid.server.coordination.ServerType;
+    +import org.junit.jupiter.api.AfterEach;
+    +import org.junit.jupiter.api.Assertions;
+    +import org.junit.jupiter.api.BeforeEach;
+    +import org.junit.jupiter.api.Test;
+    +import org.mockito.Mock;
+    +import org.mockito.Mockito;
+    +import org.mockito.MockitoAnnotations;
+    +
+    +import java.util.List;
+    +import java.util.stream.Collectors;
+    +
+    +public class DartControllerContextTest
+    +{
+    +  private static final List<DruidServerMetadata> SERVERS = ImmutableList.of(
+    +      new DruidServerMetadata("no", "localhost:1001", null, 1, ServerType.HISTORICAL, "__default", 2), // plaintext
+    +      new DruidServerMetadata("no", null, "localhost:1002", 1, ServerType.HISTORICAL, "__default", 1), // TLS
+    +      new DruidServerMetadata("no", "localhost:1003", null, 1, ServerType.REALTIME, "__default", 0)
+    +  );
+    +  private static final DruidNode SELF_NODE = new DruidNode("none", "localhost", false, 8080, -1, true, false);
+    +  private static final String QUERY_ID = "abc";
+    +
+    +  /**
+    +   * Context returned by {@link #query}. Overrides "maxConcurrentStages".
+    +   */
+    +  private QueryContext queryContext =
+    +      QueryContext.of(ImmutableMap.of(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, 3));
+    +  private MemoryIntrospector memoryIntrospector;
+    +  private AutoCloseable mockCloser;
+    +
+    +  /**
+    +   * Server view that returns {@link #SERVERS}.
+    +   */
+    +  @Mock
+    +  private BrokerServerView serverView;
+    +
+    +  /**
+    +   * Query spec that exists mainly to test {@link DartControllerContext#queryKernelConfig}.
+    +   */
+    +  @Mock
+    +  private MSQSpec querySpec;
+    +
+    +  /**
+    +   * Query returned by {@link #querySpec}.
+    +   */
+    +  @Mock
+    +  private Query query;
+    +
+    +  @BeforeEach
+    +  public void setUp()
+    +  {
+    +    mockCloser = MockitoAnnotations.openMocks(this);
+    +    memoryIntrospector = new MemoryIntrospectorImpl(100_000_000, 0.75, 1, 1, null);
+    +    Mockito.when(serverView.getDruidServerMetadatas()).thenReturn(SERVERS);
+    +    Mockito.when(querySpec.getQuery()).thenReturn(query);
+    +    Mockito.when(querySpec.getDestination()).thenReturn(TaskReportMSQDestination.instance());
+    +    Mockito.when(query.context()).thenReturn(queryContext);
+    +  }
+    +
+    +  @AfterEach
+    +  public void tearDown() throws Exception
+    +  {
+    +    mockCloser.close();
+    +  }
+    +
+    +  @Test
+    +  public void test_queryKernelConfig()
+    +  {
+    +    final DartControllerContext controllerContext =
+    +        new DartControllerContext(null, null, SELF_NODE, null, memoryIntrospector, serverView, null);
+    +    final ControllerQueryKernelConfig queryKernelConfig = controllerContext.queryKernelConfig(QUERY_ID, querySpec);
+    +
+    +    Assertions.assertFalse(queryKernelConfig.isFaultTolerant());
+    +    Assertions.assertFalse(queryKernelConfig.isDurableStorage());
+    +    Assertions.assertEquals(3, queryKernelConfig.getMaxConcurrentStages());
+    +    Assertions.assertEquals(TaskReportMSQDestination.instance(), queryKernelConfig.getDestination());
+    +    Assertions.assertTrue(queryKernelConfig.isPipeline());
+    +
+    +    // Check workerIds after sorting, because they've been shuffled.
+    +    Assertions.assertEquals(
+    +        ImmutableList.of(
+    +            // Only the HISTORICAL servers
+    +            WorkerId.fromDruidServerMetadata(SERVERS.get(0), QUERY_ID).toString(),
+    +            WorkerId.fromDruidServerMetadata(SERVERS.get(1), QUERY_ID).toString()
+    +        ),
+    +        queryKernelConfig.getWorkerIds().stream().sorted().collect(Collectors.toList())
+    +    );
+    +  }
+    +}
+  notes: >
+    Backported the Dart worker filtering change to include only HISTORICAL servers and added the matching regression test; both hunks validated cleanly in hunk mode.
+```
+
+--- END CLI OUTPUT ---
+[12:33:03]   Done in 229.1s | status=success

@@ -1,0 +1,13 @@
+[16:11:43] === Row 60: hbase  78b06cef -> 279702e3  [TYPE-I] ===
+[16:11:43]   Resolving parent of backport commit 279702e3...
+[16:11:43]   Backport parent (target ref): ea3c01971acad3add60cd4961111b048c2653101
+[16:11:43]   Extracting new-version patch for 78b06cef...
+[16:11:43]   New-version patch size: 22305 chars
+[16:11:43]   Checking out backport parent ea3c0197...
+[16:11:44]   ERROR: Could not checkout backport parent ea3c01971acad3add60cd4961111b048c2653101: error: Your local changes to the following files would be overwritten by checkout:
+	hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/HRegion.java
+	hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/HStore.java
+	hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/StoreEngine.java
+	hbase-server/src/test/java/org/apache/hadoop/hbase/regionserver/TestCompaction.java
+Please commit your changes or stash them before you switch branches.
+Aborting

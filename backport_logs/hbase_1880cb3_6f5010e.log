@@ -1,0 +1,337 @@
+[16:11:44] === Row 61: hbase  1880cb3a -> 6f5010e4  [TYPE-I] ===
+[16:11:44]   Resolving parent of backport commit 6f5010e4...
+[16:11:44]   Backport parent (target ref): 65e255bb435fde7e5c77aef411aec094716ae61a
+[16:11:44]   Extracting new-version patch for 1880cb3a...
+[16:11:44]   New-version patch size: 10685 chars
+[16:11:44]   Checking out backport parent 65e255bb...
+[16:11:46]   Invoking OpenCode CLI (14575 chars)...
+[16:11:46]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll map the master diff onto the current `branch-2` checkout, then validate the resulting hunks individually against `65e255bb435fde7e5c77aef411aec094716ae61a`.
+[0m# [0mTodos
+[•] Inspect original commit metadata and branch-2 target context
+[ ] Construct adapted unified diff for branch-2
+[ ] Validate each hunk with validate mode=hunk
+[ ] Return YAML result
+[0m
+[0m⚙ [0mlocate_symbol {"ref":"65e255bb435fde7e5c77aef411aec094716ae61a","symbol":"NamespaceStateManager"}
+[0m⚙ [0mgit_show {"ref":"1880cb3ab57f74ada8fd0161a400676a15b4012c"}
+[0m⚙ [0mlocate_symbol {"ref":"65e255bb435fde7e5c77aef411aec094716ae61a","symbol":"TestSplitMergeQuotaTable"}
+The original commit is HBASE-29005, making namespace quota accounting skip system tables and adding a split/merge test for `hbase:quota`. One symbol lookup hit a transient Git index lock, so I’ll use direct file reads plus targeted history/context tools without changing refs.
+[0m✱ [0mGlob "hbase-server/src/test/java/org/apache/hadoop/hbase/*SplitMerge*"[90m 1 match[0m
+[0m→ [0mRead hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java[90m [offset=1, limit=280][0m
+[0m✱ [0mGrep "class MiniClusterRule|MiniClusterRule"[90m in . · 37 matches[0m
+[0m→ [0mRead hbase-server/src/test/java/org/apache/hadoop/hbase/MiniClusterRule.java[90m [offset=1, limit=150][0m
+[0m→ [0mRead hbase-server/src/test/java/org/apache/hadoop/hbase/TestSplitMerge.java[90m [offset=1, limit=180][0m
+[0m⚙ [0mgit_history {"filepath":"hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java","start_line":77,"end_line":100,"start_commit":"65e255bb435fde7e5c77aef411aec094716ae61a","end_commit":"65e255bb435fde7e5c77aef411aec094716ae61a"}
+[0m⚙ [0mviewcode {"ref":"65e255bb435fde7e5c77aef411aec094716ae61a","path":"hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java","startline":41,"endline":239}
+[0m✱ [0mGrep "interface AsyncAdmin|class AsyncAdmin"[90m in . · 1 match[0m
+[0m✱ [0mGrep "mergeRegions\("[90m in hbase-client/src/main/java · 10 matches[0m
+[0m✱ [0mGrep "getAsyncConnection\(\)"[90m in hbase-server/src/test/java · 10 matches[0m
+[0m✱ [0mGrep "createSystemTable|QUOTA_TABLE_DESC|QUOTA_CONF_KEY"[90m in . · 34 matches[0m
+[0m✱ [0mGrep "class HBaseTestingUtil|AsyncConnection|getAsyncConnection"[90m in hbase-server/src/test/java/org/apache/hadoop/hbase · 0 matches[0m
+[0m✱ [0mGrep "newBuilder\(\).*setConfiguration|RuleChain.outerRule\(miniClusterRule\)"[90m in hbase-server/src/test/java · 3 matches[0m
+[0m→ [0mRead hbase-server/src/main/java/org/apache/hadoop/hbase/quotas/QuotaUtil.java[90m [offset=60, limit=60][0m
+[0m✱ [0mGrep "@RunWith\(Parameterized.class\)|Parameterized.Parameters"[90m in hbase-server/src/test/java · 100 matches[0m
+`branch-2` has the same namespace manager structure, but the new test needs Java 8-compatible collection code: no `Map.of` or `Stream.toList()`. The async admin merge API already supports `List<byte[]>`, so the test can be preserved with `Arrays.asList` and collectors.
+[0m✱ [0mGlob "**/HBaseTestingUtil.java"[90m 0 matches[0m
+[0m✱ [0mGrep "source>1\.8|maven.compiler.source|<java.version>|--release|maven.compiler.release"[90m in . · 4 matches[0m
+[0m→ [0mRead hbase-server/src/test/java/org/apache/hadoop/hbase/ConnectionRule.java[90m [offset=1, limit=130][0m
+[0m✱ [0mGrep "<compileSource>|<releaseTarget>|<compileSource>"[90m in pom.xml · 2 matches[0m
+[0m→ [0mRead hbase-server/src/test/java/org/apache/hadoop/hbase/client/TestAsyncQuotaAdminApi.java[90m [offset=1, limit=120][0m
+[0m✱ [0mGrep "class HBaseTestingUtil"[90m in . · 2 matches[0m
+Because `HBaseTestingUtility` in this branch does not expose `getAsyncConnection()`, the test should use the existing `ConnectionRule` around `MiniClusterRule` to create and close an `AsyncConnection`.
+[0m✱ [0mGrep "AsyncConnection|getAdmin\(\)"[90m in hbase-server/src/test/java/org/apache/hadoop/hbase/HBaseTestingUtility.java · 25 matches[0m
+[0m✱ [0mGrep "mergeRegions\(.*stream|Collectors.toList\(\).*RegionInfo::getRegionName|admin.getRegions\(tableName\)"[90m in hbase-server/src/test/java · 40 matches[0m
+[0m→ [0mRead hbase-server/src/test/java/org/apache/hadoop/hbase/client/TestAsyncRegionAdminApi2.java[90m [offset=200, limit=35][0m
+I’m constructing a backport diff that keeps the production change directly and adapts only the added test for branch-2’s Java 8 baseline and test connection rules.
+[0m⚙ [0mvalidate {"ref":"65e255bb435fde7e5c77aef411aec094716ae61a","mode":"hunk","patch":"diff --git a/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java b/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java\n--- a/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java\n+++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java\n@@ -41,8 +41,9 @@ import org.slf4j.LoggerFactory;\n class NamespaceStateManager {\n \n   private static final Logger LOG = LoggerFactory.getLogger(NamespaceStateManager.class);\n-  private ConcurrentMap<String, NamespaceTableAndRegionInfo> nsStateCache;\n-  private MasterServices master;\n+\n+  private final ConcurrentMap<String, NamespaceTableAndRegionInfo> nsStateCache;\n+  private final MasterServices master;\n   private volatile boolean initialized = false;\n \n   public NamespaceStateManager(MasterServices masterServices) {\n"}
+[0m⚙ [0mvalidate {"ref":"65e255bb435fde7e5c77aef411aec094716ae61a","mode":"hunk","patch":"diff --git a/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java b/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java\n--- a/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java\n+++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java\n@@ -76,6 +77,9 @@ class NamespaceStateManager {\n    */\n   synchronized boolean checkAndUpdateNamespaceRegionCount(TableName name, byte[] regionName,\n     int incr) throws IOException {\n+    if (name.isSystemTable()) {\n+      return true;\n+    }\n     String namespace = name.getNamespaceAsString();\n     NamespaceDescriptor nspdesc = getNamespaceDescriptor(namespace);\n     if (nspdesc != null) {\n@@ -84,17 +88,18 @@ class NamespaceStateManager {\n       int regionCount = currentStatus.getRegionCount();\n       long maxRegionCount = TableNamespaceManager.getMaxRegions(nspdesc);\n       if (incr > 0 && regionCount >= maxRegionCount) {\n-        LOG.warn(\"The region \" + Bytes.toStringBinary(regionName)\n-          + \" cannot be created. The region count  will exceed quota on the namespace. \"\n-          + \"This may be transient, please retry later if there are any ongoing split\"\n-          + \" operations in the namespace.\");\n+        LOG.warn(\n+          \"The region {} cannot be created. The region count  will exceed quota on the namespace. \"\n+            + \"This may be transient, please retry later if there are any ongoing split\"\n+            + \" operations in the namespace.\",\n+          Bytes.toStringBinary(regionName));\n         return false;\n       }\n       NamespaceTableAndRegionInfo nsInfo = nsStateCache.get(namespace);\n       if (nsInfo != null) {\n         nsInfo.incRegionCountForTable(name, incr);\n       } else {\n-        LOG.warn(\"Namespace state found null for namespace : \" + namespace);\n+        LOG.warn(\"Namespace state found null for namespace : {}\", namespace);\n       }\n     }\n     return true;\n"}
+[0m⚙ [0mvalidate {"ref":"65e255bb435fde7e5c77aef411aec094716ae61a","mode":"hunk","patch":"diff --git a/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java b/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java\n--- a/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java\n+++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java\n@@ -110,6 +115,9 @@ class NamespaceStateManager {\n    */\n   synchronized void checkAndUpdateNamespaceRegionCount(TableName name, int incr)\n     throws IOException {\n+    if (name.isSystemTable()) {\n+      return;\n+    }\n     String namespace = name.getNamespaceAsString();\n     NamespaceDescriptor nspdesc = getNamespaceDescriptor(namespace);\n     if (nspdesc != null) {\n@@ -133,13 +141,16 @@ class NamespaceStateManager {\n     try {\n       return this.master.getClusterSchema().getNamespace(namespaceAsString);\n     } catch (IOException e) {\n-      LOG.error(\"Error while fetching namespace descriptor for namespace : \" + namespaceAsString);\n+      LOG.error(\"Error while fetching namespace descriptor for namespace : {}\", namespaceAsString);\n       return null;\n     }\n   }\n \n   synchronized void checkAndUpdateNamespaceTableCount(TableName table, int numRegions)\n     throws IOException {\n+    if (table.isSystemTable()) {\n+      return;\n+    }\n     String namespace = table.getNamespaceAsString();\n     NamespaceDescriptor nspdesc = getNamespaceDescriptor(namespace);\n     if (nspdesc != null) {\n"}
+[0m⚙ [0mvalidate {"ref":"65e255bb435fde7e5c77aef411aec094716ae61a","mode":"hunk","patch":"diff --git a/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java b/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java\n--- a/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java\n+++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java\n@@ -186,6 +197,7 @@ class NamespaceStateManager {\n   }\n \n   private void addTable(TableName tableName, int regionCount) throws IOException {\n+    assert !tableName.isSystemTable() : \"Tracking of system tables is not supported\";\n     NamespaceTableAndRegionInfo info = nsStateCache.get(tableName.getNamespaceAsString());\n     if (info != null) {\n       info.addTable(tableName, regionCount);\n@@ -196,6 +208,9 @@ class NamespaceStateManager {\n   }\n \n   synchronized void removeTable(TableName tableName) {\n+    if (tableName.isSystemTable()) {\n+      return;\n+    }\n     NamespaceTableAndRegionInfo info = nsStateCache.get(tableName.getNamespaceAsString());\n     if (info != null) {\n       info.removeTable(tableName);\n@@ -219,7 +234,7 @@ class NamespaceStateManager {\n         addTable(table, regions.size());\n       }\n     }\n-    LOG.info(\"Finished updating state of \" + nsStateCache.size() + \" namespaces. \");\n+    LOG.info(\"Finished updating state of {} namespaces.\", nsStateCache.size());\n     initialized = true;\n   }\n \n"}
+[0m⚙ [0mvalidate {"ref":"65e255bb435fde7e5c77aef411aec094716ae61a","mode":"hunk","patch":"diff --git a/hbase-server/src/test/java/org/apache/hadoop/hbase/TestSplitMergeQuotaTable.java b/hbase-server/src/test/java/org/apache/hadoop/hbase/TestSplitMergeQuotaTable.java\nnew file mode 100644\n--- /dev/null\n+++ b/hbase-server/src/test/java/org/apache/hadoop/hbase/TestSplitMergeQuotaTable.java\n@@ -0,0 +1,150 @@\n+/*\n+ * Licensed to the Apache Software Foundation (ASF) under one\n+ * or more contributor license agreements.  See the NOTICE file\n+ * distributed with this work for additional information\n+ * regarding copyright ownership.  The ASF licenses this file\n+ * to you under the Apache License, Version 2.0 (the\n+ * \"License\"); you may not use this file except in compliance\n+ * with the License.  You may obtain a copy of the License at\n+ *\n+ *     http://www.apache.org/licenses/LICENSE-2.0\n+ *\n+ * Unless required by applicable law or agreed to in writing, software\n+ * distributed under the License is distributed on an \"AS IS\" BASIS,\n+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n+ * See the License for the specific language governing permissions and\n+ * limitations under the License.\n+ */\n+package org.apache.hadoop.hbase;\n+\n+import static org.junit.Assert.assertEquals;\n+\n+import java.util.Arrays;\n+import java.util.Collections;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.concurrent.TimeUnit;\n+import java.util.stream.Collectors;\n+import org.apache.hadoop.conf.Configuration;\n+import org.apache.hadoop.hbase.client.AsyncAdmin;\n+import org.apache.hadoop.hbase.client.RegionInfo;\n+import org.apache.hadoop.hbase.quotas.QuotaUtil;\n+import org.apache.hadoop.hbase.testclassification.LargeTests;\n+import org.apache.hadoop.hbase.testclassification.MiscTests;\n+import org.apache.hadoop.hbase.util.Bytes;\n+import org.junit.ClassRule;\n+import org.junit.Rule;\n+import org.junit.Test;\n+import org.junit.experimental.categories.Category;\n+import org.junit.rules.ExternalResource;\n+import org.junit.rules.RuleChain;\n+import org.junit.rules.TestRule;\n+import org.junit.runner.RunWith;\n+import org.junit.runners.Parameterized;\n+import org.slf4j.Logger;\n+import org.slf4j.LoggerFactory;\n+\n+/**\n+ * Test that we can split and merge the quota table given the presence of various configuration\n+ * settings.\n+ */\n+@Category({ MiscTests.class, LargeTests.class })\n+@RunWith(Parameterized.class)\n+public class TestSplitMergeQuotaTable {\n+\n+  private static final Logger LOG = LoggerFactory.getLogger(TestSplitMergeQuotaTable.class);\n+\n+  @ClassRule\n+  public static final HBaseClassTestRule CLASS_RULE =\n+    HBaseClassTestRule.forClass(TestSplitMergeQuotaTable.class);\n+\n+  @Parameterized.Parameters(name = \"{0}\")\n+  public static Object[][] params() {\n+    return new Object[][] { { Collections.singletonMap(QuotaUtil.QUOTA_CONF_KEY, \"false\") },\n+      { Collections.singletonMap(QuotaUtil.QUOTA_CONF_KEY, \"true\") }, };\n+  }\n+\n+  private final TableName tableName = QuotaUtil.QUOTA_TABLE_NAME;\n+  private final MiniClusterRule miniClusterRule;\n+  private final ConnectionRule connectionRule;\n+\n+  @Rule\n+  public final RuleChain ruleChain;\n+\n+  public TestSplitMergeQuotaTable(Map<String, String> configMap) {\n+    this.miniClusterRule = MiniClusterRule.newBuilder().setConfiguration(() -> {\n+      Configuration conf = HBaseConfiguration.create();\n+      conf.setInt(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT, 1000);\n+      conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);\n+      configMap.forEach(conf::set);\n+      return conf;\n+    }).build();\n+    this.connectionRule = ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);\n+    TestRule ensureQuotaTableRule = new ExternalResource() {\n+      @Override\n+      protected void before() throws Throwable {\n+        if (\n+          !connectionRule.getAsyncConnection().getAdmin().tableExists(QuotaUtil.QUOTA_TABLE_NAME)\n+            .get(30, TimeUnit.SECONDS)\n+        ) {\n+          miniClusterRule.getTestingUtility().getHBaseCluster().getMaster()\n+            .createSystemTable(QuotaUtil.QUOTA_TABLE_DESC);\n+        }\n+      }\n+    };\n+    this.ruleChain = RuleChain.outerRule(miniClusterRule).around(connectionRule)\n+      .around(ensureQuotaTableRule);\n+  }\n+\n+  @Test\n+  public void testSplitMerge() throws Exception {\n+    HBaseTestingUtility util = miniClusterRule.getTestingUtility();\n+    util.waitTableAvailable(tableName, 30_000);\n+    AsyncAdmin admin = connectionRule.getAsyncConnection().getAdmin();\n+    admin.split(tableName, Bytes.toBytes(0x10)).get(30, TimeUnit.SECONDS);\n+    util.waitFor(30_000, new Waiter.ExplainingPredicate<Exception>() {\n+\n+      @Override\n+      public boolean evaluate() throws Exception {\n+        // can potentially observe the parent and both children via this interface.\n+        return admin.getRegions(tableName)\n+          .thenApply(val -> val.stream()\n+            .filter(info -> info.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID)\n+            .collect(Collectors.toList()))\n+          .get(30, TimeUnit.SECONDS).size() > 1;\n+      }\n+\n+      @Override\n+      public String explainFailure() {\n+        return \"Split has not finished yet\";\n+      }\n+    });\n+    util.waitUntilNoRegionsInTransition();\n+    List<RegionInfo> regionInfos = admin.getRegions(tableName)\n+      .thenApply(val -> val.stream()\n+        .filter(info -> info.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID)\n+        .collect(Collectors.toList()))\n+      .get(30, TimeUnit.SECONDS);\n+    assertEquals(2, regionInfos.size());\n+    LOG.info(\"{}\", regionInfos);\n+    admin.mergeRegions(regionInfos.stream().map(RegionInfo::getRegionName).collect(Collectors.toList()),\n+      false).get(30, TimeUnit.SECONDS);\n+    util.waitFor(30000, new Waiter.ExplainingPredicate<Exception>() {\n+\n+      @Override\n+      public boolean evaluate() throws Exception {\n+        // can potentially observe the parent and both children via this interface.\n+        return admin.getRegions(tableName)\n+          .thenApply(val -> val.stream()\n+            .filter(info -> info.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID)\n+            .collect(Collectors.toList()))\n+          .get(30, TimeUnit.SECONDS).size() == 1;\n+      }\n+\n+      @Override\n+      public String explainFailure() {\n+        return \"Merge has not finished yet\";\n+      }\n+    });\n+    assertEquals(1, admin.getRegions(tableName).thenApply(val -> val.stream()\n+      .filter(info -> info.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID)\n+      .collect(Collectors.toList())).get(30, TimeUnit.SECONDS).size());\n+  }\n+}\n"}
+[0m⚙ [0mvalidate {"ref":"65e255bb435fde7e5c77aef411aec094716ae61a","mode":"hunk","patch":"diff --git a/hbase-server/src/test/java/org/apache/hadoop/hbase/TestSplitMergeQuotaTable.java b/hbase-server/src/test/java/org/apache/hadoop/hbase/TestSplitMergeQuotaTable.java\nnew file mode 100644\n--- /dev/null\n+++ b/hbase-server/src/test/java/org/apache/hadoop/hbase/TestSplitMergeQuotaTable.java\n@@ -0,0 +1,148 @@\n+/*\n+ * Licensed to the Apache Software Foundation (ASF) under one\n+ * or more contributor license agreements.  See the NOTICE file\n+ * distributed with this work for additional information\n+ * regarding copyright ownership.  The ASF licenses this file\n+ * to you under the Apache License, Version 2.0 (the\n+ * \"License\"); you may not use this file except in compliance\n+ * with the License.  You may obtain a copy of the License at\n+ *\n+ *     http://www.apache.org/licenses/LICENSE-2.0\n+ *\n+ * Unless required by applicable law or agreed to in writing, software\n+ * distributed under the License is distributed on an \"AS IS\" BASIS,\n+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n+ * See the License for the specific language governing permissions and\n+ * limitations under the License.\n+ */\n+package org.apache.hadoop.hbase;\n+\n+import static org.junit.Assert.assertEquals;\n+\n+import java.util.Collections;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.concurrent.TimeUnit;\n+import java.util.stream.Collectors;\n+import org.apache.hadoop.conf.Configuration;\n+import org.apache.hadoop.hbase.client.AsyncAdmin;\n+import org.apache.hadoop.hbase.client.RegionInfo;\n+import org.apache.hadoop.hbase.quotas.QuotaUtil;\n+import org.apache.hadoop.hbase.testclassification.LargeTests;\n+import org.apache.hadoop.hbase.testclassification.MiscTests;\n+import org.apache.hadoop.hbase.util.Bytes;\n+import org.junit.ClassRule;\n+import org.junit.Rule;\n+import org.junit.Test;\n+import org.junit.experimental.categories.Category;\n+import org.junit.rules.ExternalResource;\n+import org.junit.rules.RuleChain;\n+import org.junit.rules.TestRule;\n+import org.junit.runner.RunWith;\n+import org.junit.runners.Parameterized;\n+import org.slf4j.Logger;\n+import org.slf4j.LoggerFactory;\n+\n+/**\n+ * Test that we can split and merge the quota table given the presence of various configuration\n+ * settings.\n+ */\n+@Category({ MiscTests.class, LargeTests.class })\n+@RunWith(Parameterized.class)\n+public class TestSplitMergeQuotaTable {\n+\n+  private static final Logger LOG = LoggerFactory.getLogger(TestSplitMergeQuotaTable.class);\n+\n+  @ClassRule\n+  public static final HBaseClassTestRule CLASS_RULE =\n+    HBaseClassTestRule.forClass(TestSplitMergeQuotaTable.class);\n+\n+  @Parameterized.Parameters(name = \"{0}\")\n+  public static Object[][] params() {\n+    return new Object[][] { { Collections.singletonMap(QuotaUtil.QUOTA_CONF_KEY, \"false\") },\n+      { Collections.singletonMap(QuotaUtil.QUOTA_CONF_KEY, \"true\") }, };\n+  }\n+\n+  private final TableName tableName = QuotaUtil.QUOTA_TABLE_NAME;\n+  private final MiniClusterRule miniClusterRule;\n+  private final ConnectionRule connectionRule;\n+\n+  @Rule\n+  public final RuleChain ruleChain;\n+\n+  public TestSplitMergeQuotaTable(Map<String, String> configMap) {\n+    this.miniClusterRule = MiniClusterRule.newBuilder().setConfiguration(() -> {\n+      Configuration conf = HBaseConfiguration.create();\n+      conf.setInt(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT, 1000);\n+      conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);\n+      configMap.forEach(conf::set);\n+      return conf;\n+    }).build();\n+    this.connectionRule =\n+      ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);\n+    TestRule ensureQuotaTableRule = new ExternalResource() {\n+      @Override\n+      protected void before() throws Throwable {\n+        if (\n+          !connectionRule.getAsyncConnection().getAdmin().tableExists(QuotaUtil.QUOTA_TABLE_NAME)\n+            .get(30, TimeUnit.SECONDS)\n+        ) {\n+          miniClusterRule.getTestingUtility().getHBaseCluster().getMaster()\n+            .createSystemTable(QuotaUtil.QUOTA_TABLE_DESC);\n+        }\n+      }\n+    };\n+    this.ruleChain = RuleChain.outerRule(miniClusterRule).around(connectionRule)\n+      .around(ensureQuotaTableRule);\n+  }\n+\n+  @Test\n+  public void testSplitMerge() throws Exception {\n+    HBaseTestingUtility util = miniClusterRule.getTestingUtility();\n+    util.waitTableAvailable(tableName, 30_000);\n+    AsyncAdmin admin = connectionRule.getAsyncConnection().getAdmin();\n+    admin.split(tableName, Bytes.toBytes(0x10)).get(30, TimeUnit.SECONDS);\n+    util.waitFor(30_000, new Waiter.ExplainingPredicate<Exception>() {\n+\n+      @Override\n+      public boolean evaluate() throws Exception {\n+        // can potentially observe the parent and both children via this interface.\n+        return admin.getRegions(tableName)\n+          .thenApply(val -> val.stream()\n+            .filter(info -> info.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID)\n+            .collect(Collectors.toList()))\n+          .get(30, TimeUnit.SECONDS).size() > 1;\n+      }\n+\n+      @Override\n+      public String explainFailure() {\n+        return \"Split has not finished yet\";\n+      }\n+    });\n+    util.waitUntilNoRegionsInTransition();\n+    List<RegionInfo> regionInfos = admin.getRegions(tableName)\n+      .thenApply(val -> val.stream()\n+        .filter(info -> info.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID)\n+        .collect(Collectors.toList()))\n+      .get(30, TimeUnit.SECONDS);\n+    assertEquals(2, regionInfos.size());\n+    LOG.info(\"{}\", regionInfos);\n+    admin.mergeRegions(\n+      regionInfos.stream().map(RegionInfo::getRegionName).collect(Collectors.toList()), false)\n+      .get(30, TimeUnit.SECONDS);\n+    util.waitFor(30000, new Waiter.ExplainingPredicate<Exception>() {\n+\n+      @Override\n+      public boolean evaluate() throws Exception {\n+        // can potentially observe the parent and both children via this interface.\n+        return admin.getRegions(tableName)\n+          .thenApply(val -> val.stream()\n+            .filter(info -> info.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID)\n+            .collect(Collectors.toList()))\n+          .get(30, TimeUnit.SECONDS).size() == 1;\n+      }\n+\n+      @Override\n+      public String explainFailure() {\n+        return \"Merge has not finished yet\";\n+      }\n+    });\n+    assertEquals(1, admin.getRegions(tableName).get(30, TimeUnit.SECONDS).size());\n+  }\n+}\n"}
+All individual production hunks and the adapted new test file apply cleanly with `validate mode=hunk`; I’ll do one combined apply check in hunk mode only, then return the YAML patch.
+[0m⚙ [0mvalidate {"ref":"65e255bb435fde7e5c77aef411aec094716ae61a","mode":"hunk","patch":"diff --git a/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java b/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java\n--- a/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java\n+++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java\n@@ -41,8 +41,9 @@ import org.slf4j.LoggerFactory;\n class NamespaceStateManager {\n \n   private static final Logger LOG = LoggerFactory.getLogger(NamespaceStateManager.class);\n-  private ConcurrentMap<String, NamespaceTableAndRegionInfo> nsStateCache;\n-  private MasterServices master;\n+\n+  private final ConcurrentMap<String, NamespaceTableAndRegionInfo> nsStateCache;\n+  private final MasterServices master;\n   private volatile boolean initialized = false;\n \n   public NamespaceStateManager(MasterServices masterServices) {\n@@ -76,6 +77,9 @@ class NamespaceStateManager {\n    */\n   synchronized boolean checkAndUpdateNamespaceRegionCount(TableName name, byte[] regionName,\n     int incr) throws IOException {\n+    if (name.isSystemTable()) {\n+      return true;\n+    }\n     String namespace = name.getNamespaceAsString();\n     NamespaceDescriptor nspdesc = getNamespaceDescriptor(namespace);\n     if (nspdesc != null) {\n@@ -84,17 +88,18 @@ class NamespaceStateManager {\n       int regionCount = currentStatus.getRegionCount();\n       long maxRegionCount = TableNamespaceManager.getMaxRegions(nspdesc);\n       if (incr > 0 && regionCount >= maxRegionCount) {\n-        LOG.warn(\"The region \" + Bytes.toStringBinary(regionName)\n-          + \" cannot be created. The region count  will exceed quota on the namespace. \"\n-          + \"This may be transient, please retry later if there are any ongoing split\"\n-          + \" operations in the namespace.\");\n+        LOG.warn(\n+          \"The region {} cannot be created. The region count  will exceed quota on the namespace. \"\n+            + \"This may be transient, please retry later if there are any ongoing split\"\n+            + \" operations in the namespace.\",\n+          Bytes.toStringBinary(regionName));\n         return false;\n       }\n       NamespaceTableAndRegionInfo nsInfo = nsStateCache.get(namespace);\n       if (nsInfo != null) {\n         nsInfo.incRegionCountForTable(name, incr);\n       } else {\n-        LOG.warn(\"Namespace state found null for namespace : \" + namespace);\n+        LOG.warn(\"Namespace state found null for namespace : {}\", namespace);\n       }\n     }\n     return true;\n@@ -110,6 +115,9 @@ class NamespaceStateManager {\n    */\n   synchronized void checkAndUpdateNamespaceRegionCount(TableName name, int incr)\n     throws IOException {\n+    if (name.isSystemTable()) {\n+      return;\n+    }\n     String namespace = name.getNamespaceAsString();\n     NamespaceDescriptor nspdesc = getNamespaceDescriptor(namespace);\n     if (nspdesc != null) {\n@@ -133,13 +141,16 @@ class NamespaceStateManager {\n     try {\n       return this.master.getClusterSchema().getNamespace(namespaceAsString);\n     } catch (IOException e) {\n-      LOG.error(\"Error while fetching namespace descriptor for namespace : \" + namespaceAsString);\n+      LOG.error(\"Error while fetching namespace descriptor for namespace : {}\", namespaceAsString);\n       return null;\n     }\n   }\n \n   synchronized void checkAndUpdateNamespaceTableCount(TableName table, int numRegions)\n     throws IOException {\n+    if (table.isSystemTable()) {\n+      return;\n+    }\n     String namespace = table.getNamespaceAsString();\n     NamespaceDescriptor nspdesc = getNamespaceDescriptor(namespace);\n     if (nspdesc != null) {\n@@ -186,6 +197,7 @@ class NamespaceStateManager {\n   }\n \n   private void addTable(TableName tableName, int regionCount) throws IOException {\n+    assert !tableName.isSystemTable() : \"Tracking of system tables is not supported\";\n     NamespaceTableAndRegionInfo info = nsStateCache.get(tableName.getNamespaceAsString());\n     if (info != null) {\n       info.addTable(tableName, regionCount);\n@@ -196,6 +208,9 @@ class NamespaceStateManager {\n   }\n \n   synchronized void removeTable(TableName tableName) {\n+    if (tableName.isSystemTable()) {\n+      return;\n+    }\n     NamespaceTableAndRegionInfo info = nsStateCache.get(tableName.getNamespaceAsString());\n     if (info != null) {\n       info.removeTable(tableName);\n@@ -219,7 +234,7 @@ class NamespaceStateManager {\n         addTable(table, regions.size());\n       }\n     }\n-    LOG.info(\"Finished updating state of \" + nsStateCache.size() + \" namespaces. \");\n+    LOG.info(\"Finished updating state of {} namespaces.\", nsStateCache.size());\n     initialized = true;\n   }\n \ndiff --git a/hbase-server/src/test/java/org/apache/hadoop/hbase/TestSplitMergeQuotaTable.java b/hbase-server/src/test/java/org/apache/hadoop/hbase/TestSplitMergeQuotaTable.java\nnew file mode 100644\n--- /dev/null\n+++ b/hbase-server/src/test/java/org/apache/hadoop/hbase/TestSplitMergeQuotaTable.java\n@@ -0,0 +1,148 @@\n+/*\n+ * Licensed to the Apache Software Foundation (ASF) under one\n+ * or more contributor license agreements.  See the NOTICE file\n+ * distributed with this work for additional information\n+ * regarding copyright ownership.  The ASF licenses this file\n+ * to you under the Apache License, Version 2.0 (the\n+ * \"License\"); you may not use this file except in compliance\n+ * with the License.  You may obtain a copy of the License at\n+ *\n+ *     http://www.apache.org/licenses/LICENSE-2.0\n+ *\n+ * Unless required by applicable law or agreed to in writing, software\n+ * distributed under the License is distributed on an \"AS IS\" BASIS,\n+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n+ * See the License for the specific language governing permissions and\n+ * limitations under the License.\n+ */\n+package org.apache.hadoop.hbase;\n+\n+import static org.junit.Assert.assertEquals;\n+\n+import java.util.Collections;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.concurrent.TimeUnit;\n+import java.util.stream.Collectors;\n+import org.apache.hadoop.conf.Configuration;\n+import org.apache.hadoop.hbase.client.AsyncAdmin;\n+import org.apache.hadoop.hbase.client.RegionInfo;\n+import org.apache.hadoop.hbase.quotas.QuotaUtil;\n+import org.apache.hadoop.hbase.testclassification.LargeTests;\n+import org.apache.hadoop.hbase.testclassification.MiscTests;\n+import org.apache.hadoop.hbase.util.Bytes;\n+import org.junit.ClassRule;\n+import org.junit.Rule;\n+import org.junit.Test;\n+import org.junit.experimental.categories.Category;\n+import org.junit.rules.ExternalResource;\n+import org.junit.rules.RuleChain;\n+import org.junit.rules.TestRule;\n+import org.junit.runner.RunWith;\n+import org.junit.runners.Parameterized;\n+import org.slf4j.Logger;\n+import org.slf4j.LoggerFactory;\n+\n+/**\n+ * Test that we can split and merge the quota table given the presence of various configuration\n+ * settings.\n+ */\n+@Category({ MiscTests.class, LargeTests.class })\n+@RunWith(Parameterized.class)\n+public class TestSplitMergeQuotaTable {\n+\n+  private static final Logger LOG = LoggerFactory.getLogger(TestSplitMergeQuotaTable.class);\n+\n+  @ClassRule\n+  public static final HBaseClassTestRule CLASS_RULE =\n+    HBaseClassTestRule.forClass(TestSplitMergeQuotaTable.class);\n+\n+  @Parameterized.Parameters(name = \"{0}\")\n+  public static Object[][] params() {\n+    return new Object[][] { { Collections.singletonMap(QuotaUtil.QUOTA_CONF_KEY, \"false\") },\n+      { Collections.singletonMap(QuotaUtil.QUOTA_CONF_KEY, \"true\") }, };\n+  }\n+\n+  private final TableName tableName = QuotaUtil.QUOTA_TABLE_NAME;\n+  private final MiniClusterRule miniClusterRule;\n+  private final ConnectionRule connectionRule;\n+\n+  @Rule\n+  public final RuleChain ruleChain;\n+\n+  public TestSplitMergeQuotaTable(Map<String, String> configMap) {\n+    this.miniClusterRule = MiniClusterRule.newBuilder().setConfiguration(() -> {\n+      Configuration conf = HBaseConfiguration.create();\n+      conf.setInt(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT, 1000);\n+      conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);\n+      configMap.forEach(conf::set);\n+      return conf;\n+    }).build();\n+    this.connectionRule =\n+      ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);\n+    TestRule ensureQuotaTableRule = new ExternalResource() {\n+      @Override\n+      protected void before() throws Throwable {\n+        if (\n+          !connectionRule.getAsyncConnection().getAdmin().tableExists(QuotaUtil.QUOTA_TABLE_NAME)\n+            .get(30, TimeUnit.SECONDS)\n+        ) {\n+          miniClusterRule.getTestingUtility().getHBaseCluster().getMaster()\n+            .createSystemTable(QuotaUtil.QUOTA_TABLE_DESC);\n+        }\n+      }\n+    };\n+    this.ruleChain = RuleChain.outerRule(miniClusterRule).around(connectionRule)\n+      .around(ensureQuotaTableRule);\n+  }\n+\n+  @Test\n+  public void testSplitMerge() throws Exception {\n+    HBaseTestingUtility util = miniClusterRule.getTestingUtility();\n+    util.waitTableAvailable(tableName, 30_000);\n+    AsyncAdmin admin = connectionRule.getAsyncConnection().getAdmin();\n+    admin.split(tableName, Bytes.toBytes(0x10)).get(30, TimeUnit.SECONDS);\n+    util.waitFor(30_000, new Waiter.ExplainingPredicate<Exception>() {\n+\n+      @Override\n+      public boolean evaluate() throws Exception {\n+        // can potentially observe the parent and both children via this interface.\n+        return admin.getRegions(tableName)\n+          .thenApply(val -> val.stream()\n+            .filter(info -> info.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID)\n+            .collect(Collectors.toList()))\n+          .get(30, TimeUnit.SECONDS).size() > 1;\n+      }\n+\n+      @Override\n+      public String explainFailure() {\n+        return \"Split has not finished yet\";\n+      }\n+    });\n+    util.waitUntilNoRegionsInTransition();\n+    List<RegionInfo> regionInfos = admin.getRegions(tableName)\n+      .thenApply(val -> val.stream()\n+        .filter(info -> info.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID)\n+        .collect(Collectors.toList()))\n+      .get(30, TimeUnit.SECONDS);\n+    assertEquals(2, regionInfos.size());\n+    LOG.info(\"{}\", regionInfos);\n+    admin.mergeRegions(\n+      regionInfos.stream().map(RegionInfo::getRegionName).collect(Collectors.toList()), false)\n+      .get(30, TimeUnit.SECONDS);\n+    util.waitFor(30000, new Waiter.ExplainingPredicate<Exception>() {\n+\n+      @Override\n+      public boolean evaluate() throws Exception {\n+        // can potentially observe the parent and both children via this interface.\n+        return admin.getRegions(tableName)\n+          .thenApply(val -> val.stream()\n+            .filter(info -> info.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID)\n+            .collect(Collectors.toList()))\n+          .get(30, TimeUnit.SECONDS).size() == 1;\n+      }\n+\n+      @Override\n+      public String explainFailure() {\n+        return \"Merge has not finished yet\";\n+      }\n+    });\n+    assertEquals(1, admin.getRegions(tableName).get(30, TimeUnit.SECONDS).size());\n+  }\n+}\n"}
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and branch-2 target context
+[✓] Construct adapted unified diff for branch-2
+[✓] Validate each hunk with validate mode=hunk
+[•] Return YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java b/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java
+    --- a/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java
+    +++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/namespace/NamespaceStateManager.java
+    @@ -41,8 +41,9 @@ import org.slf4j.LoggerFactory;
+     class NamespaceStateManager {
+     
+       private static final Logger LOG = LoggerFactory.getLogger(NamespaceStateManager.class);
+    -  private ConcurrentMap<String, NamespaceTableAndRegionInfo> nsStateCache;
+    -  private MasterServices master;
+    +
+    +  private final ConcurrentMap<String, NamespaceTableAndRegionInfo> nsStateCache;
+    +  private final MasterServices master;
+       private volatile boolean initialized = false;
+     
+       public NamespaceStateManager(MasterServices masterServices) {
+    @@ -76,6 +77,9 @@ class NamespaceStateManager {
+        */
+       synchronized boolean checkAndUpdateNamespaceRegionCount(TableName name, byte[] regionName,
+         int incr) throws IOException {
+    +    if (name.isSystemTable()) {
+    +      return true;
+    +    }
+         String namespace = name.getNamespaceAsString();
+         NamespaceDescriptor nspdesc = getNamespaceDescriptor(namespace);
+         if (nspdesc != null) {
+    @@ -84,17 +88,18 @@ class NamespaceStateManager {
+           int regionCount = currentStatus.getRegionCount();
+           long maxRegionCount = TableNamespaceManager.getMaxRegions(nspdesc);
+           if (incr > 0 && regionCount >= maxRegionCount) {
+    -        LOG.warn("The region " + Bytes.toStringBinary(regionName)
+    -          + " cannot be created. The region count  will exceed quota on the namespace. "
+    -          + "This may be transient, please retry later if there are any ongoing split"
+    -          + " operations in the namespace.");
+    +        LOG.warn(
+    +          "The region {} cannot be created. The region count  will exceed quota on the namespace. "
+    +            + "This may be transient, please retry later if there are any ongoing split"
+    +            + " operations in the namespace.",
+    +          Bytes.toStringBinary(regionName));
+             return false;
+           }
+           NamespaceTableAndRegionInfo nsInfo = nsStateCache.get(namespace);
+           if (nsInfo != null) {
+             nsInfo.incRegionCountForTable(name, incr);
+           } else {
+    -        LOG.warn("Namespace state found null for namespace : " + namespace);
+    +        LOG.warn("Namespace state found null for namespace : {}", namespace);
+           }
+         }
+         return true;
+    @@ -110,6 +115,9 @@ class NamespaceStateManager {
+        */
+       synchronized void checkAndUpdateNamespaceRegionCount(TableName name, int incr)
+         throws IOException {
+    +    if (name.isSystemTable()) {
+    +      return;
+    +    }
+         String namespace = name.getNamespaceAsString();
+         NamespaceDescriptor nspdesc = getNamespaceDescriptor(namespace);
+         if (nspdesc != null) {
+    @@ -133,13 +141,16 @@ class NamespaceStateManager {
+         try {
+           return this.master.getClusterSchema().getNamespace(namespaceAsString);
+         } catch (IOException e) {
+    -      LOG.error("Error while fetching namespace descriptor for namespace : " + namespaceAsString);
+    +      LOG.error("Error while fetching namespace descriptor for namespace : {}", namespaceAsString);
+           return null;
+         }
+       }
+     
+       synchronized void checkAndUpdateNamespaceTableCount(TableName table, int numRegions)
+         throws IOException {
+    +    if (table.isSystemTable()) {
+    +      return;
+    +    }
+         String namespace = table.getNamespaceAsString();
+         NamespaceDescriptor nspdesc = getNamespaceDescriptor(namespace);
+         if (nspdesc != null) {
+    @@ -186,6 +197,7 @@ class NamespaceStateManager {
+       }
+     
+       private void addTable(TableName tableName, int regionCount) throws IOException {
+    +    assert !tableName.isSystemTable() : "Tracking of system tables is not supported";
+         NamespaceTableAndRegionInfo info = nsStateCache.get(tableName.getNamespaceAsString());
+         if (info != null) {
+           info.addTable(tableName, regionCount);
+    @@ -196,6 +208,9 @@ class NamespaceStateManager {
+       }
+     
+       synchronized void removeTable(TableName tableName) {
+    +    if (tableName.isSystemTable()) {
+    +      return;
+    +    }
+         NamespaceTableAndRegionInfo info = nsStateCache.get(tableName.getNamespaceAsString());
+         if (info != null) {
+           info.removeTable(tableName);
+    @@ -219,7 +234,7 @@ class NamespaceStateManager {
+             addTable(table, regions.size());
+           }
+         }
+    -    LOG.info("Finished updating state of " + nsStateCache.size() + " namespaces. ");
+    +    LOG.info("Finished updating state of {} namespaces.", nsStateCache.size());
+         initialized = true;
+       }
+     
+    diff --git a/hbase-server/src/test/java/org/apache/hadoop/hbase/TestSplitMergeQuotaTable.java b/hbase-server/src/test/java/org/apache/hadoop/hbase/TestSplitMergeQuotaTable.java
+    new file mode 100644
+    --- /dev/null
+    +++ b/hbase-server/src/test/java/org/apache/hadoop/hbase/TestSplitMergeQuotaTable.java
+    @@ -0,0 +1,148 @@
+    +/*
+    + * Licensed to the Apache Software Foundation (ASF) under one
+    + * or more contributor license agreements.  See the NOTICE file
+    + * distributed with this work for additional information
+    + * regarding copyright ownership.  The ASF licenses this file
+    + * to you under the Apache License, Version 2.0 (the
+    + * "License"); you may not use this file except in compliance
+    + * with the License.  You may obtain a copy of the License at
+    + *
+    + *     http://www.apache.org/licenses/LICENSE-2.0
+    + *
+    + * Unless required by applicable law or agreed to in writing, software
+    + * distributed under the License is distributed on an "AS IS" BASIS,
+    + * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    + * See the License for the specific language governing permissions and
+    + * limitations under the License.
+    + */
+    +package org.apache.hadoop.hbase;
+    +
+    +import static org.junit.Assert.assertEquals;
+    +
+    +import java.util.Collections;
+    +import java.util.List;
+    +import java.util.Map;
+    +import java.util.concurrent.TimeUnit;
+    +import java.util.stream.Collectors;
+    +import org.apache.hadoop.conf.Configuration;
+    +import org.apache.hadoop.hbase.client.AsyncAdmin;
+    +import org.apache.hadoop.hbase.client.RegionInfo;
+    +import org.apache.hadoop.hbase.quotas.QuotaUtil;
+    +import org.apache.hadoop.hbase.testclassification.LargeTests;
+    +import org.apache.hadoop.hbase.testclassification.MiscTests;
+    +import org.apache.hadoop.hbase.util.Bytes;
+    +import org.junit.ClassRule;
+    +import org.junit.Rule;
+    +import org.junit.Test;
+    +import org.junit.experimental.categories.Category;
+    +import org.junit.rules.ExternalResource;
+    +import org.junit.rules.RuleChain;
+    +import org.junit.rules.TestRule;
+    +import org.junit.runner.RunWith;
+    +import org.junit.runners.Parameterized;
+    +import org.slf4j.Logger;
+    +import org.slf4j.LoggerFactory;
+    +
+    +/**
+    + * Test that we can split and merge the quota table given the presence of various configuration
+    + * settings.
+    + */
+    +@Category({ MiscTests.class, LargeTests.class })
+    +@RunWith(Parameterized.class)
+    +public class TestSplitMergeQuotaTable {
+    +
+    +  private static final Logger LOG = LoggerFactory.getLogger(TestSplitMergeQuotaTable.class);
+    +
+    +  @ClassRule
+    +  public static final HBaseClassTestRule CLASS_RULE =
+    +    HBaseClassTestRule.forClass(TestSplitMergeQuotaTable.class);
+    +
+    +  @Parameterized.Parameters(name = "{0}")
+    +  public static Object[][] params() {
+    +    return new Object[][] { { Collections.singletonMap(QuotaUtil.QUOTA_CONF_KEY, "false") },
+    +      { Collections.singletonMap(QuotaUtil.QUOTA_CONF_KEY, "true") }, };
+    +  }
+    +
+    +  private final TableName tableName = QuotaUtil.QUOTA_TABLE_NAME;
+    +  private final MiniClusterRule miniClusterRule;
+    +  private final ConnectionRule connectionRule;
+    +
+    +  @Rule
+    +  public final RuleChain ruleChain;
+    +
+    +  public TestSplitMergeQuotaTable(Map<String, String> configMap) {
+    +    this.miniClusterRule = MiniClusterRule.newBuilder().setConfiguration(() -> {
+    +      Configuration conf = HBaseConfiguration.create();
+    +      conf.setInt(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT, 1000);
+    +      conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
+    +      configMap.forEach(conf::set);
+    +      return conf;
+    +    }).build();
+    +    this.connectionRule =
+    +      ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);
+    +    TestRule ensureQuotaTableRule = new ExternalResource() {
+    +      @Override
+    +      protected void before() throws Throwable {
+    +        if (
+    +          !connectionRule.getAsyncConnection().getAdmin().tableExists(QuotaUtil.QUOTA_TABLE_NAME)
+    +            .get(30, TimeUnit.SECONDS)
+    +        ) {
+    +          miniClusterRule.getTestingUtility().getHBaseCluster().getMaster()
+    +            .createSystemTable(QuotaUtil.QUOTA_TABLE_DESC);
+    +        }
+    +      }
+    +    };
+    +    this.ruleChain = RuleChain.outerRule(miniClusterRule).around(connectionRule)
+    +      .around(ensureQuotaTableRule);
+    +  }
+    +
+    +  @Test
+    +  public void testSplitMerge() throws Exception {
+    +    HBaseTestingUtility util = miniClusterRule.getTestingUtility();
+    +    util.waitTableAvailable(tableName, 30_000);
+    +    AsyncAdmin admin = connectionRule.getAsyncConnection().getAdmin();
+    +    admin.split(tableName, Bytes.toBytes(0x10)).get(30, TimeUnit.SECONDS);
+    +    util.waitFor(30_000, new Waiter.ExplainingPredicate<Exception>() {
+    +
+    +      @Override
+    +      public boolean evaluate() throws Exception {
+    +        // can potentially observe the parent and both children via this interface.
+    +        return admin.getRegions(tableName)
+    +          .thenApply(val -> val.stream()
+    +            .filter(info -> info.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID)
+    +            .collect(Collectors.toList()))
+    +          .get(30, TimeUnit.SECONDS).size() > 1;
+    +      }
+    +
+    +      @Override
+    +      public String explainFailure() {
+    +        return "Split has not finished yet";
+    +      }
+    +    });
+    +    util.waitUntilNoRegionsInTransition();
+    +    List<RegionInfo> regionInfos = admin.getRegions(tableName)
+    +      .thenApply(val -> val.stream()
+    +        .filter(info -> info.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID)
+    +        .collect(Collectors.toList()))
+    +      .get(30, TimeUnit.SECONDS);
+    +    assertEquals(2, regionInfos.size());
+    +    LOG.info("{}", regionInfos);
+    +    admin.mergeRegions(
+    +      regionInfos.stream().map(RegionInfo::getRegionName).collect(Collectors.toList()), false)
+    +      .get(30, TimeUnit.SECONDS);
+    +    util.waitFor(30000, new Waiter.ExplainingPredicate<Exception>() {
+    +
+    +      @Override
+    +      public boolean evaluate() throws Exception {
+    +        // can potentially observe the parent and both children via this interface.
+    +        return admin.getRegions(tableName)
+    +          .thenApply(val -> val.stream()
+    +            .filter(info -> info.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID)
+    +            .collect(Collectors.toList()))
+    +          .get(30, TimeUnit.SECONDS).size() == 1;
+    +      }
+    +
+    +      @Override
+    +      public String explainFailure() {
+    +        return "Merge has not finished yet";
+    +      }
+    +    });
+    +    assertEquals(1, admin.getRegions(tableName).get(30, TimeUnit.SECONDS).size());
+    +  }
+    +}
+  notes: >
+    Backported the namespace quota system-table exclusions and added a branch-2-compatible quota table split/merge test; all hunks were validated with mode=hunk against 65e255bb435fde7e5c77aef411aec094716ae61a.
+```
+
+--- END CLI OUTPUT ---
+[16:17:49]   Done in 364.7s | status=success

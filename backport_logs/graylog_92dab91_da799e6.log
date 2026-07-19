@@ -1,0 +1,240 @@
+[13:41:25] === Row 12: graylog  92dab916 -> da799e6a  [TYPE-I] ===
+[13:41:25]   Resolving parent of backport commit da799e6a...
+[13:41:25]   Backport parent (target ref): b0c2e7b94ba2df783df30957e7b398913f0ba0df
+[13:41:25]   Extracting new-version patch for 92dab916...
+[13:41:25]   New-version patch size: 7786 chars
+[13:41:25]   Checking out backport parent b0c2e7b9...
+[13:41:25]   Invoking OpenCode CLI (11645 chars)...
+[13:41:25]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll compare the provided hunks against the current `6.0` checkout, then build and hunk-validate a minimal unified diff for the equivalent files.
+[0m# [0mTodos
+[•] Inspect original change metadata and target branch file context
+[ ] Construct unified backport patch adapted to 6.0
+[ ] Validate each patch hunk against target ref
+[ ] Return parseable YAML result
+[0m
+[0m⚙ [0mviewcode {"ref":"b0c2e7b94ba2df783df30957e7b398913f0ba0df","path":"graylog2-server/src/main/java/org/graylog2/bindings/providers/JsonSafeEngineProvider.java","startline":1,"endline":140}
+[0m⚙ [0mviewcode {"ref":"b0c2e7b94ba2df783df30957e7b398913f0ba0df","path":"graylog2-server/src/test/java/org/graylog/events/notifications/types/HTTPEventNotificationV2Test.java","startline":1,"endline":180}
+[0m⚙ [0mgit_show {"ref":"92dab916a50f809fccb0943e53f0165dd9a121c8"}
+[0m⚙ [0mlocate_symbol {"ref":"b0c2e7b94ba2df783df30957e7b398913f0ba0df","symbol":"JsonSafeEngineProvider"}
+[0m⚙ [0mlocate_symbol {"ref":"b0c2e7b94ba2df783df30957e7b398913f0ba0df","symbol":"HTTPEventNotificationV2Test"}
+The target files exist on `6.0` with matching structure; the production hunk is a direct adaptation, and the test hunk only needs the import/signature updates plus added fixtures/tests. One symbol lookup hit an existing `.git/index.lock`, but direct target context was available.
+[0m⚙ [0mgit_history {"filepath":"graylog2-server/src/test/java/org/graylog/events/notifications/types/HTTPEventNotificationV2Test.java","start_line":46,"end_line":94,"start_commit":"b0c2e7b94ba2df783df30957e7b398913f0ba0df","end_commit":"b0c2e7b94ba2df783df30957e7b398913f0ba0df"}
+[0m⚙ [0mgit_history {"filepath":"graylog2-server/src/main/java/org/graylog2/bindings/providers/JsonSafeEngineProvider.java","start_line":29,"end_line":56,"start_commit":"b0c2e7b94ba2df783df30957e7b398913f0ba0df","end_commit":"b0c2e7b94ba2df783df30957e7b398913f0ba0df"}
+`git_history` cannot diff a ref against itself, so I’ll use the target ref’s parent as the lower bound just to satisfy lineage tracing without inspecting later commits.
+[0m
+[0m$ [0mgit rev-parse "b0c2e7b94ba2df783df30957e7b398913f0ba0df^"
+5df93c4997fc523dfe4eceac2708fe824445650f
+[0m
+[0m⚙ [0mgit_history {"filepath":"graylog2-server/src/main/java/org/graylog2/bindings/providers/JsonSafeEngineProvider.java","start_line":29,"end_line":56,"start_commit":"5df93c4997fc523dfe4eceac2708fe824445650f","end_commit":"b0c2e7b94ba2df783df30957e7b398913f0ba0df"}
+[0m⚙ [0mgit_history {"filepath":"graylog2-server/src/test/java/org/graylog/events/notifications/types/HTTPEventNotificationV2Test.java","start_line":46,"end_line":94,"start_commit":"5df93c4997fc523dfe4eceac2708fe824445650f","end_commit":"b0c2e7b94ba2df783df30957e7b398913f0ba0df"}
+[0m✱ [0mGlob "changelog/unreleased/issue-20955.toml"[90m 0 matches[0m
+I’m constructing the backport diff now. It will add the changelog entry, register JSON-safe renderers for `Map`, `Iterable`, and `Collection`, and extend the notification body tests to cover maps and lists.
+[0m⚙ [0mvalidate {"ref":"b0c2e7b94ba2df783df30957e7b398913f0ba0df","mode":"hunk","patch":"diff --git a/changelog/unreleased/issue-20955.toml b/changelog/unreleased/issue-20955.toml\nnew file mode 100644\nindex 0000000000..7f3232612b\n--- /dev/null\n+++ b/changelog/unreleased/issue-20955.toml\n@@ -0,0 +1,5 @@\n+type = \"fixed\"\n+message = \"Fix unescaped double quotes in map and collection typed fields in Custom HTTP Notification JSON body.\"\n+\n+issues = [\"20955\"]\n+pulls = [\"21167\"]\n"}
+[0m⚙ [0mvalidate {"ref":"b0c2e7b94ba2df783df30957e7b398913f0ba0df","mode":"hunk","patch":"diff --git a/graylog2-server/src/main/java/org/graylog2/bindings/providers/JsonSafeEngineProvider.java b/graylog2-server/src/main/java/org/graylog2/bindings/providers/JsonSafeEngineProvider.java\n--- a/graylog2-server/src/main/java/org/graylog2/bindings/providers/JsonSafeEngineProvider.java\n+++ b/graylog2-server/src/main/java/org/graylog2/bindings/providers/JsonSafeEngineProvider.java\n@@ -23,6 +23,8 @@ import jakarta.inject.Provider;\n import jakarta.inject.Singleton;\n import org.apache.commons.lang.StringEscapeUtils;\n \n+import java.util.Collection;\n+import java.util.Iterator;\n import java.util.Locale;\n import java.util.Map;\n \n@@ -34,7 +36,11 @@ public class JsonSafeEngineProvider implements Provider<Engine> {\n     public JsonSafeEngineProvider() {\n         engine = Engine.createEngine();\n         engine.registerRenderer(String.class, new JsonSafeRenderer());\n+        engine.registerRenderer(Map.class, new JsonSafeMapRenderer());\n+        engine.registerRenderer(Iterable.class, new JsonSafeIterableRenderer());\n+        engine.registerRenderer(Collection.class, new JsonSafeCollectionRenderer());\n     }\n+\n     @Override\n     public Engine get() {\n         return engine;\n"}
+[0m⚙ [0mvalidate {"ref":"b0c2e7b94ba2df783df30957e7b398913f0ba0df","mode":"hunk","patch":"diff --git a/graylog2-server/src/main/java/org/graylog2/bindings/providers/JsonSafeEngineProvider.java b/graylog2-server/src/main/java/org/graylog2/bindings/providers/JsonSafeEngineProvider.java\n--- a/graylog2-server/src/main/java/org/graylog2/bindings/providers/JsonSafeEngineProvider.java\n+++ b/graylog2-server/src/main/java/org/graylog2/bindings/providers/JsonSafeEngineProvider.java\n@@ -52,4 +58,55 @@ public class JsonSafeEngineProvider implements Provider<Engine> {\n             return StringEscapeUtils.escapeJava(s).replace(\"/\", \"\\\\/\");\n         }\n     }\n+\n+    @SuppressWarnings(\"rawtypes\")\n+    private static class JsonSafeMapRenderer implements Renderer<Map> {\n+\n+        @Override\n+        public String render(Map map, Locale locale, Map<String, Object> map2) {\n+            final String renderedResult;\n+\n+            if (map.isEmpty()) {\n+                renderedResult = \"\";\n+            } else if (map.size() == 1) {\n+                renderedResult = map.values().iterator().next().toString();\n+            } else {\n+                renderedResult = map.toString();\n+            }\n+            return StringEscapeUtils.escapeJava(renderedResult).replace(\"/\", \"\\\\/\");\n+        }\n+    }\n+\n+    private static class JsonSafeIterableRenderer implements Renderer<Iterable> {\n+\n+        @Override\n+        public String render(Iterable iterable, Locale locale, Map<String, Object> model) {\n+            final String renderedResult;\n+\n+            final Iterator<?> iterator = iterable.iterator();\n+            renderedResult = iterator.hasNext() ? iterator.next().toString() : \"\";\n+            return StringEscapeUtils.escapeJava(renderedResult).replace(\"/\", \"\\\\/\");\n+\n+        }\n+\n+    }\n+\n+    private static class JsonSafeCollectionRenderer implements Renderer<Collection> {\n+\n+        @Override\n+        public String render(Collection collection, Locale locale, Map<String, Object> model) {\n+            final String renderedResult;\n+\n+            if (collection.isEmpty()) {\n+                renderedResult = \"\";\n+            } else if (collection.size() == 1) {\n+                renderedResult = collection.iterator().next().toString();\n+            } else {\n+                renderedResult = collection.toString();\n+            }\n+            return StringEscapeUtils.escapeJava(renderedResult).replace(\"/\", \"\\\\/\");\n+\n+        }\n+\n+    }\n }\n"}
+[0m⚙ [0mvalidate {"ref":"b0c2e7b94ba2df783df30957e7b398913f0ba0df","mode":"hunk","patch":"diff --git a/graylog2-server/src/test/java/org/graylog/events/notifications/types/HTTPEventNotificationV2Test.java b/graylog2-server/src/test/java/org/graylog/events/notifications/types/HTTPEventNotificationV2Test.java\n--- a/graylog2-server/src/test/java/org/graylog/events/notifications/types/HTTPEventNotificationV2Test.java\n+++ b/graylog2-server/src/test/java/org/graylog/events/notifications/types/HTTPEventNotificationV2Test.java\n@@ -16,7 +16,6 @@\n  */\n package org.graylog.events.notifications.types;\n \n-import com.fasterxml.jackson.core.JsonProcessingException;\n import com.floreysoft.jmte.Engine;\n import com.google.common.collect.ImmutableList;\n import org.graylog.events.configuration.EventsConfigurationProvider;\n@@ -38,7 +37,8 @@ import org.junit.jupiter.api.BeforeEach;\n import org.junit.jupiter.api.Test;\n import org.mockito.Mock;\n \n-import java.io.UnsupportedEncodingException;\n+import java.util.HashMap;\n+import java.util.List;\n import java.util.Map;\n \n import static org.assertj.core.api.Assertions.assertThat;\n"}
+[0m⚙ [0mvalidate {"ref":"b0c2e7b94ba2df783df30957e7b398913f0ba0df","mode":"hunk","patch":"diff --git a/graylog2-server/src/test/java/org/graylog/events/notifications/types/HTTPEventNotificationV2Test.java b/graylog2-server/src/test/java/org/graylog/events/notifications/types/HTTPEventNotificationV2Test.java\n--- a/graylog2-server/src/test/java/org/graylog/events/notifications/types/HTTPEventNotificationV2Test.java\n+++ b/graylog2-server/src/test/java/org/graylog/events/notifications/types/HTTPEventNotificationV2Test.java\n@@ -74,21 +74,63 @@ public class HTTPEventNotificationV2Test {\n     }\n \n     @Test\n-    public void testEscapedQuotesInBacklog() throws UnsupportedEncodingException, JsonProcessingException {\n+    public void testEscapedQuotesInBacklog() {\n         Map<String, Object> model = Map.of(\n                 \"event_definition_title\", \"<<Test Event Title>>\",\n-                \"event\", Map.of(\"message\", \"Event Message & Whatnot\"),\n-                \"backlog\", createBacklog()\n+                \"backlog\", createBacklog(),\n+                \"event\", createEvent()\n         );\n         String bodyTemplate = \"${if backlog}{\\\"backlog\\\": [${foreach backlog message}{ \\\"title\\\": \\\"Message\\\", \\\"value\\\": \\\"${message.message}\\\" }${if last_message}${else},${end}${end}]}${end}\";\n         String body = notification.transformBody(bodyTemplate, HTTPEventNotificationConfigV2.ContentType.JSON, model);\n         assertThat(body).contains(\"\\\"value\\\": \\\"Message with \\\\\\\"Double Quotes\\\\\\\"\");\n     }\n \n+    @Test\n+    public void testEscapedQuotesInEventFields() {\n+        Map<String, Object> model = Map.of(\n+                \"event_definition_title\", \"<<Test Event Title>>\",\n+                \"backlog\", createBacklog(),\n+                \"event\", createEvent()\n+        );\n+        String bodyTemplate = \"{\\n\" +\n+                \"    \\\"message\\\": \\\"${event.message}\\\\\\\\n\\\\\\\\n${event.fields}\\\",\\n\" +\n+                \"    \\\"title\\\": \\\"${event_definition_title}\\\"\\n\" +\n+                \"}\";\n+        String body = notification.transformBody(bodyTemplate, HTTPEventNotificationConfigV2.ContentType.JSON, model);\n+        assertThat(body).contains(\"\\\\\\\"bad_field\\\\\\\"\");\n+    }\n+\n+    @Test\n+    public void testEscapedQuotesInList() {\n+        Map<String, Object> model = Map.of(\n+                \"event_definition_title\", \"<<Test Event Title>>\",\n+                \"backlog\", createBacklog(),\n+                \"event\", createEvent()\n+        );\n+        String bodyTemplate = \"{\\n\" +\n+                \"    \\\"message\\\": \\\"${event.message}\\\\\\\\n\\\\\\\\n${event.list_field}\\\",\\n\" +\n+                \"    \\\"title\\\": \\\"${event_definition_title}\\\"\\n\" +\n+                \"}\";\n+        String body = notification.transformBody(bodyTemplate, HTTPEventNotificationConfigV2.ContentType.JSON, model);\n+        assertThat(body).contains(\"\\\\\\\"list_value1\\\\\\\"\");\n+    }\n+\n     private ImmutableList<MessageSummary> createBacklog() {\n         Message message = new TestMessageFactory().createMessage(\"Message with \\\"Double Quotes\\\"\", \"Unit Test\", DateTime.now(DateTimeZone.UTC));\n         MessageSummary summary = new MessageSummary(\"index1\", message);\n         return ImmutableList.of(summary);\n     }\n \n+    private Map<String, Object> createEvent() {\n+        final Map<String, Object> event = new HashMap<>();\n+        final Map<String, Object> fields = Map.of(\n+                \"field1\", \"\\\"bad_field\\\"\",\n+                \"field2\", \"A somehow \\\"worse\\\" field!\"\n+        );\n+        event.put(\"message\", \"Event Message & Whatnot\");\n+        event.put(\"fields\", fields);\n+        event.put(\"list_field\", List.of(\"\\\"list_value1\\\"\", \"\\\"list_value2\\\"\"));\n+        return event;\n+    }\n+\n }\n"}
+[0m
+[0m# [0mTodos
+[✓] Inspect original change metadata and target branch file context
+[✓] Construct unified backport patch adapted to 6.0
+[✓] Validate each patch hunk against target ref
+[•] Return parseable YAML result
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/changelog/unreleased/issue-20955.toml b/changelog/unreleased/issue-20955.toml
+    new file mode 100644
+    index 0000000000..7f3232612b
+    --- /dev/null
+    +++ b/changelog/unreleased/issue-20955.toml
+    @@ -0,0 +1,5 @@
+    +type = "fixed"
+    +message = "Fix unescaped double quotes in map and collection typed fields in Custom HTTP Notification JSON body."
+    +
+    +issues = ["20955"]
+    +pulls = ["21167"]
+    diff --git a/graylog2-server/src/main/java/org/graylog2/bindings/providers/JsonSafeEngineProvider.java b/graylog2-server/src/main/java/org/graylog2/bindings/providers/JsonSafeEngineProvider.java
+    index b616c662a7..9abfbd42d5 100644
+    --- a/graylog2-server/src/main/java/org/graylog2/bindings/providers/JsonSafeEngineProvider.java
+    +++ b/graylog2-server/src/main/java/org/graylog2/bindings/providers/JsonSafeEngineProvider.java
+    @@ -23,6 +23,8 @@ import jakarta.inject.Provider;
+     import jakarta.inject.Singleton;
+     import org.apache.commons.lang.StringEscapeUtils;
+     
+    +import java.util.Collection;
+    +import java.util.Iterator;
+     import java.util.Locale;
+     import java.util.Map;
+     
+    @@ -34,7 +36,11 @@ public class JsonSafeEngineProvider implements Provider<Engine> {
+         public JsonSafeEngineProvider() {
+             engine = Engine.createEngine();
+             engine.registerRenderer(String.class, new JsonSafeRenderer());
+    +        engine.registerRenderer(Map.class, new JsonSafeMapRenderer());
+    +        engine.registerRenderer(Iterable.class, new JsonSafeIterableRenderer());
+    +        engine.registerRenderer(Collection.class, new JsonSafeCollectionRenderer());
+         }
+    +
+         @Override
+         public Engine get() {
+             return engine;
+    @@ -52,4 +58,55 @@ public class JsonSafeEngineProvider implements Provider<Engine> {
+                 return StringEscapeUtils.escapeJava(s).replace("/", "\\/");
+             }
+         }
+    +
+    +    @SuppressWarnings("rawtypes")
+    +    private static class JsonSafeMapRenderer implements Renderer<Map> {
+    +
+    +        @Override
+    +        public String render(Map map, Locale locale, Map<String, Object> map2) {
+    +            final String renderedResult;
+    +
+    +            if (map.isEmpty()) {
+    +                renderedResult = "";
+    +            } else if (map.size() == 1) {
+    +                renderedResult = map.values().iterator().next().toString();
+    +            } else {
+    +                renderedResult = map.toString();
+    +            }
+    +            return StringEscapeUtils.escapeJava(renderedResult).replace("/", "\\/");
+    +        }
+    +    }
+    +
+    +    private static class JsonSafeIterableRenderer implements Renderer<Iterable> {
+    +
+    +        @Override
+    +        public String render(Iterable iterable, Locale locale, Map<String, Object> model) {
+    +            final String renderedResult;
+    +
+    +            final Iterator<?> iterator = iterable.iterator();
+    +            renderedResult = iterator.hasNext() ? iterator.next().toString() : "";
+    +            return StringEscapeUtils.escapeJava(renderedResult).replace("/", "\\/");
+    +
+    +        }
+    +
+    +    }
+    +
+    +    private static class JsonSafeCollectionRenderer implements Renderer<Collection> {
+    +
+    +        @Override
+    +        public String render(Collection collection, Locale locale, Map<String, Object> model) {
+    +            final String renderedResult;
+    +
+    +            if (collection.isEmpty()) {
+    +                renderedResult = "";
+    +            } else if (collection.size() == 1) {
+    +                renderedResult = collection.iterator().next().toString();
+    +            } else {
+    +                renderedResult = collection.toString();
+    +            }
+    +            return StringEscapeUtils.escapeJava(renderedResult).replace("/", "\\/");
+    +
+    +        }
+    +
+    +    }
+     }
+    diff --git a/graylog2-server/src/test/java/org/graylog/events/notifications/types/HTTPEventNotificationV2Test.java b/graylog2-server/src/test/java/org/graylog/events/notifications/types/HTTPEventNotificationV2Test.java
+    index a01d2b7a08..241090c937 100644
+    --- a/graylog2-server/src/test/java/org/graylog/events/notifications/types/HTTPEventNotificationV2Test.java
+    +++ b/graylog2-server/src/test/java/org/graylog/events/notifications/types/HTTPEventNotificationV2Test.java
+    @@ -16,7 +16,6 @@
+      */
+     package org.graylog.events.notifications.types;
+     
+    -import com.fasterxml.jackson.core.JsonProcessingException;
+     import com.floreysoft.jmte.Engine;
+     import com.google.common.collect.ImmutableList;
+     import org.graylog.events.configuration.EventsConfigurationProvider;
+    @@ -38,7 +37,8 @@ import org.junit.jupiter.api.BeforeEach;
+     import org.junit.jupiter.api.Test;
+     import org.mockito.Mock;
+     
+    -import java.io.UnsupportedEncodingException;
+    +import java.util.HashMap;
+    +import java.util.List;
+     import java.util.Map;
+     
+     import static org.assertj.core.api.Assertions.assertThat;
+    @@ -74,21 +74,63 @@ public class HTTPEventNotificationV2Test {
+         }
+     
+         @Test
+    -    public void testEscapedQuotesInBacklog() throws UnsupportedEncodingException, JsonProcessingException {
+    +    public void testEscapedQuotesInBacklog() {
+             Map<String, Object> model = Map.of(
+                     "event_definition_title", "<<Test Event Title>>",
+    -                "event", Map.of("message", "Event Message & Whatnot"),
+    -                "backlog", createBacklog()
+    +                "backlog", createBacklog(),
+    +                "event", createEvent()
+             );
+             String bodyTemplate = "${if backlog}{\"backlog\": [${foreach backlog message}{ \"title\": \"Message\", \"value\": \"${message.message}\" }${if last_message}${else},${end}${end}]}${end}";
+             String body = notification.transformBody(bodyTemplate, HTTPEventNotificationConfigV2.ContentType.JSON, model);
+             assertThat(body).contains("\"value\": \"Message with \\\"Double Quotes\\\"");
+         }
+     
+    +    @Test
+    +    public void testEscapedQuotesInEventFields() {
+    +        Map<String, Object> model = Map.of(
+    +                "event_definition_title", "<<Test Event Title>>",
+    +                "backlog", createBacklog(),
+    +                "event", createEvent()
+    +        );
+    +        String bodyTemplate = "{\n" +
+    +                "    \"message\": \"${event.message}\\\\n\\\\n${event.fields}\",\n" +
+    +                "    \"title\": \"${event_definition_title}\"\n" +
+    +                "}";
+    +        String body = notification.transformBody(bodyTemplate, HTTPEventNotificationConfigV2.ContentType.JSON, model);
+    +        assertThat(body).contains("\\\"bad_field\\\"");
+    +    }
+    +
+    +    @Test
+    +    public void testEscapedQuotesInList() {
+    +        Map<String, Object> model = Map.of(
+    +                "event_definition_title", "<<Test Event Title>>",
+    +                "backlog", createBacklog(),
+    +                "event", createEvent()
+    +        );
+    +        String bodyTemplate = "{\n" +
+    +                "    \"message\": \"${event.message}\\\\n\\\\n${event.list_field}\",\n" +
+    +                "    \"title\": \"${event_definition_title}\"\n" +
+    +                "}";
+    +        String body = notification.transformBody(bodyTemplate, HTTPEventNotificationConfigV2.ContentType.JSON, model);
+    +        assertThat(body).contains("\\\"list_value1\\\"");
+    +    }
+    +
+         private ImmutableList<MessageSummary> createBacklog() {
+             Message message = new TestMessageFactory().createMessage("Message with \"Double Quotes\"", "Unit Test", DateTime.now(DateTimeZone.UTC));
+             MessageSummary summary = new MessageSummary("index1", message);
+             return ImmutableList.of(summary);
+         }
+     
+    +    private Map<String, Object> createEvent() {
+    +        final Map<String, Object> event = new HashMap<>();
+    +        final Map<String, Object> fields = Map.of(
+    +                "field1", "\"bad_field\"",
+    +                "field2", "A somehow \"worse\" field!"
+    +        );
+    +        event.put("message", "Event Message & Whatnot");
+    +        event.put("fields", fields);
+    +        event.put("list_field", List.of("\"list_value1\"", "\"list_value2\""));
+    +        return event;
+    +    }
+    +
+     }
+  notes: >
+    Backported the JSON-safe Map/Iterable/Collection rendering change and related tests; all hunks validated cleanly against b0c2e7b94ba2df783df30957e7b398913f0ba0df.
+```
+
+--- END CLI OUTPUT ---
+[13:44:24]   Done in 178.7s | status=success

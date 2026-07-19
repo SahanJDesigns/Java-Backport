@@ -1,0 +1,467 @@
+[05:35:28] === Row 2: crate  3481af30 -> 35345ac3  [TYPE-II] ===
+[05:35:28]   Resolving parent of backport commit 35345ac3...
+[05:35:28]   Backport parent (target ref): 064c90f128f7455932a50006eaa4af4c4528c5d4
+[05:35:28]   Extracting new-version patch for 3481af30...
+[05:35:29]   New-version patch size: 5647 chars
+[05:35:29]   Checking out backport parent 064c90f1...
+[05:35:29]   Invoking OpenCode CLI (9736 chars)...
+[05:35:29]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the target ref’s matching files and symbols first, then build and validate a minimal backport patch against the checked-out `5.9` parent.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target-branch code context
+[ ] Construct unified backport patch adapted to 5.9
+[ ] Validate patch hunks and full patch
+[ ] Apply patch and commit result
+[ ] Return YAML result with final diff
+[0m
+[0m⚙ [0mviewcode {"ref":"064c90f128f7455932a50006eaa4af4c4528c5d4","path":"server/src/test/java/io/crate/planner/SelectPlannerTest.java","startline":1600,"endline":1665}
+[0m⚙ [0mviewcode {"ref":"064c90f128f7455932a50006eaa4af4c4528c5d4","path":"server/src/main/java/io/crate/types/DoubleType.java","startline":1,"endline":210}
+[0m⚙ [0mviewcode {"ref":"064c90f128f7455932a50006eaa4af4c4528c5d4","path":"docs/appendices/release-notes/5.9.3.rst","startline":130,"endline":170}
+[0m⚙ [0mviewcode {"ref":"064c90f128f7455932a50006eaa4af4c4528c5d4","path":"server/src/main/java/io/crate/types/FloatType.java","startline":1,"endline":210}
+[0m⚙ [0mgit_show {"ref":"3481af304449c3b306d769af3f7f2e40f58d3170"}
+The target branch has the same affected type classes and the planner test ends earlier than master’s line numbering, so this is a direct code/test insertion with context adjusted to the current file endings.
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/types/FloatType.java","start_line":120,"end_line":170,"start_commit":"064c90f128f7455932a50006eaa4af4c4528c5d4","end_commit":"064c90f128f7455932a50006eaa4af4c4528c5d4"}
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/types/DoubleType.java","start_line":120,"end_line":166,"start_commit":"064c90f128f7455932a50006eaa4af4c4528c5d4","end_commit":"064c90f128f7455932a50006eaa4af4c4528c5d4"}
+[0m⚙ [0mlocate_symbol {"ref":"064c90f128f7455932a50006eaa4af4c4528c5d4","symbol":"SelectPlannerTest"}
+[0m⚙ [0mlocate_symbol {"ref":"064c90f128f7455932a50006eaa4af4c4528c5d4","symbol":"DoubleType"}
+[0m⚙ [0mlocate_symbol {"ref":"064c90f128f7455932a50006eaa4af4c4528c5d4","symbol":"FloatType"}
+A helper git lookup left `.git/index.lock`, blocking further git-backed validation. I’m checking whether it is stale before removing only that lock file.
+[0m
+[0m$ [0mgit status --short
+?? tags
+[0m
+I’m constructing the backport patch now. The `5.9` branch uses standard `Double.valueOf`/`Float.parseFloat` instead of fast parsers, so the backport only changes the BigDecimal range-validation path and keeps existing parser behavior intact.
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target-branch code context
+[•] Construct unified backport patch adapted to 5.9
+[ ] Validate patch hunks and full patch
+[ ] Apply patch and commit result
+[ ] Return YAML result with final diff
+[0m
+[0m⚙ [0mvalidate {"ref":"064c90f128f7455932a50006eaa4af4c4528c5d4","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/types/DoubleType.java b/server/src/main/java/io/crate/types/DoubleType.java\n--- a/server/src/main/java/io/crate/types/DoubleType.java\n+++ b/server/src/main/java/io/crate/types/DoubleType.java\n@@ -23,7 +23,6 @@ package io.crate.types;\n \n import java.io.IOException;\n import java.math.BigDecimal;\n-import java.math.BigInteger;\n import java.util.List;\n import java.util.function.Function;\n \n@@ -120,8 +119,8 @@ public class DoubleType extends DataType<Double> implements FixedWidthType, Stre\n         }\n     };\n \n-    private static final BigInteger DOUBLE_MAX = BigDecimal.valueOf(Double.MAX_VALUE).toBigInteger();\n-    private static final BigInteger DOUBLE_MIN = BigDecimal.valueOf(-Double.MAX_VALUE).toBigInteger();\n+    private static final BigDecimal DOUBLE_MAX = BigDecimal.valueOf(Double.MAX_VALUE);\n+    private static final BigDecimal DOUBLE_MIN = BigDecimal.valueOf(-Double.MAX_VALUE);\n \n     private DoubleType() {\n     }\n@@ -160,8 +159,12 @@ public class DoubleType extends DataType<Double> implements FixedWidthType, Stre\n         } else if (value instanceof String s) {\n             return Double.valueOf(s);\n         } else if (value instanceof BigDecimal bigDecimalValue) {\n-            if (DOUBLE_MAX.compareTo(bigDecimalValue.toBigInteger()) <= 0\n-                || DOUBLE_MIN.compareTo(bigDecimalValue.toBigInteger()) >= 0) {\n+            // Preferring compareTo over equals as it gives safer equality check.\n+            // From the compareTo docs:\n+            // Two BigDecimal objects that are equal in value but have a different scale (like 2.0 and 2.00)\n+            // are considered equal by this method.\n+            if (DOUBLE_MAX.compareTo(bigDecimalValue) <= 0\n+                || DOUBLE_MIN.compareTo(bigDecimalValue) >= 0) {\n                 throw new IllegalArgumentException(getName() + \" value out of range: \" + value);\n             }\n             return bigDecimalValue.doubleValue();\n"}
+The `DoubleType` hunk applies cleanly after adapting the string parser context to `5.9`. Continuing hunk validation for `FloatType`, the test, and release notes.
+[0m⚙ [0mvalidate {"ref":"064c90f128f7455932a50006eaa4af4c4528c5d4","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/types/FloatType.java b/server/src/main/java/io/crate/types/FloatType.java\n--- a/server/src/main/java/io/crate/types/FloatType.java\n+++ b/server/src/main/java/io/crate/types/FloatType.java\n@@ -23,7 +23,6 @@ package io.crate.types;\n \n import java.io.IOException;\n import java.math.BigDecimal;\n-import java.math.BigInteger;\n import java.util.List;\n import java.util.function.Function;\n \n@@ -120,8 +119,8 @@ public class FloatType extends DataType<Float> implements Streamer<Float>, Fixed\n         }\n     };\n \n-    private static final BigInteger MAX = BigDecimal.valueOf(Float.MAX_VALUE).toBigInteger();\n-    private static final BigInteger MIN = BigDecimal.valueOf(-Float.MAX_VALUE).toBigInteger();\n+    private static final BigDecimal MAX = BigDecimal.valueOf(Float.MAX_VALUE);\n+    private static final BigDecimal MIN = BigDecimal.valueOf(-Float.MAX_VALUE);\n \n     private FloatType() {\n     }\n@@ -160,8 +159,12 @@ public class FloatType extends DataType<Float> implements Streamer<Float>, Fixed\n         } else if (value instanceof String s) {\n             return Float.parseFloat(s);\n         } else if (value instanceof BigDecimal bigDecimalValue) {\n-            if (MAX.compareTo(bigDecimalValue.toBigInteger()) <= 0\n-                || MIN.compareTo(bigDecimalValue.toBigInteger()) >= 0) {\n+            // Preferring compareTo over equals as it gives safer equality check.\n+            // From the compareTo docs:\n+            // Two BigDecimal objects that are equal in value but have a different scale (like 2.0 and 2.00)\n+            // are considered equal by this method.\n+            if (MAX.compareTo(bigDecimalValue) <= 0\n+                || MIN.compareTo(bigDecimalValue) >= 0) {\n                 throw new IllegalArgumentException(\"float value out of range: \" + value);\n             }\n             return bigDecimalValue.floatValue();\n"}
+[0m⚙ [0mvalidate {"ref":"064c90f128f7455932a50006eaa4af4c4528c5d4","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/planner/SelectPlannerTest.java b/server/src/test/java/io/crate/planner/SelectPlannerTest.java\n--- a/server/src/test/java/io/crate/planner/SelectPlannerTest.java\n+++ b/server/src/test/java/io/crate/planner/SelectPlannerTest.java\n@@ -1631,5 +1631,18 @@ public class SelectPlannerTest extends CrateDummyClusterServiceUnitTest {\n             \"        └ Collect[sys.summits | [height, (height > 0), prominence, country] | true]\"\n         );\n     }\n+\n+    @Test\n+    public void test_float_and_double_implicit_cast_dont_hang_on_range_validation() throws Exception {\n+        var e = SQLExecutor.of(clusterService);\n+\n+        // Used to hang in the value range validation in FloatType.implicitCast.\n+        LogicalPlan logicalPlan = e.logicalPlan(\"SELECT EXP(-1110102730.1852759636)::float\");\n+        assertThat(logicalPlan).hasOperators(\"TableFunction[empty_row | [0.0] | true]\");\n+\n+        // Used to hang in the value range validation in DoubleType.implicitCast.\n+        logicalPlan = e.logicalPlan(\"SELECT EXP(-1110102730.1852759636)::double\");\n+        assertThat(logicalPlan).hasOperators(\"TableFunction[empty_row | [0.0] | true]\");\n+    }\n \n }\n"}
+[0m⚙ [0mvalidate {"ref":"064c90f128f7455932a50006eaa4af4c4528c5d4","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.9.3.rst b/docs/appendices/release-notes/5.9.3.rst\n--- a/docs/appendices/release-notes/5.9.3.rst\n+++ b/docs/appendices/release-notes/5.9.3.rst\n@@ -148,3 +148,8 @@ Fixes\n   ``ORDER BY`` expression contained a nested function. For example::\n \n     SELECT * FROM t ORDER BY LEFT(txt_col, 1) = ANY(['a']);\n+\n+- Fixed an issue that caused casting values of the ``NUMERIC`` type to the\n+  ``float`` or ``double`` types to hang. For example::\n+\n+    SELECT exp(-1110102730.1852759636)::float;\n"}
+All individual hunks apply cleanly. I’m running full validation for the combined patch now.
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target-branch code context
+[✓] Construct unified backport patch adapted to 5.9
+[•] Validate patch hunks and full patch
+[ ] Apply patch and commit result
+[ ] Return YAML result with final diff
+[0m
+[0m⚙ [0mvalidate {"ref":"064c90f128f7455932a50006eaa4af4c4528c5d4","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.9.3.rst b/docs/appendices/release-notes/5.9.3.rst\n--- a/docs/appendices/release-notes/5.9.3.rst\n+++ b/docs/appendices/release-notes/5.9.3.rst\n@@ -148,3 +148,8 @@ Fixes\n   ``ORDER BY`` expression contained a nested function. For example::\n \n     SELECT * FROM t ORDER BY LEFT(txt_col, 1) = ANY(['a']);\n+\n+- Fixed an issue that caused casting values of the ``NUMERIC`` type to the\n+  ``float`` or ``double`` types to hang. For example::\n+\n+    SELECT exp(-1110102730.1852759636)::float;\ndiff --git a/server/src/main/java/io/crate/types/DoubleType.java b/server/src/main/java/io/crate/types/DoubleType.java\n--- a/server/src/main/java/io/crate/types/DoubleType.java\n+++ b/server/src/main/java/io/crate/types/DoubleType.java\n@@ -23,7 +23,6 @@ package io.crate.types;\n \n import java.io.IOException;\n import java.math.BigDecimal;\n-import java.math.BigInteger;\n import java.util.List;\n import java.util.function.Function;\n \n@@ -120,8 +119,8 @@ public class DoubleType extends DataType<Double> implements FixedWidthType, Stre\n         }\n     };\n \n-    private static final BigInteger DOUBLE_MAX = BigDecimal.valueOf(Double.MAX_VALUE).toBigInteger();\n-    private static final BigInteger DOUBLE_MIN = BigDecimal.valueOf(-Double.MAX_VALUE).toBigInteger();\n+    private static final BigDecimal DOUBLE_MAX = BigDecimal.valueOf(Double.MAX_VALUE);\n+    private static final BigDecimal DOUBLE_MIN = BigDecimal.valueOf(-Double.MAX_VALUE);\n \n     private DoubleType() {\n     }\n@@ -160,8 +159,12 @@ public class DoubleType extends DataType<Double> implements FixedWidthType, Stre\n         } else if (value instanceof String s) {\n             return Double.valueOf(s);\n         } else if (value instanceof BigDecimal bigDecimalValue) {\n-            if (DOUBLE_MAX.compareTo(bigDecimalValue.toBigInteger()) <= 0\n-                || DOUBLE_MIN.compareTo(bigDecimalValue.toBigInteger()) >= 0) {\n+            // Preferring compareTo over equals as it gives safer equality check.\n+            // From the compareTo docs:\n+            // Two BigDecimal objects that are equal in value but have a different scale (like 2.0 and 2.00)\n+            // are considered equal by this method.\n+            if (DOUBLE_MAX.compareTo(bigDecimalValue) <= 0\n+                || DOUBLE_MIN.compareTo(bigDecimalValue) >= 0) {\n                 throw new IllegalArgumentException(getName() + \" value out of range: \" + value);\n             }\n             return bigDecimalValue.doubleValue();\ndiff --git a/server/src/main/java/io/crate/types/FloatType.java b/server/src/main/java/io/crate/types/FloatType.java\n--- a/server/src/main/java/io/crate/types/FloatType.java\n+++ b/server/src/main/java/io/crate/types/FloatType.java\n@@ -23,7 +23,6 @@ package io.crate.types;\n \n import java.io.IOException;\n import java.math.BigDecimal;\n-import java.math.BigInteger;\n import java.util.List;\n import java.util.function.Function;\n \n@@ -120,8 +119,8 @@ public class FloatType extends DataType<Float> implements Streamer<Float>, Fixed\n         }\n     };\n \n-    private static final BigInteger MAX = BigDecimal.valueOf(Float.MAX_VALUE).toBigInteger();\n-    private static final BigInteger MIN = BigDecimal.valueOf(-Float.MAX_VALUE).toBigInteger();\n+    private static final BigDecimal MAX = BigDecimal.valueOf(Float.MAX_VALUE);\n+    private static final BigDecimal MIN = BigDecimal.valueOf(-Float.MAX_VALUE);\n \n     private FloatType() {\n     }\n@@ -160,8 +159,12 @@ public class FloatType extends DataType<Float> implements Streamer<Float>, Fixed\n         } else if (value instanceof String s) {\n             return Float.parseFloat(s);\n         } else if (value instanceof BigDecimal bigDecimalValue) {\n-            if (MAX.compareTo(bigDecimalValue.toBigInteger()) <= 0\n-                || MIN.compareTo(bigDecimalValue.toBigInteger()) >= 0) {\n+            // Preferring compareTo over equals as it gives safer equality check.\n+            // From the compareTo docs:\n+            // Two BigDecimal objects that are equal in value but have a different scale (like 2.0 and 2.00)\n+            // are considered equal by this method.\n+            if (MAX.compareTo(bigDecimalValue) <= 0\n+                || MIN.compareTo(bigDecimalValue) >= 0) {\n                 throw new IllegalArgumentException(\"float value out of range: \" + value);\n             }\n             return bigDecimalValue.floatValue();\ndiff --git a/server/src/test/java/io/crate/planner/SelectPlannerTest.java b/server/src/test/java/io/crate/planner/SelectPlannerTest.java\n--- a/server/src/test/java/io/crate/planner/SelectPlannerTest.java\n+++ b/server/src/test/java/io/crate/planner/SelectPlannerTest.java\n@@ -1631,5 +1631,18 @@ public class SelectPlannerTest extends CrateDummyClusterServiceUnitTest {\n             \"        └ Collect[sys.summits | [height, (height > 0), prominence, country] | true]\"\n         );\n     }\n+\n+    @Test\n+    public void test_float_and_double_implicit_cast_dont_hang_on_range_validation() throws Exception {\n+        var e = SQLExecutor.of(clusterService);\n+\n+        // Used to hang in the value range validation in FloatType.implicitCast.\n+        LogicalPlan logicalPlan = e.logicalPlan(\"SELECT EXP(-1110102730.1852759636)::float\");\n+        assertThat(logicalPlan).hasOperators(\"TableFunction[empty_row | [0.0] | true]\");\n+\n+        // Used to hang in the value range validation in DoubleType.implicitCast.\n+        logicalPlan = e.logicalPlan(\"SELECT EXP(-1110102730.1852759636)::double\");\n+        assertThat(logicalPlan).hasOperators(\"TableFunction[empty_row | [0.0] | true]\");\n+    }\n \n }\n"}
+Full validation passed: the patch applies, compiles, and the selected test suite passes in Docker. I’m applying the same patch to the working tree and committing only the backport changes.
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target-branch code context
+[✓] Construct unified backport patch adapted to 5.9
+[✓] Validate patch hunks and full patch
+[•] Apply patch and commit result
+[ ] Return YAML result with final diff
+[0m
+[0m% [0mPatch 4 files
+[0m
+[0m$ [0mgit status --short
+M docs/appendices/release-notes/5.9.3.rst
+ M server/src/main/java/io/crate/types/DoubleType.java
+ M server/src/main/java/io/crate/types/FloatType.java
+ M server/src/test/java/io/crate/planner/SelectPlannerTest.java
+[0m
+[0m$ [0mgit log --oneline -10
+064c90f128 Fix exceptions thrown when querying nested object arrays' sub-columns
+a230d382db Fix issue with PK lookup with lots of values
+6adc3300b8 Tests: add more tests for ORDER BY expression validations
+c30dc7d3bf Fix UnsupportedFeatureException from complex ORDER BY expression validation
+e61377b2b8 Fix SQL printing of CastFunction target type
+cf9a4b14d7 Fix: generated columns not dropped with no error
+7e0562ab10 The SubQueryAndParamBinder must not ignore conversion exceptions
+b51346a3d5 Fix query used at JDBC FDW, alias symbols must be replaced by their source
+c6e6240fcd Fix printing of a `CASE` expression.
+8108b22ce2 Make warnings in 5.9.0 release notes less scary; clarify it's a testing release
+[0m
+[0m$ [0mgit diff -- docs/appendices/release-notes/5.9.3.rst server/src/main/java/io/crate/types/DoubleType.java server/src/main/java/io/crate/types/FloatType.java server/src/test/java/io/crate/planner/SelectPlannerTest.java
+warning: in the working copy of 'docs/appendices/release-notes/5.9.3.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/types/DoubleType.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/types/FloatType.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/planner/SelectPlannerTest.java', LF will be replaced by CRLF the next time Git touches it
+diff --git a/docs/appendices/release-notes/5.9.3.rst b/docs/appendices/release-notes/5.9.3.rst
+index 7fb94f8793..db490b5c1d 100644
+--- a/docs/appendices/release-notes/5.9.3.rst
++++ b/docs/appendices/release-notes/5.9.3.rst
+@@ -148,3 +148,8 @@ Fixes
+   ``ORDER BY`` expression contained a nested function. For example::
+ 
+     SELECT * FROM t ORDER BY LEFT(txt_col, 1) = ANY(['a']);
++
++- Fixed an issue that caused casting values of the ``NUMERIC`` type to the
++  ``float`` or ``double`` types to hang. For example::
++
++    SELECT exp(-1110102730.1852759636)::float;
+diff --git a/server/src/main/java/io/crate/types/DoubleType.java b/server/src/main/java/io/crate/types/DoubleType.java
+index bfcd0d3342..8dfa2530a4 100644
+--- a/server/src/main/java/io/crate/types/DoubleType.java
++++ b/server/src/main/java/io/crate/types/DoubleType.java
+@@ -23,7 +23,6 @@ package io.crate.types;
+ 
+ import java.io.IOException;
+ import java.math.BigDecimal;
+-import java.math.BigInteger;
+ import java.util.List;
+ import java.util.function.Function;
+ 
+@@ -119,8 +118,8 @@ public class DoubleType extends DataType<Double> implements FixedWidthType, Stre
+         }
+     };
+ 
+-    private static final BigInteger DOUBLE_MAX = BigDecimal.valueOf(Double.MAX_VALUE).toBigInteger();
+-    private static final BigInteger DOUBLE_MIN = BigDecimal.valueOf(-Double.MAX_VALUE).toBigInteger();
++    private static final BigDecimal DOUBLE_MAX = BigDecimal.valueOf(Double.MAX_VALUE);
++    private static final BigDecimal DOUBLE_MIN = BigDecimal.valueOf(-Double.MAX_VALUE);
+ 
+     private DoubleType() {
+     }
+@@ -159,8 +158,12 @@ public class DoubleType extends DataType<Double> implements FixedWidthType, Stre
+         } else if (value instanceof String s) {
+             return Double.valueOf(s);
+         } else if (value instanceof BigDecimal bigDecimalValue) {
+-            if (DOUBLE_MAX.compareTo(bigDecimalValue.toBigInteger()) <= 0
+-                || DOUBLE_MIN.compareTo(bigDecimalValue.toBigInteger()) >= 0) {
++            // Preferring compareTo over equals as it gives safer equality check.
++            // From the compareTo docs:
++            // Two BigDecimal objects that are equal in value but have a different scale (like 2.0 and 2.00)
++            // are considered equal by this method.
++            if (DOUBLE_MAX.compareTo(bigDecimalValue) <= 0
++                || DOUBLE_MIN.compareTo(bigDecimalValue) >= 0) {
+                 throw new IllegalArgumentException(getName() + " value out of range: " + value);
+             }
+             return bigDecimalValue.doubleValue();
+diff --git a/server/src/main/java/io/crate/types/FloatType.java b/server/src/main/java/io/crate/types/FloatType.java
+index 6274eb8a0b..9ad4969142 100644
+--- a/server/src/main/java/io/crate/types/FloatType.java
++++ b/server/src/main/java/io/crate/types/FloatType.java
+@@ -23,7 +23,6 @@ package io.crate.types;
+ 
+ import java.io.IOException;
+ import java.math.BigDecimal;
+-import java.math.BigInteger;
+ import java.util.List;
+ import java.util.function.Function;
+ 
+@@ -119,8 +118,8 @@ public class FloatType extends DataType<Float> implements Streamer<Float>, Fixed
+         }
+     };
+ 
+-    private static final BigInteger MAX = BigDecimal.valueOf(Float.MAX_VALUE).toBigInteger();
+-    private static final BigInteger MIN = BigDecimal.valueOf(-Float.MAX_VALUE).toBigInteger();
++    private static final BigDecimal MAX = BigDecimal.valueOf(Float.MAX_VALUE);
++    private static final BigDecimal MIN = BigDecimal.valueOf(-Float.MAX_VALUE);
+ 
+     private FloatType() {
+     }
+@@ -159,8 +158,12 @@ public class FloatType extends DataType<Float> implements Streamer<Float>, Fixed
+         } else if (value instanceof String s) {
+             return Float.parseFloat(s);
+         } else if (value instanceof BigDecimal bigDecimalValue) {
+-            if (MAX.compareTo(bigDecimalValue.toBigInteger()) <= 0
+-                || MIN.compareTo(bigDecimalValue.toBigInteger()) >= 0) {
++            // Preferring compareTo over equals as it gives safer equality check.
++            // From the compareTo docs:
++            // Two BigDecimal objects that are equal in value but have a different scale (like 2.0 and 2.00)
++            // are considered equal by this method.
++            if (MAX.compareTo(bigDecimalValue) <= 0
++                || MIN.compareTo(bigDecimalValue) >= 0) {
+                 throw new IllegalArgumentException("float value out of range: " + value);
+             }
+             return bigDecimalValue.floatValue();
+diff --git a/server/src/test/java/io/crate/planner/SelectPlannerTest.java b/server/src/test/java/io/crate/planner/SelectPlannerTest.java
+index 06066af965..c5ab497d7c 100644
+--- a/server/src/test/java/io/crate/planner/SelectPlannerTest.java
++++ b/server/src/test/java/io/crate/planner/SelectPlannerTest.java
+@@ -1631,4 +1631,17 @@ public class SelectPlannerTest extends CrateDummyClusterServiceUnitTest {
+         );
+     }
+ 
++    @Test
++    public void test_float_and_double_implicit_cast_dont_hang_on_range_validation() throws Exception {
++        var e = SQLExecutor.of(clusterService);
++
++        // Used to hang in the value range validation in FloatType.implicitCast.
++        LogicalPlan logicalPlan = e.logicalPlan("SELECT EXP(-1110102730.1852759636)::float");
++        assertThat(logicalPlan).hasOperators("TableFunction[empty_row | [0.0] | true]");
++
++        // Used to hang in the value range validation in DoubleType.implicitCast.
++        logicalPlan = e.logicalPlan("SELECT EXP(-1110102730.1852759636)::double");
++        assertThat(logicalPlan).hasOperators("TableFunction[empty_row | [0.0] | true]");
++    }
++
+ }
+[0m
+The working tree diff contains only the four intended backport files. I’m staging those paths and creating the required commit.
+[0m$ [0mgit add -- "docs/appendices/release-notes/5.9.3.rst" "server/src/main/java/io/crate/types/DoubleType.java" "server/src/main/java/io/crate/types/FloatType.java" "server/src/test/java/io/crate/planner/SelectPlannerTest.java"; if ($?) { git commit -m "Use floatValue and doubleValue to validate values" }
+warning: in the working copy of 'docs/appendices/release-notes/5.9.3.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/types/DoubleType.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/types/FloatType.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/planner/SelectPlannerTest.java', LF will be replaced by CRLF the next time Git touches it
+[detached HEAD d3a27cda83] Use floatValue and doubleValue to validate values
+ 4 files changed, 34 insertions(+), 10 deletions(-)
+[0m
+The backport commit was created successfully. I’m collecting the final diff from the target parent to `HEAD` for the YAML result.
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target-branch code context
+[✓] Construct unified backport patch adapted to 5.9
+[✓] Validate patch hunks and full patch
+[✓] Apply patch and commit result
+[•] Return YAML result with final diff
+[0m
+[0m$ [0mgit diff 064c90f128f7455932a50006eaa4af4c4528c5d4 HEAD
+diff --git a/docs/appendices/release-notes/5.9.3.rst b/docs/appendices/release-notes/5.9.3.rst
+index 7fb94f8793..db490b5c1d 100644
+--- a/docs/appendices/release-notes/5.9.3.rst
++++ b/docs/appendices/release-notes/5.9.3.rst
+@@ -148,3 +148,8 @@ Fixes
+   ``ORDER BY`` expression contained a nested function. For example::
+ 
+     SELECT * FROM t ORDER BY LEFT(txt_col, 1) = ANY(['a']);
++
++- Fixed an issue that caused casting values of the ``NUMERIC`` type to the
++  ``float`` or ``double`` types to hang. For example::
++
++    SELECT exp(-1110102730.1852759636)::float;
+diff --git a/server/src/main/java/io/crate/types/DoubleType.java b/server/src/main/java/io/crate/types/DoubleType.java
+index bfcd0d3342..8dfa2530a4 100644
+--- a/server/src/main/java/io/crate/types/DoubleType.java
++++ b/server/src/main/java/io/crate/types/DoubleType.java
+@@ -23,7 +23,6 @@ package io.crate.types;
+ 
+ import java.io.IOException;
+ import java.math.BigDecimal;
+-import java.math.BigInteger;
+ import java.util.List;
+ import java.util.function.Function;
+ 
+@@ -119,8 +118,8 @@ public class DoubleType extends DataType<Double> implements FixedWidthType, Stre
+         }
+     };
+ 
+-    private static final BigInteger DOUBLE_MAX = BigDecimal.valueOf(Double.MAX_VALUE).toBigInteger();
+-    private static final BigInteger DOUBLE_MIN = BigDecimal.valueOf(-Double.MAX_VALUE).toBigInteger();
++    private static final BigDecimal DOUBLE_MAX = BigDecimal.valueOf(Double.MAX_VALUE);
++    private static final BigDecimal DOUBLE_MIN = BigDecimal.valueOf(-Double.MAX_VALUE);
+ 
+     private DoubleType() {
+     }
+@@ -159,8 +158,12 @@ public class DoubleType extends DataType<Double> implements FixedWidthType, Stre
+         } else if (value instanceof String s) {
+             return Double.valueOf(s);
+         } else if (value instanceof BigDecimal bigDecimalValue) {
+-            if (DOUBLE_MAX.compareTo(bigDecimalValue.toBigInteger()) <= 0
+-                || DOUBLE_MIN.compareTo(bigDecimalValue.toBigInteger()) >= 0) {
++            // Preferring compareTo over equals as it gives safer equality check.
++            // From the compareTo docs:
++            // Two BigDecimal objects that are equal in value but have a different scale (like 2.0 and 2.00)
++            // are considered equal by this method.
++            if (DOUBLE_MAX.compareTo(bigDecimalValue) <= 0
++                || DOUBLE_MIN.compareTo(bigDecimalValue) >= 0) {
+                 throw new IllegalArgumentException(getName() + " value out of range: " + value);
+             }
+             return bigDecimalValue.doubleValue();
+diff --git a/server/src/main/java/io/crate/types/FloatType.java b/server/src/main/java/io/crate/types/FloatType.java
+index 6274eb8a0b..9ad4969142 100644
+--- a/server/src/main/java/io/crate/types/FloatType.java
++++ b/server/src/main/java/io/crate/types/FloatType.java
+@@ -23,7 +23,6 @@ package io.crate.types;
+ 
+ import java.io.IOException;
+ import java.math.BigDecimal;
+-import java.math.BigInteger;
+ import java.util.List;
+ import java.util.function.Function;
+ 
+@@ -119,8 +118,8 @@ public class FloatType extends DataType<Float> implements Streamer<Float>, Fixed
+         }
+     };
+ 
+-    private static final BigInteger MAX = BigDecimal.valueOf(Float.MAX_VALUE).toBigInteger();
+-    private static final BigInteger MIN = BigDecimal.valueOf(-Float.MAX_VALUE).toBigInteger();
++    private static final BigDecimal MAX = BigDecimal.valueOf(Float.MAX_VALUE);
++    private static final BigDecimal MIN = BigDecimal.valueOf(-Float.MAX_VALUE);
+ 
+     private FloatType() {
+     }
+@@ -159,8 +158,12 @@ public class FloatType extends DataType<Float> implements Streamer<Float>, Fixed
+         } else if (value instanceof String s) {
+             return Float.parseFloat(s);
+         } else if (value instanceof BigDecimal bigDecimalValue) {
+-            if (MAX.compareTo(bigDecimalValue.toBigInteger()) <= 0
+-                || MIN.compareTo(bigDecimalValue.toBigInteger()) >= 0) {
++            // Preferring compareTo over equals as it gives safer equality check.
++            // From the compareTo docs:
++            // Two BigDecimal objects that are equal in value but have a different scale (like 2.0 and 2.00)
++            // are considered equal by this method.
++            if (MAX.compareTo(bigDecimalValue) <= 0
++                || MIN.compareTo(bigDecimalValue) >= 0) {
+                 throw new IllegalArgumentException("float value out of range: " + value);
+             }
+             return bigDecimalValue.floatValue();
+diff --git a/server/src/test/java/io/crate/planner/SelectPlannerTest.java b/server/src/test/java/io/crate/planner/SelectPlannerTest.java
+index 06066af965..c5ab497d7c 100644
+--- a/server/src/test/java/io/crate/planner/SelectPlannerTest.java
++++ b/server/src/test/java/io/crate/planner/SelectPlannerTest.java
+@@ -1631,4 +1631,17 @@ public class SelectPlannerTest extends CrateDummyClusterServiceUnitTest {
+         );
+     }
+ 
++    @Test
++    public void test_float_and_double_implicit_cast_dont_hang_on_range_validation() throws Exception {
++        var e = SQLExecutor.of(clusterService);
++
++        // Used to hang in the value range validation in FloatType.implicitCast.
++        LogicalPlan logicalPlan = e.logicalPlan("SELECT EXP(-1110102730.1852759636)::float");
++        assertThat(logicalPlan).hasOperators("TableFunction[empty_row | [0.0] | true]");
++
++        // Used to hang in the value range validation in DoubleType.implicitCast.
++        logicalPlan = e.logicalPlan("SELECT EXP(-1110102730.1852759636)::double");
++        assertThat(logicalPlan).hasOperators("TableFunction[empty_row | [0.0] | true]");
++    }
++
+ }
+[0m
+[0m$ [0mgit status --short
+(no output)
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target-branch code context
+[✓] Construct unified backport patch adapted to 5.9
+[✓] Validate patch hunks and full patch
+[✓] Apply patch and commit result
+[✓] Return YAML result with final diff
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/docs/appendices/release-notes/5.9.3.rst b/docs/appendices/release-notes/5.9.3.rst
+    index 7fb94f8793..db490b5c1d 100644
+    --- a/docs/appendices/release-notes/5.9.3.rst
+    +++ b/docs/appendices/release-notes/5.9.3.rst
+    @@ -148,3 +148,8 @@ Fixes
+       ``ORDER BY`` expression contained a nested function. For example::
+     
+         SELECT * FROM t ORDER BY LEFT(txt_col, 1) = ANY(['a']);
+    +
+    +- Fixed an issue that caused casting values of the ``NUMERIC`` type to the
+    +  ``float`` or ``double`` types to hang. For example::
+    +
+    +    SELECT exp(-1110102730.1852759636)::float;
+    diff --git a/server/src/main/java/io/crate/types/DoubleType.java b/server/src/main/java/io/crate/types/DoubleType.java
+    index bfcd0d3342..8dfa2530a4 100644
+    --- a/server/src/main/java/io/crate/types/DoubleType.java
+    +++ b/server/src/main/java/io/crate/types/DoubleType.java
+    @@ -23,7 +23,6 @@ package io.crate.types;
+     
+     import java.io.IOException;
+     import java.math.BigDecimal;
+    -import java.math.BigInteger;
+     import java.util.List;
+     import java.util.function.Function;
+     
+    @@ -119,8 +118,8 @@ public class DoubleType extends DataType<Double> implements FixedWidthType, Stre
+             }
+         };
+     
+    -    private static final BigInteger DOUBLE_MAX = BigDecimal.valueOf(Double.MAX_VALUE).toBigInteger();
+    -    private static final BigInteger DOUBLE_MIN = BigDecimal.valueOf(-Double.MAX_VALUE).toBigInteger();
+    +    private static final BigDecimal DOUBLE_MAX = BigDecimal.valueOf(Double.MAX_VALUE);
+    +    private static final BigDecimal DOUBLE_MIN = BigDecimal.valueOf(-Double.MAX_VALUE);
+     
+         private DoubleType() {
+         }
+    @@ -159,8 +158,12 @@ public class DoubleType extends DataType<Double> implements FixedWidthType, Stre
+             } else if (value instanceof String s) {
+                 return Double.valueOf(s);
+             } else if (value instanceof BigDecimal bigDecimalValue) {
+    -            if (DOUBLE_MAX.compareTo(bigDecimalValue.toBigInteger()) <= 0
+    -                || DOUBLE_MIN.compareTo(bigDecimalValue.toBigInteger()) >= 0) {
+    +            // Preferring compareTo over equals as it gives safer equality check.
+    +            // From the compareTo docs:
+    +            // Two BigDecimal objects that are equal in value but have a different scale (like 2.0 and 2.00)
+    +            // are considered equal by this method.
+    +            if (DOUBLE_MAX.compareTo(bigDecimalValue) <= 0
+    +                || DOUBLE_MIN.compareTo(bigDecimalValue) >= 0) {
+                     throw new IllegalArgumentException(getName() + " value out of range: " + value);
+                 }
+                 return bigDecimalValue.doubleValue();
+    diff --git a/server/src/main/java/io/crate/types/FloatType.java b/server/src/main/java/io/crate/types/FloatType.java
+    index 6274eb8a0b..9ad4969142 100644
+    --- a/server/src/main/java/io/crate/types/FloatType.java
+    +++ b/server/src/main/java/io/crate/types/FloatType.java
+    @@ -23,7 +23,6 @@ package io.crate.types;
+     
+     import java.io.IOException;
+     import java.math.BigDecimal;
+    -import java.math.BigInteger;
+     import java.util.List;
+     import java.util.function.Function;
+     
+    @@ -119,8 +118,8 @@ public class FloatType extends DataType<Float> implements Streamer<Float>, Fixed
+             }
+         };
+     
+    -    private static final BigInteger MAX = BigDecimal.valueOf(Float.MAX_VALUE).toBigInteger();
+    -    private static final BigInteger MIN = BigDecimal.valueOf(-Float.MAX_VALUE).toBigInteger();
+    +    private static final BigDecimal MAX = BigDecimal.valueOf(Float.MAX_VALUE);
+    +    private static final BigDecimal MIN = BigDecimal.valueOf(-Float.MAX_VALUE);
+     
+         private FloatType() {
+         }
+    @@ -159,8 +158,12 @@ public class FloatType extends DataType<Float> implements Streamer<Float>, Fixed
+             } else if (value instanceof String s) {
+                 return Float.parseFloat(s);
+             } else if (value instanceof BigDecimal bigDecimalValue) {
+    -            if (MAX.compareTo(bigDecimalValue.toBigInteger()) <= 0
+    -                || MIN.compareTo(bigDecimalValue.toBigInteger()) >= 0) {
+    +            // Preferring compareTo over equals as it gives safer equality check.
+    +            // From the compareTo docs:
+    +            // Two BigDecimal objects that are equal in value but have a different scale (like 2.0 and 2.00)
+    +            // are considered equal by this method.
+    +            if (MAX.compareTo(bigDecimalValue) <= 0
+    +                || MIN.compareTo(bigDecimalValue) >= 0) {
+                     throw new IllegalArgumentException("float value out of range: " + value);
+                 }
+                 return bigDecimalValue.floatValue();
+    diff --git a/server/src/test/java/io/crate/planner/SelectPlannerTest.java b/server/src/test/java/io/crate/planner/SelectPlannerTest.java
+    index 06066af965..c5ab497d7c 100644
+    --- a/server/src/test/java/io/crate/planner/SelectPlannerTest.java
+    +++ b/server/src/test/java/io/crate/planner/SelectPlannerTest.java
+    @@ -1631,4 +1631,17 @@ public class SelectPlannerTest extends CrateDummyClusterServiceUnitTest {
+             );
+         }
+     
+    +    @Test
+    +    public void test_float_and_double_implicit_cast_dont_hang_on_range_validation() throws Exception {
+    +        var e = SQLExecutor.of(clusterService);
+    +
+    +        // Used to hang in the value range validation in FloatType.implicitCast.
+    +        LogicalPlan logicalPlan = e.logicalPlan("SELECT EXP(-1110102730.1852759636)::float");
+    +        assertThat(logicalPlan).hasOperators("TableFunction[empty_row | [0.0] | true]");
+    +
+    +        // Used to hang in the value range validation in DoubleType.implicitCast.
+    +        logicalPlan = e.logicalPlan("SELECT EXP(-1110102730.1852759636)::double");
+    +        assertThat(logicalPlan).hasOperators("TableFunction[empty_row | [0.0] | true]");
+    +    }
+    +
+     }
+  notes: >
+    Backported and committed the BigDecimal range-validation fix for float/double casts; hunk and full validation passed.
+```
+
+--- END CLI OUTPUT ---
+[06:14:31]   Done in 2342.8s | status=success

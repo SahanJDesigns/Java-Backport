@@ -1,0 +1,542 @@
+[06:14:33] === Row 3: crate  35979d3c -> 064c90f1  [TYPE-II] ===
+[06:14:33]   Resolving parent of backport commit 064c90f1...
+[06:14:33]   Backport parent (target ref): a230d382dba17c1c37d3ac6fc999e75fdd4b88aa
+[06:14:33]   Extracting new-version patch for 35979d3c...
+[06:14:33]   New-version patch size: 6406 chars
+[06:14:33]   Checking out backport parent a230d382...
+[06:14:34]   Invoking OpenCode CLI (10495 chars)...
+[06:14:34]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the target branch context for each touched file, then build and validate a minimal backport patch against the specified parent ref before applying and committing it.
+[0m# [0mTodos
+[•] Inspect original commit metadata and target branch code context
+[ ] Construct and hunk-validate backport patch
+[ ] Run full validation
+[ ] Apply patch and commit result
+[ ] Return YAML result with patch
+[0m
+[0m⚙ [0mviewcode {"ref":"a230d382dba17c1c37d3ac6fc999e75fdd4b88aa","path":"server/src/main/java/io/crate/metadata/table/TableInfo.java","startline":1,"endline":190}
+[0m⚙ [0mviewcode {"ref":"a230d382dba17c1c37d3ac6fc999e75fdd4b88aa","path":"server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java","startline":1,"endline":110}
+[0m⚙ [0mviewcode {"ref":"a230d382dba17c1c37d3ac6fc999e75fdd4b88aa","path":"server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java","startline":2840,"endline":2905}
+[0m⚙ [0mviewcode {"ref":"a230d382dba17c1c37d3ac6fc999e75fdd4b88aa","path":"server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java","startline":1,"endline":110}
+[0m⚙ [0mviewcode {"ref":"a230d382dba17c1c37d3ac6fc999e75fdd4b88aa","path":"server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java","startline":1,"endline":80}
+[0m⚙ [0mgit_show {"ref":"35979d3c4226ce9e13f6d6d5bdf154bdb356ff31"}
+[0m⚙ [0mviewcode {"ref":"a230d382dba17c1c37d3ac6fc999e75fdd4b88aa","path":"docs/appendices/release-notes/5.9.3.rst","startline":45,"endline":80}
+[0m⚙ [0mlocate_symbol {"ref":"a230d382dba17c1c37d3ac6fc999e75fdd4b88aa","symbol":"extractValue"}
+[0m⚙ [0mlocate_symbol {"ref":"a230d382dba17c1c37d3ac6fc999e75fdd4b88aa","symbol":"getReference"}
+[0m⚙ [0mlocate_symbol {"ref":"a230d382dba17c1c37d3ac6fc999e75fdd4b88aa","symbol":"IS_OBJECT_ARRAY"}
+The target files contain the same relevant implementation points as the master diff. Two symbol lookups hit a stale `.git/index.lock`; I’ll verify the repository state before proceeding so validation and commit operations are safe.
+[0m✱ [0mGrep "static .*dimensions|dimensions\("[90m in server/src/main/java/io/crate/types · 4 matches[0m
+[0m✱ [0mGrep "static .*unnest|unnest\("[90m in server/src/main/java/io/crate/types · 2 matches[0m
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java","start_line":70,"end_line":91,"start_commit":"a230d382dba17c1c37d3ac6fc999e75fdd4b88aa","end_commit":"a230d382dba17c1c37d3ac6fc999e75fdd4b88aa"}
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/io/crate/metadata/table/TableInfo.java","start_line":47,"end_line":149,"start_commit":"a230d382dba17c1c37d3ac6fc999e75fdd4b88aa","end_commit":"a230d382dba17c1c37d3ac6fc999e75fdd4b88aa"}
+`ArrayType.unnest` and `ArrayType.dimensions` already exist on the target ref, so the TableInfo change can be ported directly. The `git_history` calls with an empty commit range failed, but the viewed target context and symbol locations are sufficient to map the hunks.
+[0m
+[0m$ [0mgit status --short; if ($?) { Test-Path -LiteralPath ".git\index.lock" }
+?? tags
+False
+[0m
+I’m going to validate the five hunks individually now: release note, `StoredRow`, `TableInfo`, and the two regression tests.
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch code context
+[•] Construct and hunk-validate backport patch
+[ ] Run full validation
+[ ] Apply patch and commit result
+[ ] Return YAML result with patch
+[0m
+[0m⚙ [0mvalidate {"ref":"a230d382dba17c1c37d3ac6fc999e75fdd4b88aa","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.9.3.rst b/docs/appendices/release-notes/5.9.3.rst\n--- a/docs/appendices/release-notes/5.9.3.rst\n+++ b/docs/appendices/release-notes/5.9.3.rst\n@@ -60,6 +60,9 @@ Fixes\n   :ref:`generated column <ddl-generated-columns>` from a table, even though no\n   error was returned.\n \n+- Fixed an issue that caused exceptions when querying sub-columns of nested\n+  object arrays.\n+\n - Fixed an issue that would cause an error to be thrown when attempting to\n   ``ORDER BY`` on top of a complex query (e.g. a ``JOIN``), using an expression\n   which contains a query parameter, e.g.::\n"}
+[0m⚙ [0mvalidate {"ref":"a230d382dba17c1c37d3ac6fc999e75fdd4b88aa","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java b/server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java\n--- a/server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java\n+++ b/server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java\n@@ -76,18 +76,7 @@ public interface StoredRow {\n             if (tmp instanceof Map) {\n                 m = (Map<?, ?>) tmp;\n             } else if (tmp instanceof List<?> list) {\n-                if (i + 1 == path.size()) {\n-                    return list;\n-                }\n-                ArrayList<Object> newList = new ArrayList<>(list.size());\n-                for (Object o : list) {\n-                    if (o instanceof Map) {\n-                        newList.add(extractValue((Map<?, ?>) o, path, i + 1));\n-                    } else {\n-                        newList.add(o);\n-                    }\n-                }\n-                return newList;\n+                return extractValueHelper(list, path, i);\n             } else {\n                 if (i + 1 != path.size()) {\n                     return null;\n@@ -97,4 +86,21 @@ public interface StoredRow {\n         }\n         return tmp;\n     }\n+\n+    private static Object extractValueHelper(final List<?> list, List<String> path, int pathStartIndex) {\n+        if (pathStartIndex + 1 == path.size()) {\n+            return list;\n+        }\n+        ArrayList<Object> newList = new ArrayList<>(list.size());\n+        for (Object o : list) {\n+            if (o instanceof Map<?,?> m) {\n+                newList.add(extractValue(m, path, pathStartIndex + 1));\n+            } else if (o instanceof List<?> l) {\n+                newList.add(extractValueHelper(l, path, pathStartIndex));\n+            } else {\n+                newList.add(o);\n+            }\n+        }\n+        return newList;\n+    }\n }\n"}
+[0m⚙ [0mvalidate {"ref":"a230d382dba17c1c37d3ac6fc999e75fdd4b88aa","mode":"hunk","patch":"diff --git a/server/src/main/java/io/crate/metadata/table/TableInfo.java b/server/src/main/java/io/crate/metadata/table/TableInfo.java\n--- a/server/src/main/java/io/crate/metadata/table/TableInfo.java\n+++ b/server/src/main/java/io/crate/metadata/table/TableInfo.java\n@@ -47,7 +47,7 @@ import io.crate.types.ObjectType;\n public interface TableInfo extends RelationInfo {\n \n     Predicate<DataType<?>> IS_OBJECT_ARRAY =\n-        type -> type instanceof ArrayType && ((ArrayType<?>) type).innerType().id() == ObjectType.ID;\n+        type -> type instanceof ArrayType && ArrayType.unnest(type).id() == ObjectType.ID;\n \n     /**\n      * returns information about a column with the given ident.\n@@ -144,7 +144,7 @@ public interface TableInfo extends RelationInfo {\n         int arrayDimensions = 0;\n         for (var parent : getParents(column)) {\n             if (IS_OBJECT_ARRAY.test(parent.valueType())) {\n-                arrayDimensions++;\n+                arrayDimensions += ArrayType.dimensions(parent.valueType());\n             }\n         }\n         return makeArray(ref.valueType(), arrayDimensions);\n"}
+The three production/documentation hunks apply cleanly. I’m validating the test additions next, with target-line offsets adjusted for the 5.9 file endings.
+[0m⚙ [0mvalidate {"ref":"a230d382dba17c1c37d3ac6fc999e75fdd4b88aa","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java b/server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java\n--- a/server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java\n+++ b/server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java\n@@ -31,6 +31,7 @@ import static io.crate.testing.Asserts.isFunction;\n import static io.crate.testing.Asserts.isLiteral;\n import static io.crate.testing.Asserts.isReference;\n import static io.crate.testing.Asserts.toCondition;\n+import static io.crate.types.ArrayType.makeArray;\n import static org.assertj.core.api.Assertions.anyOf;\n import static org.assertj.core.api.Assertions.assertThatThrownBy;\n \n@@ -2871,4 +2872,14 @@ public class SelectStatementAnalyzerTest extends CrateDummyClusterServiceUnitTes\n                 .hasDataType(DataTypes.INTEGER)\n         );\n     }\n+\n+    @Test\n+    public void test_sub_columns_of_nested_object_arrays() throws IOException {\n+        var executor = SQLExecutor.of(clusterService)\n+            .addTable(\"create table t (o object as (a int)[][])\");\n+        QueriedSelectRelation relation = executor.analyze(\"select o['a'] from t\");\n+        assertThat(relation.outputs()).satisfiesExactly(\n+            output -> assertThat(output.valueType()).isEqualTo(makeArray(DataTypes.INTEGER, 2))\n+        );\n+    }\n }\n"}
+The analyzer regression test hunk applies cleanly. I’m validating the stored-row lookup regression test hunk now.
+[0m⚙ [0mvalidate {"ref":"a230d382dba17c1c37d3ac6fc999e75fdd4b88aa","mode":"hunk","patch":"diff --git a/server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java b/server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java\n--- a/server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java\n+++ b/server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java\n@@ -65,4 +65,21 @@ public class StoredRowLookupTest {\n         Map<String, Map<String, Integer>> m = singletonMap(\"x\", singletonMap(\"a\", 1)); // such that x['a'] = 1\n         assertThat(StoredRow.extractValue(m, Arrays.asList(\"x\", \"a\", \"a\"), 0)).isNull(); // x['a']['a'] should return null\n     }\n+\n+    @Test\n+    public void test_extract_sub_columns_of_nested_object_arrays() {\n+        Map<String, List<List<Map<String, Integer>>>> m = singletonMap(\n+            \"o\",\n+            Arrays.asList(\n+                List.of(singletonMap(\"a\", 1)),\n+                List.of(singletonMap(\"a\", 2), singletonMap(\"a\", 3)),\n+                null)\n+        );\n+        assertThat(StoredRow.extractValue(m, Arrays.asList(\"o\", \"a\"), 0)).isEqualTo(\n+            Arrays.asList(\n+                List.of(1),\n+                List.of(2, 3),\n+                null)\n+        );\n+    }\n }\n"}
+All individual hunks apply. I’m running full patch validation against the target ref before touching the working tree.
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch code context
+[✓] Construct and hunk-validate backport patch
+[•] Run full validation
+[ ] Apply patch and commit result
+[ ] Return YAML result with patch
+[0m
+[0m⚙ [0mvalidate {"ref":"a230d382dba17c1c37d3ac6fc999e75fdd4b88aa","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.9.3.rst b/docs/appendices/release-notes/5.9.3.rst\n--- a/docs/appendices/release-notes/5.9.3.rst\n+++ b/docs/appendices/release-notes/5.9.3.rst\n@@ -60,6 +60,9 @@ Fixes\n   :ref:`generated column <ddl-generated-columns>` from a table, even though no\n   error was returned.\n \n+- Fixed an issue that caused exceptions when querying sub-columns of nested\n+  object arrays.\n+\n - Fixed an issue that would cause an error to be thrown when attempting to\n   ``ORDER BY`` on top of a complex query (e.g. a ``JOIN``), using an expression\n   which contains a query parameter, e.g.::\ndiff --git a/server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java b/server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java\n--- a/server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java\n+++ b/server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java\n@@ -76,18 +76,7 @@ public interface StoredRow {\n             if (tmp instanceof Map) {\n                 m = (Map<?, ?>) tmp;\n             } else if (tmp instanceof List<?> list) {\n-                if (i + 1 == path.size()) {\n-                    return list;\n-                }\n-                ArrayList<Object> newList = new ArrayList<>(list.size());\n-                for (Object o : list) {\n-                    if (o instanceof Map) {\n-                        newList.add(extractValue((Map<?, ?>) o, path, i + 1));\n-                    } else {\n-                        newList.add(o);\n-                    }\n-                }\n-                return newList;\n+                return extractValueHelper(list, path, i);\n             } else {\n                 if (i + 1 != path.size()) {\n                     return null;\n@@ -97,4 +86,21 @@ public interface StoredRow {\n         }\n         return tmp;\n     }\n+\n+    private static Object extractValueHelper(final List<?> list, List<String> path, int pathStartIndex) {\n+        if (pathStartIndex + 1 == path.size()) {\n+            return list;\n+        }\n+        ArrayList<Object> newList = new ArrayList<>(list.size());\n+        for (Object o : list) {\n+            if (o instanceof Map<?,?> m) {\n+                newList.add(extractValue(m, path, pathStartIndex + 1));\n+            } else if (o instanceof List<?> l) {\n+                newList.add(extractValueHelper(l, path, pathStartIndex));\n+            } else {\n+                newList.add(o);\n+            }\n+        }\n+        return newList;\n+    }\n }\ndiff --git a/server/src/main/java/io/crate/metadata/table/TableInfo.java b/server/src/main/java/io/crate/metadata/table/TableInfo.java\n--- a/server/src/main/java/io/crate/metadata/table/TableInfo.java\n+++ b/server/src/main/java/io/crate/metadata/table/TableInfo.java\n@@ -47,7 +47,7 @@ import io.crate.types.ObjectType;\n public interface TableInfo extends RelationInfo {\n \n     Predicate<DataType<?>> IS_OBJECT_ARRAY =\n-        type -> type instanceof ArrayType && ((ArrayType<?>) type).innerType().id() == ObjectType.ID;\n+        type -> type instanceof ArrayType && ArrayType.unnest(type).id() == ObjectType.ID;\n \n     /**\n      * returns information about a column with the given ident.\n@@ -144,7 +144,7 @@ public interface TableInfo extends RelationInfo {\n         int arrayDimensions = 0;\n         for (var parent : getParents(column)) {\n             if (IS_OBJECT_ARRAY.test(parent.valueType())) {\n-                arrayDimensions++;\n+                arrayDimensions += ArrayType.dimensions(parent.valueType());\n             }\n         }\n         return makeArray(ref.valueType(), arrayDimensions);\ndiff --git a/server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java b/server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java\n--- a/server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java\n+++ b/server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java\n@@ -31,6 +31,7 @@ import static io.crate.testing.Asserts.isFunction;\n import static io.crate.testing.Asserts.isLiteral;\n import static io.crate.testing.Asserts.isReference;\n import static io.crate.testing.Asserts.toCondition;\n+import static io.crate.types.ArrayType.makeArray;\n import static org.assertj.core.api.Assertions.anyOf;\n import static org.assertj.core.api.Assertions.assertThatThrownBy;\n \n@@ -2871,4 +2872,14 @@ public class SelectStatementAnalyzerTest extends CrateDummyClusterServiceUnitTes\n                 .hasDataType(DataTypes.INTEGER)\n         );\n     }\n+\n+    @Test\n+    public void test_sub_columns_of_nested_object_arrays() throws IOException {\n+        var executor = SQLExecutor.of(clusterService)\n+            .addTable(\"create table t (o object as (a int)[][])\");\n+        QueriedSelectRelation relation = executor.analyze(\"select o['a'] from t\");\n+        assertThat(relation.outputs()).satisfiesExactly(\n+            output -> assertThat(output.valueType()).isEqualTo(makeArray(DataTypes.INTEGER, 2))\n+        );\n+    }\n }\ndiff --git a/server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java b/server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java\n--- a/server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java\n+++ b/server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java\n@@ -65,4 +65,21 @@ public class StoredRowLookupTest {\n         Map<String, Map<String, Integer>> m = singletonMap(\"x\", singletonMap(\"a\", 1)); // such that x['a'] = 1\n         assertThat(StoredRow.extractValue(m, Arrays.asList(\"x\", \"a\", \"a\"), 0)).isNull(); // x['a']['a'] should return null\n     }\n+\n+    @Test\n+    public void test_extract_sub_columns_of_nested_object_arrays() {\n+        Map<String, List<List<Map<String, Integer>>>> m = singletonMap(\n+            \"o\",\n+            Arrays.asList(\n+                List.of(singletonMap(\"a\", 1)),\n+                List.of(singletonMap(\"a\", 2), singletonMap(\"a\", 3)),\n+                null)\n+        );\n+        assertThat(StoredRow.extractValue(m, Arrays.asList(\"o\", \"a\"), 0)).isEqualTo(\n+            Arrays.asList(\n+                List.of(1),\n+                List.of(2, 3),\n+                null)\n+        );\n+    }\n }\n"}
+Full validation passed: patch applies, compiles, and the validation test suite passed. I’m applying the same patch to the working tree and committing it.
+[0m
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch code context
+[✓] Construct and hunk-validate backport patch
+[✓] Run full validation
+[•] Apply patch and commit result
+[ ] Return YAML result with patch
+[0m
+[0m% [0mPatch 5 files
+[0m
+[0m$ [0mgit log --oneline -10
+a230d382db Fix issue with PK lookup with lots of values
+6adc3300b8 Tests: add more tests for ORDER BY expression validations
+c30dc7d3bf Fix UnsupportedFeatureException from complex ORDER BY expression validation
+e61377b2b8 Fix SQL printing of CastFunction target type
+cf9a4b14d7 Fix: generated columns not dropped with no error
+7e0562ab10 The SubQueryAndParamBinder must not ignore conversion exceptions
+b51346a3d5 Fix query used at JDBC FDW, alias symbols must be replaced by their source
+c6e6240fcd Fix printing of a `CASE` expression.
+8108b22ce2 Make warnings in 5.9.0 release notes less scary; clarify it's a testing release
+78b6c6617e Ingore value parsing and sanitizing errors when parsing translog entries
+[0m
+[0m$ [0mgit diff -- docs/appendices/release-notes/5.9.3.rst server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java server/src/main/java/io/crate/metadata/table/TableInfo.java server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java
+warning: in the working copy of 'docs/appendices/release-notes/5.9.3.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/metadata/table/TableInfo.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java', LF will be replaced by CRLF the next time Git touches it
+diff --git a/docs/appendices/release-notes/5.9.3.rst b/docs/appendices/release-notes/5.9.3.rst
+index 6de6a221a2..7fb94f8793 100644
+--- a/docs/appendices/release-notes/5.9.3.rst
++++ b/docs/appendices/release-notes/5.9.3.rst
+@@ -60,6 +60,9 @@ Fixes
+   :ref:`generated column <ddl-generated-columns>` from a table, even though no
+   error was returned.
+ 
++- Fixed an issue that caused exceptions when querying sub-columns of nested
++  object arrays.
++
+ - Fixed an issue that would cause an error to be thrown when attempting to
+   ``ORDER BY`` on top of a complex query (e.g. a ``JOIN``), using an expression
+   which contains a query parameter, e.g.::
+diff --git a/server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java b/server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java
+index c5aedf4485..1e84b94e00 100644
+--- a/server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java
++++ b/server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java
+@@ -77,18 +77,7 @@ public interface StoredRow {
+             if (tmp instanceof Map) {
+                 m = (Map<?, ?>) tmp;
+             } else if (tmp instanceof List<?> list) {
+-                if (i + 1 == path.size()) {
+-                    return list;
+-                }
+-                ArrayList<Object> newList = new ArrayList<>(list.size());
+-                for (Object o : list) {
+-                    if (o instanceof Map) {
+-                        newList.add(extractValue((Map<?, ?>) o, path, i + 1));
+-                    } else {
+-                        newList.add(o);
+-                    }
+-                }
+-                return newList;
++                return extractValueHelper(list, path, i);
+             } else {
+                 if (i + 1 != path.size()) {
+                     return null;
+@@ -98,4 +87,21 @@ public interface StoredRow {
+         }
+         return tmp;
+     }
++
++    private static Object extractValueHelper(final List<?> list, List<String> path, int pathStartIndex) {
++        if (pathStartIndex + 1 == path.size()) {
++            return list;
++        }
++        ArrayList<Object> newList = new ArrayList<>(list.size());
++        for (Object o : list) {
++            if (o instanceof Map<?,?> m) {
++                newList.add(extractValue(m, path, pathStartIndex + 1));
++            } else if (o instanceof List<?> l) {
++                newList.add(extractValueHelper(l, path, pathStartIndex));
++            } else {
++                newList.add(o);
++            }
++        }
++        return newList;
++    }
+ }
+diff --git a/server/src/main/java/io/crate/metadata/table/TableInfo.java b/server/src/main/java/io/crate/metadata/table/TableInfo.java
+index b0969ca6b5..46a2e6524f 100644
+--- a/server/src/main/java/io/crate/metadata/table/TableInfo.java
++++ b/server/src/main/java/io/crate/metadata/table/TableInfo.java
+@@ -47,7 +47,7 @@ import io.crate.types.ObjectType;
+ public interface TableInfo extends RelationInfo {
+ 
+     Predicate<DataType<?>> IS_OBJECT_ARRAY =
+-        type -> type instanceof ArrayType && ((ArrayType<?>) type).innerType().id() == ObjectType.ID;
++        type -> type instanceof ArrayType && ArrayType.unnest(type).id() == ObjectType.ID;
+ 
+     /**
+      * returns information about a column with the given ident.
+@@ -144,7 +144,7 @@ public interface TableInfo extends RelationInfo {
+         int arrayDimensions = 0;
+         for (var parent : getParents(column)) {
+             if (IS_OBJECT_ARRAY.test(parent.valueType())) {
+-                arrayDimensions++;
++                arrayDimensions += ArrayType.dimensions(parent.valueType());
+             }
+         }
+         return makeArray(ref.valueType(), arrayDimensions);
+diff --git a/server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java b/server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java
+index d985a62879..de9d053237 100644
+--- a/server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java
++++ b/server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java
+@@ -31,6 +31,7 @@ import static io.crate.testing.Asserts.isFunction;
+ import static io.crate.testing.Asserts.isLiteral;
+ import static io.crate.testing.Asserts.isReference;
+ import static io.crate.testing.Asserts.toCondition;
++import static io.crate.types.ArrayType.makeArray;
+ import static org.assertj.core.api.Assertions.anyOf;
+ import static org.assertj.core.api.Assertions.assertThatThrownBy;
+ 
+@@ -2870,4 +2871,14 @@ public class SelectStatementAnalyzerTest extends CrateDummyClusterServiceUnitTes
+                 .hasDataType(DataTypes.INTEGER)
+         );
+     }
++
++    @Test
++    public void test_sub_columns_of_nested_object_arrays() throws IOException {
++        var executor = SQLExecutor.of(clusterService)
++            .addTable("create table t (o object as (a int)[][])");
++        QueriedSelectRelation relation = executor.analyze("select o['a'] from t");
++        assertThat(relation.outputs()).satisfiesExactly(
++            output -> assertThat(output.valueType()).isEqualTo(makeArray(DataTypes.INTEGER, 2))
++        );
++    }
+ }
+diff --git a/server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java b/server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java
+index bbce4f5937..7002bef7e8 100644
+--- a/server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java
++++ b/server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java
+@@ -65,4 +65,21 @@ public class StoredRowLookupTest {
+         Map<String, Map<String, Integer>> m = singletonMap("x", singletonMap("a", 1)); // such that x['a'] = 1
+         assertThat(StoredRow.extractValue(m, Arrays.asList("x", "a", "a"), 0)).isNull(); // x['a']['a'] should return null
+     }
++
++    @Test
++    public void test_extract_sub_columns_of_nested_object_arrays() {
++        Map<String, List<List<Map<String, Integer>>>> m = singletonMap(
++            "o",
++            Arrays.asList(
++                List.of(singletonMap("a", 1)),
++                List.of(singletonMap("a", 2), singletonMap("a", 3)),
++                null)
++        );
++        assertThat(StoredRow.extractValue(m, Arrays.asList("o", "a"), 0)).isEqualTo(
++            Arrays.asList(
++                List.of(1),
++                List.of(2, 3),
++                null)
++        );
++    }
+ }
+[0m
+[0m$ [0mgit status --short
+M docs/appendices/release-notes/5.9.3.rst
+ M server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java
+ M server/src/main/java/io/crate/metadata/table/TableInfo.java
+ M server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java
+ M server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java
+[0m
+The working diff matches the validated patch. I’m staging only the five touched files and committing the backport.
+[0m$ [0mgit add -- docs/appendices/release-notes/5.9.3.rst server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java server/src/main/java/io/crate/metadata/table/TableInfo.java server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java; if ($?) { git commit -m "Fix querying sub-columns of nested object arrays" }
+warning: in the working copy of 'docs/appendices/release-notes/5.9.3.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/io/crate/metadata/table/TableInfo.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java', LF will be replaced by CRLF the next time Git touches it
+[detached HEAD af5fe81f4a] Fix querying sub-columns of nested object arrays
+ 5 files changed, 51 insertions(+), 14 deletions(-)
+[0m
+[0m$ [0mgit status --short
+(no output)
+[0m
+[0m$ [0mgit diff a230d382dba17c1c37d3ac6fc999e75fdd4b88aa HEAD
+diff --git a/docs/appendices/release-notes/5.9.3.rst b/docs/appendices/release-notes/5.9.3.rst
+index 6de6a221a2..7fb94f8793 100644
+--- a/docs/appendices/release-notes/5.9.3.rst
++++ b/docs/appendices/release-notes/5.9.3.rst
+@@ -60,6 +60,9 @@ Fixes
+   :ref:`generated column <ddl-generated-columns>` from a table, even though no
+   error was returned.
+ 
++- Fixed an issue that caused exceptions when querying sub-columns of nested
++  object arrays.
++
+ - Fixed an issue that would cause an error to be thrown when attempting to
+   ``ORDER BY`` on top of a complex query (e.g. a ``JOIN``), using an expression
+   which contains a query parameter, e.g.::
+diff --git a/server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java b/server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java
+index c5aedf4485..1e84b94e00 100644
+--- a/server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java
++++ b/server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java
+@@ -77,18 +77,7 @@ public interface StoredRow {
+             if (tmp instanceof Map) {
+                 m = (Map<?, ?>) tmp;
+             } else if (tmp instanceof List<?> list) {
+-                if (i + 1 == path.size()) {
+-                    return list;
+-                }
+-                ArrayList<Object> newList = new ArrayList<>(list.size());
+-                for (Object o : list) {
+-                    if (o instanceof Map) {
+-                        newList.add(extractValue((Map<?, ?>) o, path, i + 1));
+-                    } else {
+-                        newList.add(o);
+-                    }
+-                }
+-                return newList;
++                return extractValueHelper(list, path, i);
+             } else {
+                 if (i + 1 != path.size()) {
+                     return null;
+@@ -98,4 +87,21 @@ public interface StoredRow {
+         }
+         return tmp;
+     }
++
++    private static Object extractValueHelper(final List<?> list, List<String> path, int pathStartIndex) {
++        if (pathStartIndex + 1 == path.size()) {
++            return list;
++        }
++        ArrayList<Object> newList = new ArrayList<>(list.size());
++        for (Object o : list) {
++            if (o instanceof Map<?,?> m) {
++                newList.add(extractValue(m, path, pathStartIndex + 1));
++            } else if (o instanceof List<?> l) {
++                newList.add(extractValueHelper(l, path, pathStartIndex));
++            } else {
++                newList.add(o);
++            }
++        }
++        return newList;
++    }
+ }
+diff --git a/server/src/main/java/io/crate/metadata/table/TableInfo.java b/server/src/main/java/io/crate/metadata/table/TableInfo.java
+index b0969ca6b5..46a2e6524f 100644
+--- a/server/src/main/java/io/crate/metadata/table/TableInfo.java
++++ b/server/src/main/java/io/crate/metadata/table/TableInfo.java
+@@ -47,7 +47,7 @@ import io.crate.types.ObjectType;
+ public interface TableInfo extends RelationInfo {
+ 
+     Predicate<DataType<?>> IS_OBJECT_ARRAY =
+-        type -> type instanceof ArrayType && ((ArrayType<?>) type).innerType().id() == ObjectType.ID;
++        type -> type instanceof ArrayType && ArrayType.unnest(type).id() == ObjectType.ID;
+ 
+     /**
+      * returns information about a column with the given ident.
+@@ -144,7 +144,7 @@ public interface TableInfo extends RelationInfo {
+         int arrayDimensions = 0;
+         for (var parent : getParents(column)) {
+             if (IS_OBJECT_ARRAY.test(parent.valueType())) {
+-                arrayDimensions++;
++                arrayDimensions += ArrayType.dimensions(parent.valueType());
+             }
+         }
+         return makeArray(ref.valueType(), arrayDimensions);
+diff --git a/server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java b/server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java
+index d985a62879..de9d053237 100644
+--- a/server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java
++++ b/server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java
+@@ -31,6 +31,7 @@ import static io.crate.testing.Asserts.isFunction;
+ import static io.crate.testing.Asserts.isLiteral;
+ import static io.crate.testing.Asserts.isReference;
+ import static io.crate.testing.Asserts.toCondition;
++import static io.crate.types.ArrayType.makeArray;
+ import static org.assertj.core.api.Assertions.anyOf;
+ import static org.assertj.core.api.Assertions.assertThatThrownBy;
+ 
+@@ -2870,4 +2871,14 @@ public class SelectStatementAnalyzerTest extends CrateDummyClusterServiceUnitTes
+                 .hasDataType(DataTypes.INTEGER)
+         );
+     }
++
++    @Test
++    public void test_sub_columns_of_nested_object_arrays() throws IOException {
++        var executor = SQLExecutor.of(clusterService)
++            .addTable("create table t (o object as (a int)[][])");
++        QueriedSelectRelation relation = executor.analyze("select o['a'] from t");
++        assertThat(relation.outputs()).satisfiesExactly(
++            output -> assertThat(output.valueType()).isEqualTo(makeArray(DataTypes.INTEGER, 2))
++        );
++    }
+ }
+diff --git a/server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java b/server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java
+index bbce4f5937..7002bef7e8 100644
+--- a/server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java
++++ b/server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java
+@@ -65,4 +65,21 @@ public class StoredRowLookupTest {
+         Map<String, Map<String, Integer>> m = singletonMap("x", singletonMap("a", 1)); // such that x['a'] = 1
+         assertThat(StoredRow.extractValue(m, Arrays.asList("x", "a", "a"), 0)).isNull(); // x['a']['a'] should return null
+     }
++
++    @Test
++    public void test_extract_sub_columns_of_nested_object_arrays() {
++        Map<String, List<List<Map<String, Integer>>>> m = singletonMap(
++            "o",
++            Arrays.asList(
++                List.of(singletonMap("a", 1)),
++                List.of(singletonMap("a", 2), singletonMap("a", 3)),
++                null)
++        );
++        assertThat(StoredRow.extractValue(m, Arrays.asList("o", "a"), 0)).isEqualTo(
++            Arrays.asList(
++                List.of(1),
++                List.of(2, 3),
++                null)
++        );
++    }
+ }
+[0m
+The backport commit was created successfully on the detached target HEAD, and the working tree is clean.
+[0m# [0mTodos
+[✓] Inspect original commit metadata and target branch code context
+[✓] Construct and hunk-validate backport patch
+[✓] Run full validation
+[✓] Apply patch and commit result
+[•] Return YAML result with patch
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/docs/appendices/release-notes/5.9.3.rst b/docs/appendices/release-notes/5.9.3.rst
+    index 6de6a221a2..7fb94f8793 100644
+    --- a/docs/appendices/release-notes/5.9.3.rst
+    +++ b/docs/appendices/release-notes/5.9.3.rst
+    @@ -60,6 +60,9 @@ Fixes
+       :ref:`generated column <ddl-generated-columns>` from a table, even though no
+       error was returned.
+     
+    +- Fixed an issue that caused exceptions when querying sub-columns of nested
+    +  object arrays.
+    +
+     - Fixed an issue that would cause an error to be thrown when attempting to
+       ``ORDER BY`` on top of a complex query (e.g. a ``JOIN``), using an expression
+       which contains a query parameter, e.g.::
+    diff --git a/server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java b/server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java
+    index c5aedf4485..1e84b94e00 100644
+    --- a/server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java
+    +++ b/server/src/main/java/io/crate/expression/reference/doc/lucene/StoredRow.java
+    @@ -77,18 +77,7 @@ public interface StoredRow {
+                 if (tmp instanceof Map) {
+                     m = (Map<?, ?>) tmp;
+                 } else if (tmp instanceof List<?> list) {
+    -                if (i + 1 == path.size()) {
+    -                    return list;
+    -                }
+    -                ArrayList<Object> newList = new ArrayList<>(list.size());
+    -                for (Object o : list) {
+    -                    if (o instanceof Map) {
+    -                        newList.add(extractValue((Map<?, ?>) o, path, i + 1));
+    -                    } else {
+    -                        newList.add(o);
+    -                    }
+    -                }
+    -                return newList;
+    +                return extractValueHelper(list, path, i);
+                 } else {
+                     if (i + 1 != path.size()) {
+                         return null;
+    @@ -98,4 +87,21 @@ public interface StoredRow {
+             }
+             return tmp;
+         }
+    +
+    +    private static Object extractValueHelper(final List<?> list, List<String> path, int pathStartIndex) {
+    +        if (pathStartIndex + 1 == path.size()) {
+    +            return list;
+    +        }
+    +        ArrayList<Object> newList = new ArrayList<>(list.size());
+    +        for (Object o : list) {
+    +            if (o instanceof Map<?,?> m) {
+    +                newList.add(extractValue(m, path, pathStartIndex + 1));
+    +            } else if (o instanceof List<?> l) {
+    +                newList.add(extractValueHelper(l, path, pathStartIndex));
+    +            } else {
+    +                newList.add(o);
+    +            }
+    +        }
+    +        return newList;
+    +    }
+     }
+    diff --git a/server/src/main/java/io/crate/metadata/table/TableInfo.java b/server/src/main/java/io/crate/metadata/table/TableInfo.java
+    index b0969ca6b5..46a2e6524f 100644
+    --- a/server/src/main/java/io/crate/metadata/table/TableInfo.java
+    +++ b/server/src/main/java/io/crate/metadata/table/TableInfo.java
+    @@ -47,7 +47,7 @@ import io.crate.types.ObjectType;
+     public interface TableInfo extends RelationInfo {
+     
+         Predicate<DataType<?>> IS_OBJECT_ARRAY =
+    -        type -> type instanceof ArrayType && ((ArrayType<?>) type).innerType().id() == ObjectType.ID;
+    +        type -> type instanceof ArrayType && ArrayType.unnest(type).id() == ObjectType.ID;
+     
+         /**
+          * returns information about a column with the given ident.
+    @@ -144,7 +144,7 @@ public interface TableInfo extends RelationInfo {
+             int arrayDimensions = 0;
+             for (var parent : getParents(column)) {
+                 if (IS_OBJECT_ARRAY.test(parent.valueType())) {
+    -                arrayDimensions++;
+    +                arrayDimensions += ArrayType.dimensions(parent.valueType());
+                 }
+             }
+             return makeArray(ref.valueType(), arrayDimensions);
+    diff --git a/server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java b/server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java
+    index d985a62879..de9d053237 100644
+    --- a/server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java
+    +++ b/server/src/test/java/io/crate/analyze/SelectStatementAnalyzerTest.java
+    @@ -31,6 +31,7 @@ import static io.crate.testing.Asserts.isFunction;
+     import static io.crate.testing.Asserts.isLiteral;
+     import static io.crate.testing.Asserts.isReference;
+     import static io.crate.testing.Asserts.toCondition;
+    +import static io.crate.types.ArrayType.makeArray;
+     import static org.assertj.core.api.Assertions.anyOf;
+     import static org.assertj.core.api.Assertions.assertThatThrownBy;
+     
+    @@ -2870,4 +2871,14 @@ public class SelectStatementAnalyzerTest extends CrateDummyClusterServiceUnitTes
+                     .hasDataType(DataTypes.INTEGER)
+             );
+         }
+    +
+    +    @Test
+    +    public void test_sub_columns_of_nested_object_arrays() throws IOException {
+    +        var executor = SQLExecutor.of(clusterService)
+    +            .addTable("create table t (o object as (a int)[][])");
+    +        QueriedSelectRelation relation = executor.analyze("select o['a'] from t");
+    +        assertThat(relation.outputs()).satisfiesExactly(
+    +            output -> assertThat(output.valueType()).isEqualTo(makeArray(DataTypes.INTEGER, 2))
+    +        );
+    +    }
+     }
+    diff --git a/server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java b/server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java
+    index bbce4f5937..7002bef7e8 100644
+    --- a/server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java
+    +++ b/server/src/test/java/io/crate/expression/reference/doc/lucene/StoredRowLookupTest.java
+    @@ -65,4 +65,21 @@ public class StoredRowLookupTest {
+             Map<String, Map<String, Integer>> m = singletonMap("x", singletonMap("a", 1)); // such that x['a'] = 1
+             assertThat(StoredRow.extractValue(m, Arrays.asList("x", "a", "a"), 0)).isNull(); // x['a']['a'] should return null
+         }
+    +
+    +    @Test
+    +    public void test_extract_sub_columns_of_nested_object_arrays() {
+    +        Map<String, List<List<Map<String, Integer>>>> m = singletonMap(
+    +            "o",
+    +            Arrays.asList(
+    +                List.of(singletonMap("a", 1)),
+    +                List.of(singletonMap("a", 2), singletonMap("a", 3)),
+    +                null)
+    +        );
+    +        assertThat(StoredRow.extractValue(m, Arrays.asList("o", "a"), 0)).isEqualTo(
+    +            Arrays.asList(
+    +                List.of(1),
+    +                List.of(2, 3),
+    +                null)
+    +        );
+    +    }
+     }
+  notes: >
+    Backported the nested object array sub-column fix, validated it fully, and committed the result.
+```
+
+--- END CLI OUTPUT ---
+[06:55:22]   Done in 2449.0s | status=success

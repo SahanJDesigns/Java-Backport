@@ -1,0 +1,1056 @@
+[03:50:50] === Row 38: crate  6e913b36 -> 86a6e5a8  [TYPE-I] ===
+[03:50:50]   Resolving parent of backport commit 86a6e5a8...
+[03:50:50]   Backport parent (target ref): c2d3f9c775cf2148c42f220977c92e5403001936
+[03:50:50]   Extracting new-version patch for 6e913b36...
+[03:50:50]   New-version patch size: 11780 chars
+[03:50:50]   Checking out backport parent c2d3f9c7...
+[03:50:50]   Invoking OpenCode CLI (15808 chars)...
+[03:50:50]   Streaming OpenCode CLI output...
+
+--- CLI OUTPUT ---
+[0m
+> build · gpt-5.5
+[0m
+I’ll inspect the target branch context for each touched file, map the hunks to the 5.9 code, then validate and apply a minimal backport patch.
+[0m# [0mTodos
+[•] Understand original commit intent and target-file context
+[ ] Construct and hunk-validate backport patch
+[ ] Apply patch and commit result
+[ ] Run full validation and report YAML
+[0m
+[0m⚙ [0mviewcode {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","path":"server/src/main/java/org/elasticsearch/index/search/MatchQuery.java","startline":1,"endline":220}
+[0m⚙ [0mviewcode {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","path":"server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java","startline":1,"endline":230}
+[0m⚙ [0mgit_show {"ref":"6e913b36c2674daca8e03555fd4da911ad2cb934"}
+[0m⚙ [0mviewcode {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","path":"server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java","startline":900,"endline":980}
+[0m⚙ [0mviewcode {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","path":"plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java","startline":40,"endline":200}
+[0m⚙ [0mviewcode {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","path":"docs/general/dql/fulltext.rst","startline":55,"endline":210}
+[0m✱ [0mGlob "docs/appendices/release-notes/5.9*.rst"[90m 14 matches[0m
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/org/elasticsearch/index/search/MatchQuery.java","start_line":107,"end_line":140,"start_commit":"c2d3f9c775cf2148c42f220977c92e5403001936","end_commit":"c2d3f9c775cf2148c42f220977c92e5403001936"}
+[0m⚙ [0mgit_history {"filepath":"server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java","start_line":145,"end_line":170,"start_commit":"c2d3f9c775cf2148c42f220977c92e5403001936","end_commit":"c2d3f9c775cf2148c42f220977c92e5403001936"}
+[0m⚙ [0mlocate_symbol {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","symbol":"MultiMatchQuery"}
+[0m⚙ [0mlocate_symbol {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","symbol":"MatchQuery"}
+The target files exist in the same locations. One tool hit a stale `.git/index.lock`, so I’m checking the repository state before continuing; I won’t switch branches or reset anything.
+[0m
+[0m$ [0mgit status --short
+?? tags
+[0m
+[0m⚙ [0mviewcode {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","path":"docs/appendices/release-notes/5.9.13.rst","startline":1,"endline":120}
+[0m⚙ [0mviewcode {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","path":"server/src/test/java/io/crate/lucene/LuceneQueryBuilderTest.java","startline":1,"endline":220}
+[0m⚙ [0mlocate_symbol {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","symbol":"CrossFieldsQueryBuilder"}
+The release note target in 5.9 is `docs/appendices/release-notes/5.9.13.rst`. The code hunks map directly; the only adaptation is adding the release-note entry to the active 5.9 release file instead of the original 5.10.4 file.
+[0m⚙ [0mvalidate {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst\n--- a/docs/appendices/release-notes/5.9.13.rst\n+++ b/docs/appendices/release-notes/5.9.13.rst\n@@ -67,3 +67,7 @@ Fixes\n   a complete partitioned table to not reset the setting on all partitions, but\n   only on the table itself, so the reset value of the setting would only have\n   taken effect for new partitions.\n+\n+- Fixed an issue that caused a ``MATCH`` query to silently override the\n+  specified analyzer with the analyzer that was used to index the corresponding\n+  column. Since this is not allowed, an error is now thrown.\n"}
+[0m⚙ [0mvalidate {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","mode":"hunk","patch":"diff --git a/docs/general/dql/fulltext.rst b/docs/general/dql/fulltext.rst\n--- a/docs/general/dql/fulltext.rst\n+++ b/docs/general/dql/fulltext.rst\n@@ -64,11 +64,10 @@ relevant the row::\n     SELECT 2 rows in set (... sec)\n \n The MATCH predicate in its simplest form performs a fulltext search against a\n-single column. It takes the ``query_term`` and, if no ``analyzer`` was\n-provided, analyzes the term with the analyzer configured on\n-``column_or_idx_ident``. The resulting tokens are then matched against the\n-index at ``column_or_idx_ident`` and if one of them matches, MATCH returns\n-``TRUE``.\n+single column. It takes the ``query_term`` and analyzes the term with the\n+analyzer configured on ``column_or_idx_ident``. The resulting tokens are then\n+matched against the index at ``column_or_idx_ident`` and if one of them\n+matches, MATCH returns ``TRUE``.\n \n The MATCH predicate can be also used to perform a fulltext search on multiple\n columns with a single ``query_term`` and to add weight to specific columns it's\n@@ -111,11 +110,9 @@ Arguments\n   The default boost is 1.\n \n :query_term:\n-  This string is analyzed (using the explicitly given ``analyzer`` or\n-  the analyzer of the columns to perform the search on) and the\n-  resulting tokens are compared to the index. The tokens used for search\n-  are combined using the boolean ``OR`` operator unless stated otherwise\n-  using the ``operator`` option.\n+  This string is analyzed and the resulting tokens are compared to the index.\n+  The tokens used for search are combined using the boolean ``OR`` operator\n+  unless stated otherwise using the ``operator`` option.\n \n :match_type:\n   Optional. Defaults to ``best_fields`` for fulltext indices. For\n@@ -197,7 +194,9 @@ certain match type works. Not all options are applicable to all match types.\n See the options below for details.\n \n :analyzer:\n-  The analyzer used to convert the ``query_term`` into tokens.\n+  The analyzer used to convert the ``query_term`` into tokens. Currently the\n+  only acceptable analyzer is the one that is used to index the\n+  ``column_or_idx_ident``.\n \n :boost:\n   This numeric value is multiplied with the resulting :ref:`_score\n"}
+[0m⚙ [0mvalidate {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","mode":"hunk","patch":"diff --git a/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java b/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java\n--- a/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java\n+++ b/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java\n@@ -53,7 +53,7 @@ public class FulltextITest extends IntegTestCase {\n         execute(\"refresh table locations\");\n \n         execute(\"select name, _score from locations where match((kind, name_description_ft), 'galaxy') \" +\n-                \"using best_fields with (analyzer='english') order by _score desc\");\n+                \"using best_fields order by _score desc\");\n         assertThat(response).hasRows(\n             \"End of the Galaxy| 0.895417\",\n             \"Altair| 0.49754602\",\n@@ -182,7 +182,7 @@ public class FulltextITest extends IntegTestCase {\n         this.setup.setUpLocationsWithFTIndex();\n         execute(\"refresh table locations\");\n         execute(\"select name, description, kind, _score from locations \" +\n-                \"where match((kind, name_description_ft 0.5), 'Planet earth') using most_fields with (analyzer='english') order by _score desc\");\n+                \"where match((kind, name_description_ft 0.5), 'Planet earth') using most_fields order by _score desc\");\n         assertThat(response).hasRows(\n             \"Alpha Centauri| 4.1 light-years northwest of earth| Star System| 0.57336456\",\n             \"Bartledan| An Earthlike planet on which Arthur Dent lived for a short time, Bartledan is inhabited by Bartledanians, a race that appears human but only physically.| Planet| 0.32080865\",\n"}
+The documentation and integration-test hunks apply cleanly. I’m validating the Java query-builder changes next, where analyzer selection and error reporting are implemented.
+[0m⚙ [0mvalidate {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","mode":"hunk","patch":"diff --git a/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java b/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java\n--- a/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java\n+++ b/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java\n@@ -24,6 +24,7 @@ import static org.elasticsearch.common.lucene.search.Queries.newUnmappedFieldQue\n \n import java.io.IOException;\n import java.util.ArrayList;\n import java.util.List;\n+import java.util.Locale;\n \n import org.apache.logging.log4j.LogManager;\n import org.apache.lucene.analysis.Analyzer;\n@@ -55,7 +56,6 @@ import org.elasticsearch.common.logging.DeprecationLogger;\n import org.elasticsearch.common.lucene.Lucene;\n import org.elasticsearch.common.lucene.search.MultiPhrasePrefixQuery;\n import org.elasticsearch.common.unit.Fuzziness;\n-import org.jetbrains.annotations.Nullable;\n \n import io.crate.lucene.DisableGraphAttribute;\n import io.crate.lucene.ExtendedCommonTermsQuery;\n@@ -108,20 +108,45 @@ public class MatchQuery {\n \n     protected final LuceneQueryBuilder.Context context;\n     protected final ParsedOptions parsedOptions;\n-    protected final Analyzer analyzer;\n \n \n     public MatchQuery(LuceneQueryBuilder.Context context, ParsedOptions parsedOptions) {\n         this.context = context;\n         this.parsedOptions = parsedOptions;\n-        this.analyzer = getAnalyzer(parsedOptions.analyzer());\n     }\n \n-    private Analyzer getAnalyzer(@Nullable String analyzerName) {\n-        if (analyzerName == null) {\n-            return Lucene.KEYWORD_ANALYZER;\n+    /**\n+     * Returns the analyzer that was used to index the given column, but throws an exception when the search-analyzer\n+     * specified in parse-options is different(from the index-analyzer).\n+     */\n+    protected Analyzer getSafeAnalyzer(Reference ref) {\n+        String searchAnalyzer = parsedOptions.analyzer();\n+        if (ref instanceof IndexReference indexRef) {\n+            if (searchAnalyzer == null || searchAnalyzer.equals(indexRef.analyzer())) {\n+                return context.getAnalyzer(indexRef.analyzer());\n+            }\n+            throw new IllegalArgumentException(\n+                String.format(\n+                    Locale.ENGLISH,\n+                    \"Column '%s' was indexed with the '%s' analyzer, searching with a different analyzer, '%s' is not supported\",\n+                    indexRef.column(),\n+                    indexRef.analyzer(),\n+                    searchAnalyzer\n+                )\n+            );\n+        } else {\n+            if (searchAnalyzer == null || searchAnalyzer.equals(\"keyword\")) {\n+                return Lucene.KEYWORD_ANALYZER;\n+            }\n+            throw new IllegalArgumentException(\n+                String.format(\n+                    Locale.ENGLISH,\n+                    \"Column '%s' was indexed with the 'keyword' analyzer, searching with a different analyzer, '%s' is not supported\",\n+                    ref.column(),\n+                    searchAnalyzer\n+                )\n+            );\n         }\n-        return context.getAnalyzer(analyzerName);\n     }\n \n     public Query parse(Type type, String fieldName, Object value) {\n@@ -131,9 +156,7 @@ public class MatchQuery {\n             return newUnmappedFieldQuery(fieldName);\n         }\n         final String field = ref.storageIdent();\n-        Analyzer analyzer = ref instanceof IndexReference indexRef\n-            ? getAnalyzer(indexRef.analyzer())\n-            : this.analyzer;\n+        Analyzer analyzer = getSafeAnalyzer(ref);\n \n         /*\n          * If a keyword analyzer is used, we know that further analysis isn't\n"}
+The first Java patch attempt had valid matching text but malformed hunk framing for the validator. I’m splitting it into smaller hunks with exact counts.
+[0m⚙ [0mvalidate {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","mode":"hunk","patch":"diff --git a/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java b/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java\n--- a/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java\n+++ b/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java\n@@ -25,7 +25,8 @@ import static org.elasticsearch.common.lucene.search.Queries.newUnmappedFieldQue\n import java.io.IOException;\n import java.util.ArrayList;\n import java.util.List;\n+import java.util.Locale;\n \n import org.apache.logging.log4j.LogManager;\n import org.apache.lucene.analysis.Analyzer;\n import org.apache.lucene.analysis.TokenStream;\n@@ -55,9 +56,8 @@ import org.apache.lucene.util.QueryBuilder;\n import org.elasticsearch.common.logging.DeprecationLogger;\n import org.elasticsearch.common.lucene.Lucene;\n import org.elasticsearch.common.lucene.search.MultiPhrasePrefixQuery;\n import org.elasticsearch.common.unit.Fuzziness;\n-import org.jetbrains.annotations.Nullable;\n \n import io.crate.lucene.DisableGraphAttribute;\n import io.crate.lucene.ExtendedCommonTermsQuery;\n import io.crate.lucene.LuceneQueryBuilder;\n"}
+[0m⚙ [0mvalidate {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","mode":"hunk","patch":"diff --git a/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java b/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java\n--- a/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java\n+++ b/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java\n@@ -109,21 +109,46 @@ public class MatchQuery {\n \n     protected final LuceneQueryBuilder.Context context;\n     protected final ParsedOptions parsedOptions;\n-    protected final Analyzer analyzer;\n \n \n     public MatchQuery(LuceneQueryBuilder.Context context, ParsedOptions parsedOptions) {\n         this.context = context;\n         this.parsedOptions = parsedOptions;\n-        this.analyzer = getAnalyzer(parsedOptions.analyzer());\n     }\n \n-    private Analyzer getAnalyzer(@Nullable String analyzerName) {\n-        if (analyzerName == null) {\n-            return Lucene.KEYWORD_ANALYZER;\n+    /**\n+     * Returns the analyzer that was used to index the given column, but throws an exception when the search-analyzer\n+     * specified in parse-options is different(from the index-analyzer).\n+     */\n+    protected Analyzer getSafeAnalyzer(Reference ref) {\n+        String searchAnalyzer = parsedOptions.analyzer();\n+        if (ref instanceof IndexReference indexRef) {\n+            if (searchAnalyzer == null || searchAnalyzer.equals(indexRef.analyzer())) {\n+                return context.getAnalyzer(indexRef.analyzer());\n+            }\n+            throw new IllegalArgumentException(\n+                String.format(\n+                    Locale.ENGLISH,\n+                    \"Column '%s' was indexed with the '%s' analyzer, searching with a different analyzer, '%s' is not supported\",\n+                    indexRef.column(),\n+                    indexRef.analyzer(),\n+                    searchAnalyzer\n+                )\n+            );\n+        } else {\n+            if (searchAnalyzer == null || searchAnalyzer.equals(\"keyword\")) {\n+                return Lucene.KEYWORD_ANALYZER;\n+            }\n+            throw new IllegalArgumentException(\n+                String.format(\n+                    Locale.ENGLISH,\n+                    \"Column '%s' was indexed with the 'keyword' analyzer, searching with a different analyzer, '%s' is not supported\",\n+                    ref.column(),\n+                    searchAnalyzer\n+                )\n+            );\n         }\n-        return context.getAnalyzer(analyzerName);\n     }\n \n     public Query parse(Type type, String fieldName, Object value) {\n@@ -131,9 +156,7 @@ public class MatchQuery {\n             return newUnmappedFieldQuery(fieldName);\n         }\n         final String field = ref.storageIdent();\n-        Analyzer analyzer = ref instanceof IndexReference indexRef\n-            ? getAnalyzer(indexRef.analyzer())\n-            : this.analyzer;\n+        Analyzer analyzer = getSafeAnalyzer(ref);\n \n         /*\n          * If a keyword analyzer is used, we know that further analysis isn't\n"}
+One hunk still had an unprefixed blank line in the diff text. I’m correcting the patch formatting and continuing validation.
+[0m⚙ [0mvalidate {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","mode":"hunk","patch":"diff --git a/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java b/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java\n--- a/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java\n+++ b/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java\n@@ -109,21 +109,46 @@ public class MatchQuery {\n \n     protected final LuceneQueryBuilder.Context context;\n     protected final ParsedOptions parsedOptions;\n-    protected final Analyzer analyzer;\n \n \n     public MatchQuery(LuceneQueryBuilder.Context context, ParsedOptions parsedOptions) {\n         this.context = context;\n         this.parsedOptions = parsedOptions;\n-        this.analyzer = getAnalyzer(parsedOptions.analyzer());\n     }\n \n-    private Analyzer getAnalyzer(@Nullable String analyzerName) {\n-        if (analyzerName == null) {\n-            return Lucene.KEYWORD_ANALYZER;\n+    /**\n+     * Returns the analyzer that was used to index the given column, but throws an exception when the search-analyzer\n+     * specified in parse-options is different(from the index-analyzer).\n+     */\n+    protected Analyzer getSafeAnalyzer(Reference ref) {\n+        String searchAnalyzer = parsedOptions.analyzer();\n+        if (ref instanceof IndexReference indexRef) {\n+            if (searchAnalyzer == null || searchAnalyzer.equals(indexRef.analyzer())) {\n+                return context.getAnalyzer(indexRef.analyzer());\n+            }\n+            throw new IllegalArgumentException(\n+                String.format(\n+                    Locale.ENGLISH,\n+                    \"Column '%s' was indexed with the '%s' analyzer, searching with a different analyzer, '%s' is not supported\",\n+                    indexRef.column(),\n+                    indexRef.analyzer(),\n+                    searchAnalyzer\n+                )\n+            );\n+        } else {\n+            if (searchAnalyzer == null || searchAnalyzer.equals(\"keyword\")) {\n+                return Lucene.KEYWORD_ANALYZER;\n+            }\n+            throw new IllegalArgumentException(\n+                String.format(\n+                    Locale.ENGLISH,\n+                    \"Column '%s' was indexed with the 'keyword' analyzer, searching with a different analyzer, '%s' is not supported\",\n+                    ref.column(),\n+                    searchAnalyzer\n+                )\n+            );\n         }\n-        return context.getAnalyzer(analyzerName);\n     }\n \n     public Query parse(Type type, String fieldName, Object value) {\n"}
+I’ve validated the straightforward hunks and confirmed the Java targets. I’m applying the patch now, then I’ll use the generated `git diff` for exact hunk/full validation and commit.
+[0m% [0mPatch 6 files
+[0m
+[0m$ [0mgit diff -- docs/appendices/release-notes/5.9.13.rst docs/general/dql/fulltext.rst plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java server/src/main/java/org/elasticsearch/index/search/MatchQuery.java server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java
+warning: in the working copy of 'docs/appendices/release-notes/5.9.13.rst', LF will be replaced by CRLF the next time Git touches it
+diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst
+index 6bc7041825..51144cfd3f 100644
+--- a/docs/appendices/release-notes/5.9.13.rst
++++ b/docs/appendices/release-notes/5.9.13.rst
+@@ -66,3 +66,7 @@ Fixes
+   a complete partitioned table to not reset the setting on all partitions, but
+   only on the table itself, so the reset value of the setting would only have
+   taken effect for new partitions.
++
++- Fixed an issue that caused a ``MATCH`` query to silently override the
++  specified analyzer with the analyzer that was used to index the corresponding
++  column. Since this is not allowed, an error is now thrown.
+diff --git a/docs/general/dql/fulltext.rst b/docs/general/dql/fulltext.rst
+index a7386fc2aa..f5f1c4768f 100644
+--- a/docs/general/dql/fulltext.rst
++++ b/docs/general/dql/fulltext.rst
+@@ -64,11 +64,10 @@ relevant the row::
+     SELECT 2 rows in set (... sec)
+ 
+ The MATCH predicate in its simplest form performs a fulltext search against a
+-single column. It takes the ``query_term`` and, if no ``analyzer`` was
+-provided, analyzes the term with the analyzer configured on
+-``column_or_idx_ident``. The resulting tokens are then matched against the
+-index at ``column_or_idx_ident`` and if one of them matches, MATCH returns
+-``TRUE``.
++single column. It takes the ``query_term`` and analyzes the term with the
++analyzer configured on ``column_or_idx_ident``. The resulting tokens are then
++matched against the index at ``column_or_idx_ident`` and if one of them
++matches, MATCH returns ``TRUE``.
+ 
+ The MATCH predicate can be also used to perform a fulltext search on multiple
+ columns with a single ``query_term`` and to add weight to specific columns it's
+@@ -111,11 +110,9 @@ Arguments
+   The default boost is 1.
+ 
+ :query_term:
+-  This string is analyzed (using the explicitly given ``analyzer`` or
+-  the analyzer of the columns to perform the search on) and the
+-  resulting tokens are compared to the index. The tokens used for search
+-  are combined using the boolean ``OR`` operator unless stated otherwise
+-  using the ``operator`` option.
++  This string is analyzed and the resulting tokens are compared to the index.
++  The tokens used for search are combined using the boolean ``OR`` operator
++  unless stated otherwise using the ``operator`` option.
+ 
+ :match_type:
+   Optional. Defaults to ``best_fields`` for fulltext indices. For
+@@ -197,7 +194,9 @@ certain match type works. Not all options are applicable to all match types.
+ See the options below for details.
+ 
+ :analyzer:
+-  The analyzer used to convert the ``query_term`` into tokens.
++  The analyzer used to convert the ``query_term`` into tokens. Currently the
++  only acceptable analyzer is the one that is used to index the
++  ``column_or_idx_ident``.
+ 
+ :boost:
+   This numeric value is multiplied with the resulting :ref:`_score
+diff --git a/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java b/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java
+index a932d175fc..c7b6ed9f43 100644
+--- a/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java
++++ b/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java
+@@ -53,7 +53,7 @@ public class FulltextITest extends IntegTestCase {
+         execute("refresh table locations");
+ 
+         execute("select name, _score from locations where match((kind, name_description_ft), 'galaxy') " +
+-                "using best_fields with (analyzer='english') order by _score desc");
++                "using best_fields order by _score desc");
+         assertThat(response).hasRows(
+             "End of the Galaxy| 0.895417",
+             "Altair| 0.49754602",
+@@ -182,7 +182,7 @@ public class FulltextITest extends IntegTestCase {
+         this.setup.setUpLocationsWithFTIndex();
+         execute("refresh table locations");
+         execute("select name, description, kind, _score from locations " +
+-                "where match((kind, name_description_ft 0.5), 'Planet earth') using most_fields with (analyzer='english') order by _score desc");
++                "where match((kind, name_description_ft 0.5), 'Planet earth') using most_fields order by _score desc");
+         assertThat(response).hasRows(
+             "Alpha Centauri| 4.1 light-years northwest of earth| Star System| 0.57336456",
+             "Bartledan| An Earthlike planet on which Arthur Dent lived for a short time, Bartledan is inhabited by Bartledanians, a race that appears human but only physically.| Planet| 0.32080865",
+diff --git a/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java b/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java
+index 78a9bf367d..d1656decbd 100644
+--- a/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java
++++ b/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java
+@@ -25,6 +25,7 @@ import static org.elasticsearch.common.lucene.search.Queries.newUnmappedFieldQue
+ import java.io.IOException;
+ import java.util.ArrayList;
+ import java.util.List;
++import java.util.Locale;
+ 
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.lucene.analysis.Analyzer;
+@@ -56,7 +57,6 @@ import org.elasticsearch.common.logging.DeprecationLogger;
+ import org.elasticsearch.common.lucene.Lucene;
+ import org.elasticsearch.common.lucene.search.MultiPhrasePrefixQuery;
+ import org.elasticsearch.common.unit.Fuzziness;
+-import org.jetbrains.annotations.Nullable;
+ 
+ import io.crate.lucene.DisableGraphAttribute;
+ import io.crate.lucene.ExtendedCommonTermsQuery;
+@@ -109,20 +109,45 @@ public class MatchQuery {
+ 
+     protected final LuceneQueryBuilder.Context context;
+     protected final ParsedOptions parsedOptions;
+-    protected final Analyzer analyzer;
+ 
+ 
+     public MatchQuery(LuceneQueryBuilder.Context context, ParsedOptions parsedOptions) {
+         this.context = context;
+         this.parsedOptions = parsedOptions;
+-        this.analyzer = getAnalyzer(parsedOptions.analyzer());
+     }
+ 
+-    private Analyzer getAnalyzer(@Nullable String analyzerName) {
+-        if (analyzerName == null) {
+-            return Lucene.KEYWORD_ANALYZER;
++    /**
++     * Returns the analyzer that was used to index the given column, but throws an exception when the search-analyzer
++     * specified in parse-options is different(from the index-analyzer).
++     */
++    protected Analyzer getSafeAnalyzer(Reference ref) {
++        String searchAnalyzer = parsedOptions.analyzer();
++        if (ref instanceof IndexReference indexRef) {
++            if (searchAnalyzer == null || searchAnalyzer.equals(indexRef.analyzer())) {
++                return context.getAnalyzer(indexRef.analyzer());
++            }
++            throw new IllegalArgumentException(
++                String.format(
++                    Locale.ENGLISH,
++                    "Column '%s' was indexed with the '%s' analyzer, searching with a different analyzer, '%s' is not supported",
++                    indexRef.column(),
++                    indexRef.analyzer(),
++                    searchAnalyzer
++                )
++            );
++        } else {
++            if (searchAnalyzer == null || searchAnalyzer.equals("keyword")) {
++                return Lucene.KEYWORD_ANALYZER;
++            }
++            throw new IllegalArgumentException(
++                String.format(
++                    Locale.ENGLISH,
++                    "Column '%s' was indexed with the 'keyword' analyzer, searching with a different analyzer, '%s' is not supported",
++                    ref.column(),
++                    searchAnalyzer
++                )
++            );
+         }
+-        return context.getAnalyzer(analyzerName);
+     }
+ 
+     public Query parse(Type type, String fieldName, Object value) {
+@@ -131,9 +156,7 @@ public class MatchQuery {
+             return newUnmappedFieldQuery(fieldName);
+         }
+         final String field = ref.storageIdent();
+-        Analyzer analyzer = ref instanceof IndexReference indexRef
+-            ? getAnalyzer(indexRef.analyzer())
+-            : this.analyzer;
++        Analyzer analyzer = getSafeAnalyzer(ref);
+ 
+ warning: in the working copy of 'docs/general/dql/fulltext.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/org/elasticsearch/index/search/MatchQuery.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java', LF will be replaced by CRLF the next time Git touches it
+        /*
+          * If a keyword analyzer is used, we know that further analysis isn't
+diff --git a/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java b/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java
+index 14a65597b3..1eff40671c 100644
+--- a/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java
++++ b/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java
+@@ -35,14 +35,12 @@ import org.apache.lucene.search.Query;
+ import org.apache.lucene.search.TermQuery;
+ import org.apache.lucene.util.BytesRef;
+ import org.elasticsearch.ElasticsearchParseException;
+-import org.elasticsearch.common.lucene.Lucene;
+ import org.elasticsearch.common.lucene.search.Queries;
+ import org.elasticsearch.index.query.MultiMatchQueryType;
+ 
+ import io.crate.lucene.BlendedTermQuery;
+ import io.crate.lucene.LuceneQueryBuilder;
+ import io.crate.lucene.match.ParsedOptions;
+-import io.crate.metadata.IndexReference;
+ import io.crate.metadata.Reference;
+ 
+ public class MultiMatchQuery extends MatchQuery {
+@@ -152,18 +150,13 @@ public class MultiMatchQuery extends MatchQuery {
+                 String name = entry.getKey();
+                 Reference reference = context.getRef(name);
+                 if (reference != null) {
+-                    Analyzer actualAnalyzer;
+-                    if (reference instanceof IndexReference indexRef) {
+-                        actualAnalyzer = context.getAnalyzer(indexRef.analyzer());
+-                    } else {
+-                        actualAnalyzer = Lucene.KEYWORD_ANALYZER;
+-                    }
+-                    if (!groups.containsKey(actualAnalyzer)) {
+-                        groups.put(actualAnalyzer, new ArrayList<>());
++                    Analyzer analyzer = getSafeAnalyzer(reference);
++                    if (!groups.containsKey(analyzer)) {
++                        groups.put(analyzer, new ArrayList<>());
+                     }
+                     Float boost = entry.getValue();
+                     boost = boost == null ? Float.valueOf(1.0f) : boost;
+-                    groups.get(actualAnalyzer).add(new RefAndBoost(reference, boost));
++                    groups.get(analyzer).add(new RefAndBoost(reference, boost));
+                 } else {
+                     queries.add(new MatchNoDocsQuery("unknown field " + name));
+                 }
+diff --git a/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java b/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java
+index f27aeaea57..2459470512 100644
+--- a/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java
++++ b/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java
+@@ -831,4 +831,14 @@ public class CommonQueryBuilderTest extends LuceneQueryBuilderTest {
+         assertThat(query).isExactlyInstanceOf(GenericFunctionQuery.class);
+         assertThat(query).hasToString("(f = 0.99999999)");
+     }
++
++    @Test
++    public void test_cannot_query_index_ref_with_analyzer_that_is_not_used_to_index_with() {
++        assertThatThrownBy(() -> convert("match(name, 'foo') USING phrase WITH (analyzer='dummy')"))
++            .isExactlyInstanceOf(IllegalArgumentException.class)
++            .hasMessage("Column 'name' was indexed with the 'keyword' analyzer, searching with a different analyzer, 'dummy' is not supported");
++        assertThatThrownBy(() -> convert("match(tags, 'foo') USING phrase WITH (analyzer='dummy')"))
++            .isExactlyInstanceOf(IllegalArgumentException.class)
++            .hasMessage("Column 'tags' was indexed with the 'standard' analyzer, searching with a different analyzer, 'dummy' is not supported");
++    }
+ }
+[0m
+[0m$ [0mgit diff --no-color -- docs/appendices/release-notes/5.9.13.rst docs/general/dql/fulltext.rst plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java server/src/main/java/org/elasticsearch/index/search/MatchQuery.java server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java 2>$null
+diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst
+index 6bc7041825..51144cfd3f 100644
+--- a/docs/appendices/release-notes/5.9.13.rst
++++ b/docs/appendices/release-notes/5.9.13.rst
+@@ -66,3 +66,7 @@ Fixes
+   a complete partitioned table to not reset the setting on all partitions, but
+   only on the table itself, so the reset value of the setting would only have
+   taken effect for new partitions.
++
++- Fixed an issue that caused a ``MATCH`` query to silently override the
++  specified analyzer with the analyzer that was used to index the corresponding
++  column. Since this is not allowed, an error is now thrown.
+diff --git a/docs/general/dql/fulltext.rst b/docs/general/dql/fulltext.rst
+index a7386fc2aa..f5f1c4768f 100644
+--- a/docs/general/dql/fulltext.rst
++++ b/docs/general/dql/fulltext.rst
+@@ -64,11 +64,10 @@ relevant the row::
+     SELECT 2 rows in set (... sec)
+ 
+ The MATCH predicate in its simplest form performs a fulltext search against a
+-single column. It takes the ``query_term`` and, if no ``analyzer`` was
+-provided, analyzes the term with the analyzer configured on
+-``column_or_idx_ident``. The resulting tokens are then matched against the
+-index at ``column_or_idx_ident`` and if one of them matches, MATCH returns
+-``TRUE``.
++single column. It takes the ``query_term`` and analyzes the term with the
++analyzer configured on ``column_or_idx_ident``. The resulting tokens are then
++matched against the index at ``column_or_idx_ident`` and if one of them
++matches, MATCH returns ``TRUE``.
+ 
+ The MATCH predicate can be also used to perform a fulltext search on multiple
+ columns with a single ``query_term`` and to add weight to specific columns it's
+@@ -111,11 +110,9 @@ Arguments
+   The default boost is 1.
+ 
+ :query_term:
+-  This string is analyzed (using the explicitly given ``analyzer`` or
+-  the analyzer of the columns to perform the search on) and the
+-  resulting tokens are compared to the index. The tokens used for search
+-  are combined using the boolean ``OR`` operator unless stated otherwise
+-  using the ``operator`` option.
++  This string is analyzed and the resulting tokens are compared to the index.
++  The tokens used for search are combined using the boolean ``OR`` operator
++  unless stated otherwise using the ``operator`` option.
+ 
+ :match_type:
+   Optional. Defaults to ``best_fields`` for fulltext indices. For
+@@ -197,7 +194,9 @@ certain match type works. Not all options are applicable to all match types.
+ See the options below for details.
+ 
+ :analyzer:
+-  The analyzer used to convert the ``query_term`` into tokens.
++  The analyzer used to convert the ``query_term`` into tokens. Currently the
++  only acceptable analyzer is the one that is used to index the
++  ``column_or_idx_ident``.
+ 
+ :boost:
+   This numeric value is multiplied with the resulting :ref:`_score
+diff --git a/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java b/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java
+index a932d175fc..c7b6ed9f43 100644
+--- a/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java
++++ b/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java
+@@ -53,7 +53,7 @@ public class FulltextITest extends IntegTestCase {
+         execute("refresh table locations");
+ 
+         execute("select name, _score from locations where match((kind, name_description_ft), 'galaxy') " +
+-                "using best_fields with (analyzer='english') order by _score desc");
++                "using best_fields order by _score desc");
+         assertThat(response).hasRows(
+             "End of the Galaxy| 0.895417",
+             "Altair| 0.49754602",
+@@ -182,7 +182,7 @@ public class FulltextITest extends IntegTestCase {
+         this.setup.setUpLocationsWithFTIndex();
+         execute("refresh table locations");
+         execute("select name, description, kind, _score from locations " +
+-                "where match((kind, name_description_ft 0.5), 'Planet earth') using most_fields with (analyzer='english') order by _score desc");
++                "where match((kind, name_description_ft 0.5), 'Planet earth') using most_fields order by _score desc");
+         assertThat(response).hasRows(
+             "Alpha Centauri| 4.1 light-years northwest of earth| Star System| 0.57336456",
+             "Bartledan| An Earthlike planet on which Arthur Dent lived for a short time, Bartledan is inhabited by Bartledanians, a race that appears human but only physically.| Planet| 0.32080865",
+diff --git a/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java b/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java
+index 78a9bf367d..d1656decbd 100644
+--- a/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java
++++ b/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java
+@@ -25,6 +25,7 @@ import static org.elasticsearch.common.lucene.search.Queries.newUnmappedFieldQue
+ import java.io.IOException;
+ import java.util.ArrayList;
+ import java.util.List;
++import java.util.Locale;
+ 
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.lucene.analysis.Analyzer;
+@@ -56,7 +57,6 @@ import org.elasticsearch.common.logging.DeprecationLogger;
+ import org.elasticsearch.common.lucene.Lucene;
+ import org.elasticsearch.common.lucene.search.MultiPhrasePrefixQuery;
+ import org.elasticsearch.common.unit.Fuzziness;
+-import org.jetbrains.annotations.Nullable;
+ 
+ import io.crate.lucene.DisableGraphAttribute;
+ import io.crate.lucene.ExtendedCommonTermsQuery;
+@@ -109,20 +109,45 @@ public class MatchQuery {
+ 
+     protected final LuceneQueryBuilder.Context context;
+     protected final ParsedOptions parsedOptions;
+-    protected final Analyzer analyzer;
+ 
+ 
+     public MatchQuery(LuceneQueryBuilder.Context context, ParsedOptions parsedOptions) {
+         this.context = context;
+         this.parsedOptions = parsedOptions;
+-        this.analyzer = getAnalyzer(parsedOptions.analyzer());
+     }
+ 
+-    private Analyzer getAnalyzer(@Nullable String analyzerName) {
+-        if (analyzerName == null) {
+-            return Lucene.KEYWORD_ANALYZER;
++    /**
++     * Returns the analyzer that was used to index the given column, but throws an exception when the search-analyzer
++     * specified in parse-options is different(from the index-analyzer).
++     */
++    protected Analyzer getSafeAnalyzer(Reference ref) {
++        String searchAnalyzer = parsedOptions.analyzer();
++        if (ref instanceof IndexReference indexRef) {
++            if (searchAnalyzer == null || searchAnalyzer.equals(indexRef.analyzer())) {
++                return context.getAnalyzer(indexRef.analyzer());
++            }
++            throw new IllegalArgumentException(
++                String.format(
++                    Locale.ENGLISH,
++                    "Column '%s' was indexed with the '%s' analyzer, searching with a different analyzer, '%s' is not supported",
++                    indexRef.column(),
++                    indexRef.analyzer(),
++                    searchAnalyzer
++                )
++            );
++        } else {
++            if (searchAnalyzer == null || searchAnalyzer.equals("keyword")) {
++                return Lucene.KEYWORD_ANALYZER;
++            }
++            throw new IllegalArgumentException(
++                String.format(
++                    Locale.ENGLISH,
++                    "Column '%s' was indexed with the 'keyword' analyzer, searching with a different analyzer, '%s' is not supported",
++                    ref.column(),
++                    searchAnalyzer
++                )
++            );
+         }
+-        return context.getAnalyzer(analyzerName);
+     }
+ 
+     public Query parse(Type type, String fieldName, Object value) {
+@@ -131,9 +156,7 @@ public class MatchQuery {
+             return newUnmappedFieldQuery(fieldName);
+         }
+         final String field = ref.storageIdent();
+-        Analyzer analyzer = ref instanceof IndexReference indexRef
+-            ? getAnalyzer(indexRef.analyzer())
+-            : this.analyzer;
++        Analyzer analyzer = getSafeAnalyzer(ref);
+ 
+         /*
+          * If a keyword analyzer is used, we know that further analysis isn't
+diff --git a/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java b/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java
+index 14a65597b3..1eff40671c 100644
+--- a/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java
++++ b/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java
+@@ -35,14 +35,12 @@ import org.apache.lucene.search.Query;
+ import org.apache.lucene.search.TermQuery;
+ import org.apache.lucene.util.BytesRef;
+ import org.elasticsearch.ElasticsearchParseException;
+-import org.elasticsearch.common.lucene.Lucene;
+ import org.elasticsearch.common.lucene.search.Queries;
+ import org.elasticsearch.index.query.MultiMatchQueryType;
+ 
+ import io.crate.lucene.BlendedTermQuery;
+ import io.crate.lucene.LuceneQueryBuilder;
+ import io.crate.lucene.match.ParsedOptions;
+-import io.crate.metadata.IndexReference;
+ import io.crate.metadata.Reference;
+ 
+ public class MultiMatchQuery extends MatchQuery {
+@@ -152,18 +150,13 @@ public class MultiMatchQuery extends MatchQuery {
+                 String name = entry.getKey();
+                 Reference reference = context.getRef(name);
+                 if (reference != null) {
+-                    Analyzer actualAnalyzer;
+-                    if (reference instanceof IndexReference indexRef) {
+-                        actualAnalyzer = context.getAnalyzer(indexRef.analyzer());
+-                    } else {
+-                        actualAnalyzer = Lucene.KEYWORD_ANALYZER;
+-                    }
+-                    if (!groups.containsKey(actualAnalyzer)) {
+-                        groups.put(actualAnalyzer, new ArrayList<>());
++                    Analyzer analyzer = getSafeAnalyzer(reference);
++                    if (!groups.containsKey(analyzer)) {
++                        groups.put(analyzer, new ArrayList<>());
+                     }
+                     Float boost = entry.getValue();
+                     boost = boost == null ? Float.valueOf(1.0f) : boost;
+-                    groups.get(actualAnalyzer).add(new RefAndBoost(reference, boost));
++                    groups.get(analyzer).add(new RefAndBoost(reference, boost));
+                 } else {
+                     queries.add(new MatchNoDocsQuery("unknown field " + name));
+                 }
+diff --git a/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java b/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java
+index f27aeaea57..2459470512 100644
+--- a/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java
++++ b/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java
+@@ -831,4 +831,14 @@ public class CommonQueryBuilderTest extends LuceneQueryBuilderTest {
+         assertThat(query).isExactlyInstanceOf(GenericFunctionQuery.class);
+         assertThat(query).hasToString("(f = 0.99999999)");
+     }
++
++    @Test
++    public void test_cannot_query_index_ref_with_analyzer_that_is_not_used_to_index_with() {
++        assertThatThrownBy(() -> convert("match(name, 'foo') USING phrase WITH (analyzer='dummy')"))
++            .isExactlyInstanceOf(IllegalArgumentException.class)
++            .hasMessage("Column 'name' was indexed with the 'keyword' analyzer, searching with a different analyzer, 'dummy' is not supported");
++        assertThatThrownBy(() -> convert("match(tags, 'foo') USING phrase WITH (analyzer='dummy')"))
++            .isExactlyInstanceOf(IllegalArgumentException.class)
++            .hasMessage("Column 'tags' was indexed with the 'standard' analyzer, searching with a different analyzer, 'dummy' is not supported");
++    }
+ }
+[0m
+The generated diff now matches the intended backport. I’m running validation against the target ref before committing.
+[0m⚙ [0mvalidate {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst\nindex 6bc7041825..51144cfd3f 100644\n--- a/docs/appendices/release-notes/5.9.13.rst\n+++ b/docs/appendices/release-notes/5.9.13.rst\n@@ -66,3 +66,7 @@ Fixes\n   a complete partitioned table to not reset the setting on all partitions, but\n   only on the table itself, so the reset value of the setting would only have\n   taken effect for new partitions.\n+\n+- Fixed an issue that caused a ``MATCH`` query to silently override the\n+  specified analyzer with the analyzer that was used to index the corresponding\n+  column. Since this is not allowed, an error is now thrown.\ndiff --git a/docs/general/dql/fulltext.rst b/docs/general/dql/fulltext.rst\nindex a7386fc2aa..f5f1c4768f 100644\n--- a/docs/general/dql/fulltext.rst\n+++ b/docs/general/dql/fulltext.rst\n@@ -64,11 +64,10 @@ relevant the row::\n     SELECT 2 rows in set (... sec)\n \n The MATCH predicate in its simplest form performs a fulltext search against a\n-single column. It takes the ``query_term`` and, if no ``analyzer`` was\n-provided, analyzes the term with the analyzer configured on\n-``column_or_idx_ident``. The resulting tokens are then matched against the\n-index at ``column_or_idx_ident`` and if one of them matches, MATCH returns\n-``TRUE``.\n+single column. It takes the ``query_term`` and analyzes the term with the\n+analyzer configured on ``column_or_idx_ident``. The resulting tokens are then\n+matched against the index at ``column_or_idx_ident`` and if one of them\n+matches, MATCH returns ``TRUE``.\n \n The MATCH predicate can be also used to perform a fulltext search on multiple\n columns with a single ``query_term`` and to add weight to specific columns it's\n@@ -111,11 +110,9 @@ Arguments\n   The default boost is 1.\n \n :query_term:\n-  This string is analyzed (using the explicitly given ``analyzer`` or\n-  the analyzer of the columns to perform the search on) and the\n-  resulting tokens are compared to the index. The tokens used for search\n-  are combined using the boolean ``OR`` operator unless stated otherwise\n-  using the ``operator`` option.\n+  This string is analyzed and the resulting tokens are compared to the index.\n+  The tokens used for search are combined using the boolean ``OR`` operator\n+  unless stated otherwise using the ``operator`` option.\n \n :match_type:\n   Optional. Defaults to ``best_fields`` for fulltext indices. For\n@@ -197,7 +194,9 @@ certain match type works. Not all options are applicable to all match types.\n See the options below for details.\n \n :analyzer:\n-  The analyzer used to convert the ``query_term`` into tokens.\n+  The analyzer used to convert the ``query_term`` into tokens. Currently the\n+  only acceptable analyzer is the one that is used to index the\n+  ``column_or_idx_ident``.\n \n :boost:\n   This numeric value is multiplied with the resulting :ref:`_score\ndiff --git a/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java b/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java\nindex a932d175fc..c7b6ed9f43 100644\n--- a/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java\n+++ b/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java\n@@ -53,7 +53,7 @@ public class FulltextITest extends IntegTestCase {\n         execute(\"refresh table locations\");\n \n         execute(\"select name, _score from locations where match((kind, name_description_ft), 'galaxy') \" +\n-                \"using best_fields with (analyzer='english') order by _score desc\");\n+                \"using best_fields order by _score desc\");\n         assertThat(response).hasRows(\n             \"End of the Galaxy| 0.895417\",\n             \"Altair| 0.49754602\",\n@@ -182,7 +182,7 @@ public class FulltextITest extends IntegTestCase {\n         this.setup.setUpLocationsWithFTIndex();\n         execute(\"refresh table locations\");\n         execute(\"select name, description, kind, _score from locations \" +\n-                \"where match((kind, name_description_ft 0.5), 'Planet earth') using most_fields with (analyzer='english') order by _score desc\");\n+                \"where match((kind, name_description_ft 0.5), 'Planet earth') using most_fields order by _score desc\");\n         assertThat(response).hasRows(\n             \"Alpha Centauri| 4.1 light-years northwest of earth| Star System| 0.57336456\",\n             \"Bartledan| An Earthlike planet on which Arthur Dent lived for a short time, Bartledan is inhabited by Bartledanians, a race that appears human but only physically.| Planet| 0.32080865\",\ndiff --git a/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java b/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java\nindex 78a9bf367d..d1656decbd 100644\n--- a/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java\n+++ b/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java\n@@ -25,6 +25,7 @@ import static org.elasticsearch.common.lucene.search.Queries.newUnmappedFieldQue\n import java.io.IOException;\n import java.util.ArrayList;\n import java.util.List;\n+import java.util.Locale;\n \n import org.apache.logging.log4j.LogManager;\n import org.apache.lucene.analysis.Analyzer;\n@@ -56,7 +57,6 @@ import org.elasticsearch.common.logging.DeprecationLogger;\n import org.elasticsearch.common.lucene.Lucene;\n import org.elasticsearch.common.lucene.search.MultiPhrasePrefixQuery;\n import org.elasticsearch.common.unit.Fuzziness;\n-import org.jetbrains.annotations.Nullable;\n \n import io.crate.lucene.DisableGraphAttribute;\n import io.crate.lucene.ExtendedCommonTermsQuery;\n@@ -109,20 +109,45 @@ public class MatchQuery {\n \n     protected final LuceneQueryBuilder.Context context;\n     protected final ParsedOptions parsedOptions;\n-    protected final Analyzer analyzer;\n \n \n     public MatchQuery(LuceneQueryBuilder.Context context, ParsedOptions parsedOptions) {\n         this.context = context;\n         this.parsedOptions = parsedOptions;\n-        this.analyzer = getAnalyzer(parsedOptions.analyzer());\n     }\n \n-    private Analyzer getAnalyzer(@Nullable String analyzerName) {\n-        if (analyzerName == null) {\n-            return Lucene.KEYWORD_ANALYZER;\n+    /**\n+     * Returns the analyzer that was used to index the given column, but throws an exception when the search-analyzer\n+     * specified in parse-options is different(from the index-analyzer).\n+     */\n+    protected Analyzer getSafeAnalyzer(Reference ref) {\n+        String searchAnalyzer = parsedOptions.analyzer();\n+        if (ref instanceof IndexReference indexRef) {\n+            if (searchAnalyzer == null || searchAnalyzer.equals(indexRef.analyzer())) {\n+                return context.getAnalyzer(indexRef.analyzer());\n+            }\n+            throw new IllegalArgumentException(\n+                String.format(\n+                    Locale.ENGLISH,\n+                    \"Column '%s' was indexed with the '%s' analyzer, searching with a different analyzer, '%s' is not supported\",\n+                    indexRef.column(),\n+                    indexRef.analyzer(),\n+                    searchAnalyzer\n+                )\n+            );\n+        } else {\n+            if (searchAnalyzer == null || searchAnalyzer.equals(\"keyword\")) {\n+                return Lucene.KEYWORD_ANALYZER;\n+            }\n+            throw new IllegalArgumentException(\n+                String.format(\n+                    Locale.ENGLISH,\n+                    \"Column '%s' was indexed with the 'keyword' analyzer, searching with a different analyzer, '%s' is not supported\",\n+                    ref.column(),\n+                    searchAnalyzer\n+                )\n+            );\n         }\n-        return context.getAnalyzer(analyzerName);\n     }\n \n     public Query parse(Type type, String fieldName, Object value) {\n@@ -131,9 +156,7 @@ public class MatchQuery {\n             return newUnmappedFieldQuery(fieldName);\n         }\n         final String field = ref.storageIdent();\n-        Analyzer analyzer = ref instanceof IndexReference indexRef\n-            ? getAnalyzer(indexRef.analyzer())\n-            : this.analyzer;\n+        Analyzer analyzer = getSafeAnalyzer(ref);\n \n         /*\n          * If a keyword analyzer is used, we know that further analysis isn't\ndiff --git a/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java b/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java\nindex 14a65597b3..1eff40671c 100644\n--- a/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java\n+++ b/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java\n@@ -35,14 +35,12 @@ import org.apache.lucene.search.Query;\n import org.apache.lucene.search.TermQuery;\n import org.apache.lucene.util.BytesRef;\n import org.elasticsearch.ElasticsearchParseException;\n-import org.elasticsearch.common.lucene.Lucene;\n import org.elasticsearch.common.lucene.search.Queries;\n import org.elasticsearch.index.query.MultiMatchQueryType;\n \n import io.crate.lucene.BlendedTermQuery;\n import io.crate.lucene.LuceneQueryBuilder;\n import io.crate.lucene.match.ParsedOptions;\n-import io.crate.metadata.IndexReference;\n import io.crate.metadata.Reference;\n \n public class MultiMatchQuery extends MatchQuery {\n@@ -152,18 +150,13 @@ public class MultiMatchQuery extends MatchQuery {\n                 String name = entry.getKey();\n                 Reference reference = context.getRef(name);\n                 if (reference != null) {\n-                    Analyzer actualAnalyzer;\n-                    if (reference instanceof IndexReference indexRef) {\n-                        actualAnalyzer = context.getAnalyzer(indexRef.analyzer());\n-                    } else {\n-                        actualAnalyzer = Lucene.KEYWORD_ANALYZER;\n-                    }\n-                    if (!groups.containsKey(actualAnalyzer)) {\n-                        groups.put(actualAnalyzer, new ArrayList<>());\n+                    Analyzer analyzer = getSafeAnalyzer(reference);\n+                    if (!groups.containsKey(analyzer)) {\n+                        groups.put(analyzer, new ArrayList<>());\n                     }\n                     Float boost = entry.getValue();\n                     boost = boost == null ? Float.valueOf(1.0f) : boost;\n-                    groups.get(actualAnalyzer).add(new RefAndBoost(reference, boost));\n+                    groups.get(analyzer).add(new RefAndBoost(reference, boost));\n                 } else {\n                     queries.add(new MatchNoDocsQuery(\"unknown field \" + name));\n                 }\ndiff --git a/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java b/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java\nindex f27aeaea57..2459470512 100644\n--- a/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java\n+++ b/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java\n@@ -831,4 +831,14 @@ public class CommonQueryBuilderTest extends LuceneQueryBuilderTest {\n         assertThat(query).isExactlyInstanceOf(GenericFunctionQuery.class);\n         assertThat(query).hasToString(\"(f = 0.99999999)\");\n     }\n+\n+    @Test\n+    public void test_cannot_query_index_ref_with_analyzer_that_is_not_used_to_index_with() {\n+        assertThatThrownBy(() -> convert(\"match(name, 'foo') USING phrase WITH (analyzer='dummy')\"))\n+            .isExactlyInstanceOf(IllegalArgumentException.class)\n+            .hasMessage(\"Column 'name' was indexed with the 'keyword' analyzer, searching with a different analyzer, 'dummy' is not supported\");\n+        assertThatThrownBy(() -> convert(\"match(tags, 'foo') USING phrase WITH (analyzer='dummy')\"))\n+            .isExactlyInstanceOf(IllegalArgumentException.class)\n+            .hasMessage(\"Column 'tags' was indexed with the 'standard' analyzer, searching with a different analyzer, 'dummy' is not supported\");\n+    }\n }\n"}
+[0m⚙ [0mvalidate {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","mode":"hunk","revise_context":true,"patch":"diff --git a/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java b/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java\nindex 14a65597b3..1eff40671c 100644\n--- a/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java\n+++ b/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java\n@@ -35,14 +35,12 @@ import org.apache.lucene.search.Query;\n import org.apache.lucene.search.TermQuery;\n import org.apache.lucene.util.BytesRef;\n import org.elasticsearch.ElasticsearchParseException;\n-import org.elasticsearch.common.lucene.Lucene;\n import org.elasticsearch.common.lucene.search.Queries;\n import org.elasticsearch.index.query.MultiMatchQueryType;\n \n import io.crate.lucene.BlendedTermQuery;\n import io.crate.lucene.LuceneQueryBuilder;\n import io.crate.lucene.match.ParsedOptions;\n-import io.crate.metadata.IndexReference;\n import io.crate.metadata.Reference;\n \n public class MultiMatchQuery extends MatchQuery {\n"}
+[0m⚙ [0mvalidate {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","mode":"hunk","patch":"diff --git a/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java b/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java\n--- a/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java\n+++ b/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java\n@@ -35,14 +35,12 @@ import org.apache.lucene.search.Query;\n import org.apache.lucene.search.TermQuery;\n import org.apache.lucene.util.BytesRef;\n import org.elasticsearch.ElasticsearchParseException;\n-import org.elasticsearch.common.lucene.Lucene;\n import org.elasticsearch.common.lucene.search.Queries;\n import org.elasticsearch.index.query.MultiMatchQueryType;\n \n import io.crate.lucene.BlendedTermQuery;\n import io.crate.lucene.LuceneQueryBuilder;\n import io.crate.lucene.match.ParsedOptions;\n-import io.crate.metadata.IndexReference;\n import io.crate.metadata.Reference;\n \n public class MultiMatchQuery extends MatchQuery {\n"}
+[0m⚙ [0mvalidate {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","mode":"hunk","patch":"diff --git a/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java b/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java\n--- a/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java\n+++ b/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java\n@@ -32,18 +32,16 @@ import org.apache.lucene.search.MatchNoDocsQuery;\n import org.apache.lucene.search.PhraseQuery;\n import org.apache.lucene.search.Query;\n import org.apache.lucene.search.TermQuery;\n import org.apache.lucene.util.BytesRef;\n import org.elasticsearch.ElasticsearchParseException;\n-import org.elasticsearch.common.lucene.Lucene;\n import org.elasticsearch.common.lucene.search.Queries;\n import org.elasticsearch.index.query.MultiMatchQueryType;\n \n import io.crate.lucene.BlendedTermQuery;\n import io.crate.lucene.LuceneQueryBuilder;\n import io.crate.lucene.match.ParsedOptions;\n-import io.crate.metadata.IndexReference;\n import io.crate.metadata.Reference;\n \n public class MultiMatchQuery extends MatchQuery {\n \n     public MultiMatchQuery(LuceneQueryBuilder.Context context, ParsedOptions parsedOptions) {\n"}
+The validator is reporting context mismatches despite 100% matching blocks, likely due its hunk-context handling on these generated diffs. The working tree contains the intended patch, so I’m running the relevant unit test before committing.
+[0m
+[0m$ [0m& ".\gradlew.bat" ":server:test" "--tests" "io.crate.lucene.CommonQueryBuilderTest"
+& : The term '.\gradlew.bat' is not recognized as the name of a cmdlet, function, script file, or operable program. 
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:3
++ & ".\gradlew.bat" ":server:test" "--tests" "io.crate.lucene.CommonQue ...
++   ~~~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (.\gradlew.bat:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+[0m
+[0m✱ [0mGlob "gradlew*"[90m 0 matches[0m
+[0m✱ [0mGlob "mvnw*"[90m 2 matches[0m
+[0m
+[0m$ [0mgit status --short
+M docs/appendices/release-notes/5.9.13.rst
+ M docs/general/dql/fulltext.rst
+ M plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java
+ M server/src/main/java/org/elasticsearch/index/search/MatchQuery.java
+ M server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java
+ M server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java
+?? tags
+[0m
+This checkout uses Maven (`mvnw.cmd`), not Gradle. I’m switching to the Maven test command for the affected server test.
+[0m$ [0m& ".\mvnw.cmd" "-pl" "server" "-Dtest=io.crate.lucene.CommonQueryBuilderTest" "test"
+Error: JAVA_HOME not found in your environment. 
+Please set the JAVA_HOME variable in your environment to match the 
+location of your Java installation.
+[0m
+Targeted test execution is blocked because `JAVA_HOME` is not set in this environment. I’ll still commit the backport after inspecting the final diff and staging only the intended files.
+[0m$ [0mgit log --oneline -10
+c2d3f9c775 Adapt max size for internal paged requests based on downstream nodes
+0c10301566 Fix ALTER TABLE RESET to reset the setting on all partitions
+7c9bedf5f4 Run linkcheck/vale only on doc changes
+31233e8be0 Fix cla-check.yml
+03b5d43953 Update cla-check.yml to use cla-check repo instead of .github
+8630ac6d78 Create cla-check.yml
+eeb690a6dd Fix for missing jobs_log entries when jobs submitted via pgwire's simpleQuery failed
+f14704e648 Fix create shard lock retry logic
+4c04b95e27 Fix NPE queries on `sys.allocations` if no master is discovered
+aaf36ff48e Bump version to 5.9.13-SNAPSHOT
+[0m
+[0m$ [0mgit status --short
+M docs/appendices/release-notes/5.9.13.rst
+ M docs/general/dql/fulltext.rst
+ M plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java
+ M server/src/main/java/org/elasticsearch/index/search/MatchQuery.java
+ M server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java
+ M server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java
+?? tags
+[0m
+Staging the six backport files only; the existing untracked `tags` file is unrelated and will remain uncommitted.
+[0m$ [0mgit add -- "docs/appendices/release-notes/5.9.13.rst" "docs/general/dql/fulltext.rst" "plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java" "server/src/main/java/org/elasticsearch/index/search/MatchQuery.java" "server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java" "server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java"; if ($?) { git commit -m "Verify analyzer in MATCH queries" }
+warning: in the working copy of 'docs/appendices/release-notes/5.9.13.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/general/dql/fulltext.rst', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/org/elasticsearch/index/search/MatchQuery.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java', LF will be replaced by CRLF the next time Git touches it
+[detached HEAD 5894d9bfb4] Verify analyzer in MATCH queries
+ 6 files changed, 63 insertions(+), 34 deletions(-)
+[0m
+[0m$ [0mgit diff --no-color "c2d3f9c775cf2148c42f220977c92e5403001936" HEAD 2>$null
+diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst
+index 6bc7041825..51144cfd3f 100644
+--- a/docs/appendices/release-notes/5.9.13.rst
++++ b/docs/appendices/release-notes/5.9.13.rst
+@@ -66,3 +66,7 @@ Fixes
+   a complete partitioned table to not reset the setting on all partitions, but
+   only on the table itself, so the reset value of the setting would only have
+   taken effect for new partitions.
++
++- Fixed an issue that caused a ``MATCH`` query to silently override the
++  specified analyzer with the analyzer that was used to index the corresponding
++  column. Since this is not allowed, an error is now thrown.
+diff --git a/docs/general/dql/fulltext.rst b/docs/general/dql/fulltext.rst
+index a7386fc2aa..f5f1c4768f 100644
+--- a/docs/general/dql/fulltext.rst
++++ b/docs/general/dql/fulltext.rst
+@@ -64,11 +64,10 @@ relevant the row::
+     SELECT 2 rows in set (... sec)
+ 
+ The MATCH predicate in its simplest form performs a fulltext search against a
+-single column. It takes the ``query_term`` and, if no ``analyzer`` was
+-provided, analyzes the term with the analyzer configured on
+-``column_or_idx_ident``. The resulting tokens are then matched against the
+-index at ``column_or_idx_ident`` and if one of them matches, MATCH returns
+-``TRUE``.
++single column. It takes the ``query_term`` and analyzes the term with the
++analyzer configured on ``column_or_idx_ident``. The resulting tokens are then
++matched against the index at ``column_or_idx_ident`` and if one of them
++matches, MATCH returns ``TRUE``.
+ 
+ The MATCH predicate can be also used to perform a fulltext search on multiple
+ columns with a single ``query_term`` and to add weight to specific columns it's
+@@ -111,11 +110,9 @@ Arguments
+   The default boost is 1.
+ 
+ :query_term:
+-  This string is analyzed (using the explicitly given ``analyzer`` or
+-  the analyzer of the columns to perform the search on) and the
+-  resulting tokens are compared to the index. The tokens used for search
+-  are combined using the boolean ``OR`` operator unless stated otherwise
+-  using the ``operator`` option.
++  This string is analyzed and the resulting tokens are compared to the index.
++  The tokens used for search are combined using the boolean ``OR`` operator
++  unless stated otherwise using the ``operator`` option.
+ 
+ :match_type:
+   Optional. Defaults to ``best_fields`` for fulltext indices. For
+@@ -197,7 +194,9 @@ certain match type works. Not all options are applicable to all match types.
+ See the options below for details.
+ 
+ :analyzer:
+-  The analyzer used to convert the ``query_term`` into tokens.
++  The analyzer used to convert the ``query_term`` into tokens. Currently the
++  only acceptable analyzer is the one that is used to index the
++  ``column_or_idx_ident``.
+ 
+ :boost:
+   This numeric value is multiplied with the resulting :ref:`_score
+diff --git a/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java b/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java
+index a932d175fc..c7b6ed9f43 100644
+--- a/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java
++++ b/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java
+@@ -53,7 +53,7 @@ public class FulltextITest extends IntegTestCase {
+         execute("refresh table locations");
+ 
+         execute("select name, _score from locations where match((kind, name_description_ft), 'galaxy') " +
+-                "using best_fields with (analyzer='english') order by _score desc");
++                "using best_fields order by _score desc");
+         assertThat(response).hasRows(
+             "End of the Galaxy| 0.895417",
+             "Altair| 0.49754602",
+@@ -182,7 +182,7 @@ public class FulltextITest extends IntegTestCase {
+         this.setup.setUpLocationsWithFTIndex();
+         execute("refresh table locations");
+         execute("select name, description, kind, _score from locations " +
+-                "where match((kind, name_description_ft 0.5), 'Planet earth') using most_fields with (analyzer='english') order by _score desc");
++                "where match((kind, name_description_ft 0.5), 'Planet earth') using most_fields order by _score desc");
+         assertThat(response).hasRows(
+             "Alpha Centauri| 4.1 light-years northwest of earth| Star System| 0.57336456",
+             "Bartledan| An Earthlike planet on which Arthur Dent lived for a short time, Bartledan is inhabited by Bartledanians, a race that appears human but only physically.| Planet| 0.32080865",
+diff --git a/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java b/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java
+index 78a9bf367d..d1656decbd 100644
+--- a/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java
++++ b/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java
+@@ -25,6 +25,7 @@ import static org.elasticsearch.common.lucene.search.Queries.newUnmappedFieldQue
+ import java.io.IOException;
+ import java.util.ArrayList;
+ import java.util.List;
++import java.util.Locale;
+ 
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.lucene.analysis.Analyzer;
+@@ -56,7 +57,6 @@ import org.elasticsearch.common.logging.DeprecationLogger;
+ import org.elasticsearch.common.lucene.Lucene;
+ import org.elasticsearch.common.lucene.search.MultiPhrasePrefixQuery;
+ import org.elasticsearch.common.unit.Fuzziness;
+-import org.jetbrains.annotations.Nullable;
+ 
+ import io.crate.lucene.DisableGraphAttribute;
+ import io.crate.lucene.ExtendedCommonTermsQuery;
+@@ -109,20 +109,45 @@ public class MatchQuery {
+ 
+     protected final LuceneQueryBuilder.Context context;
+     protected final ParsedOptions parsedOptions;
+-    protected final Analyzer analyzer;
+ 
+ 
+     public MatchQuery(LuceneQueryBuilder.Context context, ParsedOptions parsedOptions) {
+         this.context = context;
+         this.parsedOptions = parsedOptions;
+-        this.analyzer = getAnalyzer(parsedOptions.analyzer());
+     }
+ 
+-    private Analyzer getAnalyzer(@Nullable String analyzerName) {
+-        if (analyzerName == null) {
+-            return Lucene.KEYWORD_ANALYZER;
++    /**
++     * Returns the analyzer that was used to index the given column, but throws an exception when the search-analyzer
++     * specified in parse-options is different(from the index-analyzer).
++     */
++    protected Analyzer getSafeAnalyzer(Reference ref) {
++        String searchAnalyzer = parsedOptions.analyzer();
++        if (ref instanceof IndexReference indexRef) {
++            if (searchAnalyzer == null || searchAnalyzer.equals(indexRef.analyzer())) {
++                return context.getAnalyzer(indexRef.analyzer());
++            }
++            throw new IllegalArgumentException(
++                String.format(
++                    Locale.ENGLISH,
++                    "Column '%s' was indexed with the '%s' analyzer, searching with a different analyzer, '%s' is not supported",
++                    indexRef.column(),
++                    indexRef.analyzer(),
++                    searchAnalyzer
++                )
++            );
++        } else {
++            if (searchAnalyzer == null || searchAnalyzer.equals("keyword")) {
++                return Lucene.KEYWORD_ANALYZER;
++            }
++            throw new IllegalArgumentException(
++                String.format(
++                    Locale.ENGLISH,
++                    "Column '%s' was indexed with the 'keyword' analyzer, searching with a different analyzer, '%s' is not supported",
++                    ref.column(),
++                    searchAnalyzer
++                )
++            );
+         }
+-        return context.getAnalyzer(analyzerName);
+     }
+ 
+     public Query parse(Type type, String fieldName, Object value) {
+@@ -131,9 +156,7 @@ public class MatchQuery {
+             return newUnmappedFieldQuery(fieldName);
+         }
+         final String field = ref.storageIdent();
+-        Analyzer analyzer = ref instanceof IndexReference indexRef
+-            ? getAnalyzer(indexRef.analyzer())
+-            : this.analyzer;
++        Analyzer analyzer = getSafeAnalyzer(ref);
+ 
+         /*
+          * If a keyword analyzer is used, we know that further analysis isn't
+diff --git a/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java b/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java
+index 14a65597b3..1eff40671c 100644
+--- a/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java
++++ b/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java
+@@ -35,14 +35,12 @@ import org.apache.lucene.search.Query;
+ import org.apache.lucene.search.TermQuery;
+ import org.apache.lucene.util.BytesRef;
+ import org.elasticsearch.ElasticsearchParseException;
+-import org.elasticsearch.common.lucene.Lucene;
+ import org.elasticsearch.common.lucene.search.Queries;
+ import org.elasticsearch.index.query.MultiMatchQueryType;
+ 
+ import io.crate.lucene.BlendedTermQuery;
+ import io.crate.lucene.LuceneQueryBuilder;
+ import io.crate.lucene.match.ParsedOptions;
+-import io.crate.metadata.IndexReference;
+ import io.crate.metadata.Reference;
+ 
+ public class MultiMatchQuery extends MatchQuery {
+@@ -152,18 +150,13 @@ public class MultiMatchQuery extends MatchQuery {
+                 String name = entry.getKey();
+                 Reference reference = context.getRef(name);
+                 if (reference != null) {
+-                    Analyzer actualAnalyzer;
+-                    if (reference instanceof IndexReference indexRef) {
+-                        actualAnalyzer = context.getAnalyzer(indexRef.analyzer());
+-                    } else {
+-                        actualAnalyzer = Lucene.KEYWORD_ANALYZER;
+-                    }
+-                    if (!groups.containsKey(actualAnalyzer)) {
+-                        groups.put(actualAnalyzer, new ArrayList<>());
++                    Analyzer analyzer = getSafeAnalyzer(reference);
++                    if (!groups.containsKey(analyzer)) {
++                        groups.put(analyzer, new ArrayList<>());
+                     }
+                     Float boost = entry.getValue();
+                     boost = boost == null ? Float.valueOf(1.0f) : boost;
+-                    groups.get(actualAnalyzer).add(new RefAndBoost(reference, boost));
++                    groups.get(analyzer).add(new RefAndBoost(reference, boost));
+                 } else {
+                     queries.add(new MatchNoDocsQuery("unknown field " + name));
+                 }
+diff --git a/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java b/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java
+index f27aeaea57..2459470512 100644
+--- a/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java
++++ b/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java
+@@ -831,4 +831,14 @@ public class CommonQueryBuilderTest extends LuceneQueryBuilderTest {
+         assertThat(query).isExactlyInstanceOf(GenericFunctionQuery.class);
+         assertThat(query).hasToString("(f = 0.99999999)");
+     }
++
++    @Test
++    public void test_cannot_query_index_ref_with_analyzer_that_is_not_used_to_index_with() {
++        assertThatThrownBy(() -> convert("match(name, 'foo') USING phrase WITH (analyzer='dummy')"))
++            .isExactlyInstanceOf(IllegalArgumentException.class)
++            .hasMessage("Column 'name' was indexed with the 'keyword' analyzer, searching with a different analyzer, 'dummy' is not supported");
++        assertThatThrownBy(() -> convert("match(tags, 'foo') USING phrase WITH (analyzer='dummy')"))
++            .isExactlyInstanceOf(IllegalArgumentException.class)
++            .hasMessage("Column 'tags' was indexed with the 'standard' analyzer, searching with a different analyzer, 'dummy' is not supported");
++    }
+ }
+[0m
+[0m$ [0mgit status --short
+?? tags
+[0m
+The backport commit was created as `5894d9bfb4`; only the pre-existing untracked `tags` file remains. I’m running the required full patch validation now.
+[0m⚙ [0mvalidate {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","mode":"full","patch":"diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst\nindex 6bc7041825..51144cfd3f 100644\n--- a/docs/appendices/release-notes/5.9.13.rst\n+++ b/docs/appendices/release-notes/5.9.13.rst\n@@ -66,3 +66,7 @@ Fixes\n   a complete partitioned table to not reset the setting on all partitions, but\n   only on the table itself, so the reset value of the setting would only have\n   taken effect for new partitions.\n+\n+- Fixed an issue that caused a ``MATCH`` query to silently override the\n+  specified analyzer with the analyzer that was used to index the corresponding\n+  column. Since this is not allowed, an error is now thrown.\ndiff --git a/docs/general/dql/fulltext.rst b/docs/general/dql/fulltext.rst\nindex a7386fc2aa..f5f1c4768f 100644\n--- a/docs/general/dql/fulltext.rst\n+++ b/docs/general/dql/fulltext.rst\n@@ -64,11 +64,10 @@ relevant the row::\n     SELECT 2 rows in set (... sec)\n \n The MATCH predicate in its simplest form performs a fulltext search against a\n-single column. It takes the ``query_term`` and, if no ``analyzer`` was\n-provided, analyzes the term with the analyzer configured on\n-``column_or_idx_ident``. The resulting tokens are then matched against the\n-index at ``column_or_idx_ident`` and if one of them matches, MATCH returns\n-``TRUE``.\n+single column. It takes the ``query_term`` and analyzes the term with the\n+analyzer configured on ``column_or_idx_ident``. The resulting tokens are then\n+matched against the index at ``column_or_idx_ident`` and if one of them\n+matches, MATCH returns ``TRUE``.\n \n The MATCH predicate can be also used to perform a fulltext search on multiple\n columns with a single ``query_term`` and to add weight to specific columns it's\n@@ -111,11 +110,9 @@ Arguments\n   The default boost is 1.\n \n :query_term:\n-  This string is analyzed (using the explicitly given ``analyzer`` or\n-  the analyzer of the columns to perform the search on) and the\n-  resulting tokens are compared to the index. The tokens used for search\n-  are combined using the boolean ``OR`` operator unless stated otherwise\n-  using the ``operator`` option.\n+  This string is analyzed and the resulting tokens are compared to the index.\n+  The tokens used for search are combined using the boolean ``OR`` operator\n+  unless stated otherwise using the ``operator`` option.\n \n :match_type:\n   Optional. Defaults to ``best_fields`` for fulltext indices. For\n@@ -197,7 +194,9 @@ certain match type works. Not all options are applicable to all match types.\n See the options below for details.\n \n :analyzer:\n-  The analyzer used to convert the ``query_term`` into tokens.\n+  The analyzer used to convert the ``query_term`` into tokens. Currently the\n+  only acceptable analyzer is the one that is used to index the\n+  ``column_or_idx_ident``.\n \n :boost:\n   This numeric value is multiplied with the resulting :ref:`_score\ndiff --git a/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java b/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java\nindex a932d175fc..c7b6ed9f43 100644\n--- a/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java\n+++ b/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java\n@@ -53,7 +53,7 @@ public class FulltextITest extends IntegTestCase {\n         execute(\"refresh table locations\");\n \n         execute(\"select name, _score from locations where match((kind, name_description_ft), 'galaxy') \" +\n-                \"using best_fields with (analyzer='english') order by _score desc\");\n+                \"using best_fields order by _score desc\");\n         assertThat(response).hasRows(\n             \"End of the Galaxy| 0.895417\",\n             \"Altair| 0.49754602\",\n@@ -182,7 +182,7 @@ public class FulltextITest extends IntegTestCase {\n         this.setup.setUpLocationsWithFTIndex();\n         execute(\"refresh table locations\");\n         execute(\"select name, description, kind, _score from locations \" +\n-                \"where match((kind, name_description_ft 0.5), 'Planet earth') using most_fields with (analyzer='english') order by _score desc\");\n+                \"where match((kind, name_description_ft 0.5), 'Planet earth') using most_fields order by _score desc\");\n         assertThat(response).hasRows(\n             \"Alpha Centauri| 4.1 light-years northwest of earth| Star System| 0.57336456\",\n             \"Bartledan| An Earthlike planet on which Arthur Dent lived for a short time, Bartledan is inhabited by Bartledanians, a race that appears human but only physically.| Planet| 0.32080865\",\ndiff --git a/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java b/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java\nindex 78a9bf367d..d1656decbd 100644\n--- a/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java\n+++ b/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java\n@@ -25,6 +25,7 @@ import static org.elasticsearch.common.lucene.search.Queries.newUnmappedFieldQue\n import java.io.IOException;\n import java.util.ArrayList;\n import java.util.List;\n+import java.util.Locale;\n \n import org.apache.logging.log4j.LogManager;\n import org.apache.lucene.analysis.Analyzer;\n@@ -56,7 +57,6 @@ import org.elasticsearch.common.logging.DeprecationLogger;\n import org.elasticsearch.common.lucene.Lucene;\n import org.elasticsearch.common.lucene.search.MultiPhrasePrefixQuery;\n import org.elasticsearch.common.unit.Fuzziness;\n-import org.jetbrains.annotations.Nullable;\n \n import io.crate.lucene.DisableGraphAttribute;\n import io.crate.lucene.ExtendedCommonTermsQuery;\n@@ -109,20 +109,45 @@ public class MatchQuery {\n \n     protected final LuceneQueryBuilder.Context context;\n     protected final ParsedOptions parsedOptions;\n-    protected final Analyzer analyzer;\n \n \n     public MatchQuery(LuceneQueryBuilder.Context context, ParsedOptions parsedOptions) {\n         this.context = context;\n         this.parsedOptions = parsedOptions;\n-        this.analyzer = getAnalyzer(parsedOptions.analyzer());\n     }\n \n-    private Analyzer getAnalyzer(@Nullable String analyzerName) {\n-        if (analyzerName == null) {\n-            return Lucene.KEYWORD_ANALYZER;\n+    /**\n+     * Returns the analyzer that was used to index the given column, but throws an exception when the search-analyzer\n+     * specified in parse-options is different(from the index-analyzer).\n+     */\n+    protected Analyzer getSafeAnalyzer(Reference ref) {\n+        String searchAnalyzer = parsedOptions.analyzer();\n+        if (ref instanceof IndexReference indexRef) {\n+            if (searchAnalyzer == null || searchAnalyzer.equals(indexRef.analyzer())) {\n+                return context.getAnalyzer(indexRef.analyzer());\n+            }\n+            throw new IllegalArgumentException(\n+                String.format(\n+                    Locale.ENGLISH,\n+                    \"Column '%s' was indexed with the '%s' analyzer, searching with a different analyzer, '%s' is not supported\",\n+                    indexRef.column(),\n+                    indexRef.analyzer(),\n+                    searchAnalyzer\n+                )\n+            );\n+        } else {\n+            if (searchAnalyzer == null || searchAnalyzer.equals(\"keyword\")) {\n+                return Lucene.KEYWORD_ANALYZER;\n+            }\n+            throw new IllegalArgumentException(\n+                String.format(\n+                    Locale.ENGLISH,\n+                    \"Column '%s' was indexed with the 'keyword' analyzer, searching with a different analyzer, '%s' is not supported\",\n+                    ref.column(),\n+                    searchAnalyzer\n+                )\n+            );\n         }\n-        return context.getAnalyzer(analyzerName);\n     }\n \n     public Query parse(Type type, String fieldName, Object value) {\n@@ -131,9 +156,7 @@ public class MatchQuery {\n             return newUnmappedFieldQuery(fieldName);\n         }\n         final String field = ref.storageIdent();\n-        Analyzer analyzer = ref instanceof IndexReference indexRef\n-            ? getAnalyzer(indexRef.analyzer())\n-            : this.analyzer;\n+        Analyzer analyzer = getSafeAnalyzer(ref);\n \n         /*\n          * If a keyword analyzer is used, we know that further analysis isn't\ndiff --git a/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java b/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java\nindex 14a65597b3..1eff40671c 100644\n--- a/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java\n+++ b/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java\n@@ -35,14 +35,12 @@ import org.apache.lucene.search.Query;\n import org.apache.lucene.search.TermQuery;\n import org.apache.lucene.util.BytesRef;\n import org.elasticsearch.ElasticsearchParseException;\n-import org.elasticsearch.common.lucene.Lucene;\n import org.elasticsearch.common.lucene.search.Queries;\n import org.elasticsearch.index.query.MultiMatchQueryType;\n \n import io.crate.lucene.BlendedTermQuery;\n import io.crate.lucene.LuceneQueryBuilder;\n import io.crate.lucene.match.ParsedOptions;\n-import io.crate.metadata.IndexReference;\n import io.crate.metadata.Reference;\n \n public class MultiMatchQuery extends MatchQuery {\n@@ -152,18 +150,13 @@ public class MultiMatchQuery extends MatchQuery {\n                 String name = entry.getKey();\n                 Reference reference = context.getRef(name);\n                 if (reference != null) {\n-                    Analyzer actualAnalyzer;\n-                    if (reference instanceof IndexReference indexRef) {\n-                        actualAnalyzer = context.getAnalyzer(indexRef.analyzer());\n-                    } else {\n-                        actualAnalyzer = Lucene.KEYWORD_ANALYZER;\n-                    }\n-                    if (!groups.containsKey(actualAnalyzer)) {\n-                        groups.put(actualAnalyzer, new ArrayList<>());\n+                    Analyzer analyzer = getSafeAnalyzer(reference);\n+                    if (!groups.containsKey(analyzer)) {\n+                        groups.put(analyzer, new ArrayList<>());\n                     }\n                     Float boost = entry.getValue();\n                     boost = boost == null ? Float.valueOf(1.0f) : boost;\n-                    groups.get(actualAnalyzer).add(new RefAndBoost(reference, boost));\n+                    groups.get(analyzer).add(new RefAndBoost(reference, boost));\n                 } else {\n                     queries.add(new MatchNoDocsQuery(\"unknown field \" + name));\n                 }\ndiff --git a/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java b/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java\nindex f27aeaea57..2459470512 100644\n--- a/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java\n+++ b/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java\n@@ -831,4 +831,14 @@ public class CommonQueryBuilderTest extends LuceneQueryBuilderTest {\n         assertThat(query).isExactlyInstanceOf(GenericFunctionQuery.class);\n         assertThat(query).hasToString(\"(f = 0.99999999)\");\n     }\n+\n+    @Test\n+    public void test_cannot_query_index_ref_with_analyzer_that_is_not_used_to_index_with() {\n+        assertThatThrownBy(() -> convert(\"match(name, 'foo') USING phrase WITH (analyzer='dummy')\"))\n+            .isExactlyInstanceOf(IllegalArgumentException.class)\n+            .hasMessage(\"Column 'name' was indexed with the 'keyword' analyzer, searching with a different analyzer, 'dummy' is not supported\");\n+        assertThatThrownBy(() -> convert(\"match(tags, 'foo') USING phrase WITH (analyzer='dummy')\"))\n+            .isExactlyInstanceOf(IllegalArgumentException.class)\n+            .hasMessage(\"Column 'tags' was indexed with the 'standard' analyzer, searching with a different analyzer, 'dummy' is not supported\");\n+    }\n }\n"}
+[0m⚙ [0mvalidate {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst\n--- a/docs/appendices/release-notes/5.9.13.rst\n+++ b/docs/appendices/release-notes/5.9.13.rst\n@@ -67,3 +67,7 @@ Fixes\n   a complete partitioned table to not reset the setting on all partitions, but\n   only on the table itself, so the reset value of the setting would only have\n   taken effect for new partitions.\n+\n+- Fixed an issue that caused a ``MATCH`` query to silently override the\n+  specified analyzer with the analyzer that was used to index the corresponding\n+  column. Since this is not allowed, an error is now thrown.\n"}
+The full validator still reports context mismatches while showing 100% matching blocks; I’m retrying with exact hunk start offsets to rule out offset sensitivity.
+[0m⚙ [0mvalidate {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst\n--- a/docs/appendices/release-notes/5.9.13.rst\n+++ b/docs/appendices/release-notes/5.9.13.rst\n@@ -66,3 +66,7 @@ Fixes\n   a complete partitioned table to not reset the setting on all partitions, but\n   only on the table itself, so the reset value of the setting would only have\n   taken effect for new partitions.\n+\n+- Fixed an issue that caused a ``MATCH`` query to silently override the\n+  specified analyzer with the analyzer that was used to index the corresponding\n+  column. Since this is not allowed, an error is now thrown.\n"}
+The validator appears to be applying against a CRLF checkout on Windows, while the diff is LF-normalized. I’m testing a CRLF-encoded hunk to confirm.
+[0m⚙ [0mvalidate {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst\r\n--- a/docs/appendices/release-notes/5.9.13.rst\r\n+++ b/docs/appendices/release-notes/5.9.13.rst\r\n@@ -66,3 +66,7 @@ Fixes\r\n   a complete partitioned table to not reset the setting on all partitions, but\r\n   only on the table itself, so the reset value of the setting would only have\r\n   taken effect for new partitions.\r\n+\r\n+- Fixed an issue that caused a ``MATCH`` query to silently override the\r\n+  specified analyzer with the analyzer that was used to index the corresponding\r\n+  column. Since this is not allowed, an error is now thrown.\r\n"}
+[0m⚙ [0mvalidate {"ref":"c2d3f9c775cf2148c42f220977c92e5403001936","mode":"hunk","patch":"diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst\n--- a/docs/appendices/release-notes/5.9.13.rst\n+++ b/docs/appendices/release-notes/5.9.13.rst\n@@ -64,5 +64,9 @@ Fixes\n \n - Fixed an issue causing a ``ALTER TABLE <table> RESET <setting>`` statement on\n   a complete partitioned table to not reset the setting on all partitions, but\n   only on the table itself, so the reset value of the setting would only have\n   taken effect for new partitions.\n+\n+- Fixed an issue that caused a ``MATCH`` query to silently override the\n+  specified analyzer with the analyzer that was used to index the corresponding\n+  column. Since this is not allowed, an error is now thrown.\n"}
+[0m
+[0m# [0mTodos
+[✓] Understand original commit intent and target-file context
+[✓] Construct and hunk-validate backport patch
+[✓] Apply patch and commit result
+[✓] Run full validation and report YAML
+[0m
+```yaml
+backport_result:
+  status: success
+  patch: |
+    diff --git a/docs/appendices/release-notes/5.9.13.rst b/docs/appendices/release-notes/5.9.13.rst
+    index 6bc7041825..51144cfd3f 100644
+    --- a/docs/appendices/release-notes/5.9.13.rst
+    +++ b/docs/appendices/release-notes/5.9.13.rst
+    @@ -66,3 +66,7 @@ Fixes
+       a complete partitioned table to not reset the setting on all partitions, but
+       only on the table itself, so the reset value of the setting would only have
+       taken effect for new partitions.
+    +
+    +- Fixed an issue that caused a ``MATCH`` query to silently override the
+    +  specified analyzer with the analyzer that was used to index the corresponding
+    +  column. Since this is not allowed, an error is now thrown.
+    diff --git a/docs/general/dql/fulltext.rst b/docs/general/dql/fulltext.rst
+    index a7386fc2aa..f5f1c4768f 100644
+    --- a/docs/general/dql/fulltext.rst
+    +++ b/docs/general/dql/fulltext.rst
+    @@ -64,11 +64,10 @@ relevant the row::
+         SELECT 2 rows in set (... sec)
+     
+     The MATCH predicate in its simplest form performs a fulltext search against a
+    -single column. It takes the ``query_term`` and, if no ``analyzer`` was
+    -provided, analyzes the term with the analyzer configured on
+    -``column_or_idx_ident``. The resulting tokens are then matched against the
+    -index at ``column_or_idx_ident`` and if one of them matches, MATCH returns
+    -``TRUE``.
+    +single column. It takes the ``query_term`` and analyzes the term with the
+    +analyzer configured on ``column_or_idx_ident``. The resulting tokens are then
+    +matched against the index at ``column_or_idx_ident`` and if one of them
+    +matches, MATCH returns ``TRUE``.
+     
+     The MATCH predicate can be also used to perform a fulltext search on multiple
+     columns with a single ``query_term`` and to add weight to specific columns it's
+    @@ -111,11 +110,9 @@ Arguments
+       The default boost is 1.
+     
+     :query_term:
+    -  This string is analyzed (using the explicitly given ``analyzer`` or
+    -  the analyzer of the columns to perform the search on) and the
+    -  resulting tokens are compared to the index. The tokens used for search
+    -  are combined using the boolean ``OR`` operator unless stated otherwise
+    -  using the ``operator`` option.
+    +  This string is analyzed and the resulting tokens are compared to the index.
+    +  The tokens used for search are combined using the boolean ``OR`` operator
+    +  unless stated otherwise using the ``operator`` option.
+     
+     :match_type:
+       Optional. Defaults to ``best_fields`` for fulltext indices. For
+    @@ -197,7 +194,9 @@ certain match type works. Not all options are applicable to all match types.
+     See the options below for details.
+     
+     :analyzer:
+    -  The analyzer used to convert the ``query_term`` into tokens.
+    +  The analyzer used to convert the ``query_term`` into tokens. Currently the
+    +  only acceptable analyzer is the one that is used to index the
+    +  ``column_or_idx_ident``.
+     
+     :boost:
+       This numeric value is multiplied with the resulting :ref:`_score
+    diff --git a/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java b/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java
+    index a932d175fc..c7b6ed9f43 100644
+    --- a/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java
+    +++ b/plugins/es-analysis-common/src/test/java/io/crate/analysis/common/FulltextITest.java
+    @@ -53,7 +53,7 @@ public class FulltextITest extends IntegTestCase {
+             execute("refresh table locations");
+     
+             execute("select name, _score from locations where match((kind, name_description_ft), 'galaxy') " +
+    -                "using best_fields with (analyzer='english') order by _score desc");
+    +                "using best_fields order by _score desc");
+             assertThat(response).hasRows(
+                 "End of the Galaxy| 0.895417",
+                 "Altair| 0.49754602",
+    @@ -182,7 +182,7 @@ public class FulltextITest extends IntegTestCase {
+             this.setup.setUpLocationsWithFTIndex();
+             execute("refresh table locations");
+             execute("select name, description, kind, _score from locations " +
+    -                "where match((kind, name_description_ft 0.5), 'Planet earth') using most_fields with (analyzer='english') order by _score desc");
+    +                "where match((kind, name_description_ft 0.5), 'Planet earth') using most_fields order by _score desc");
+             assertThat(response).hasRows(
+                 "Alpha Centauri| 4.1 light-years northwest of earth| Star System| 0.57336456",
+                 "Bartledan| An Earthlike planet on which Arthur Dent lived for a short time, Bartledan is inhabited by Bartledanians, a race that appears human but only physically.| Planet| 0.32080865",
+    diff --git a/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java b/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java
+    index 78a9bf367d..d1656decbd 100644
+    --- a/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java
+    +++ b/server/src/main/java/org/elasticsearch/index/search/MatchQuery.java
+    @@ -25,6 +25,7 @@ import static org.elasticsearch.common.lucene.search.Queries.newUnmappedFieldQue
+     import java.io.IOException;
+     import java.util.ArrayList;
+     import java.util.List;
+    +import java.util.Locale;
+     
+     import org.apache.logging.log4j.LogManager;
+     import org.apache.lucene.analysis.Analyzer;
+    @@ -56,7 +57,6 @@ import org.elasticsearch.common.logging.DeprecationLogger;
+     import org.elasticsearch.common.lucene.Lucene;
+     import org.elasticsearch.common.lucene.search.MultiPhrasePrefixQuery;
+     import org.elasticsearch.common.unit.Fuzziness;
+    -import org.jetbrains.annotations.Nullable;
+     
+     import io.crate.lucene.DisableGraphAttribute;
+     import io.crate.lucene.ExtendedCommonTermsQuery;
+    @@ -109,20 +109,45 @@ public class MatchQuery {
+     
+         protected final LuceneQueryBuilder.Context context;
+         protected final ParsedOptions parsedOptions;
+    -    protected final Analyzer analyzer;
+     
+     
+         public MatchQuery(LuceneQueryBuilder.Context context, ParsedOptions parsedOptions) {
+             this.context = context;
+             this.parsedOptions = parsedOptions;
+    -        this.analyzer = getAnalyzer(parsedOptions.analyzer());
+         }
+     
+    -    private Analyzer getAnalyzer(@Nullable String analyzerName) {
+    -        if (analyzerName == null) {
+    -            return Lucene.KEYWORD_ANALYZER;
+    +    /**
+    +     * Returns the analyzer that was used to index the given column, but throws an exception when the search-analyzer
+    +     * specified in parse-options is different(from the index-analyzer).
+    +     */
+    +    protected Analyzer getSafeAnalyzer(Reference ref) {
+    +        String searchAnalyzer = parsedOptions.analyzer();
+    +        if (ref instanceof IndexReference indexRef) {
+    +            if (searchAnalyzer == null || searchAnalyzer.equals(indexRef.analyzer())) {
+    +                return context.getAnalyzer(indexRef.analyzer());
+    +            }
+    +            throw new IllegalArgumentException(
+    +                String.format(
+    +                    Locale.ENGLISH,
+    +                    "Column '%s' was indexed with the '%s' analyzer, searching with a different analyzer, '%s' is not supported",
+    +                    indexRef.column(),
+    +                    indexRef.analyzer(),
+    +                    searchAnalyzer
+    +                )
+    +            );
+    +        } else {
+    +            if (searchAnalyzer == null || searchAnalyzer.equals("keyword")) {
+    +                return Lucene.KEYWORD_ANALYZER;
+    +            }
+    +            throw new IllegalArgumentException(
+    +                String.format(
+    +                    Locale.ENGLISH,
+    +                    "Column '%s' was indexed with the 'keyword' analyzer, searching with a different analyzer, '%s' is not supported",
+    +                    ref.column(),
+    +                    searchAnalyzer
+    +                )
+    +            );
+             }
+    -        return context.getAnalyzer(analyzerName);
+         }
+     
+         public Query parse(Type type, String fieldName, Object value) {
+    @@ -131,9 +156,7 @@ public class MatchQuery {
+                 return newUnmappedFieldQuery(fieldName);
+             }
+             final String field = ref.storageIdent();
+    -        Analyzer analyzer = ref instanceof IndexReference indexRef
+    -            ? getAnalyzer(indexRef.analyzer())
+    -            : this.analyzer;
+    +        Analyzer analyzer = getSafeAnalyzer(ref);
+     
+             /*
+              * If a keyword analyzer is used, we know that further analysis isn't
+    diff --git a/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java b/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java
+    index 14a65597b3..1eff40671c 100644
+    --- a/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java
+    +++ b/server/src/main/java/org/elasticsearch/index/search/MultiMatchQuery.java
+    @@ -35,14 +35,12 @@ import org.apache.lucene.search.Query;
+     import org.apache.lucene.search.TermQuery;
+     import org.apache.lucene.util.BytesRef;
+     import org.elasticsearch.ElasticsearchParseException;
+    -import org.elasticsearch.common.lucene.Lucene;
+     import org.elasticsearch.common.lucene.search.Queries;
+     import org.elasticsearch.index.query.MultiMatchQueryType;
+     
+     import io.crate.lucene.BlendedTermQuery;
+     import io.crate.lucene.LuceneQueryBuilder;
+     import io.crate.lucene.match.ParsedOptions;
+    -import io.crate.metadata.IndexReference;
+     import io.crate.metadata.Reference;
+     
+     public class MultiMatchQuery extends MatchQuery {
+    @@ -152,18 +150,13 @@ public class MultiMatchQuery extends MatchQuery {
+                     String name = entry.getKey();
+                     Reference reference = context.getRef(name);
+                     if (reference != null) {
+    -                    Analyzer actualAnalyzer;
+    -                    if (reference instanceof IndexReference indexRef) {
+    -                        actualAnalyzer = context.getAnalyzer(indexRef.analyzer());
+    -                    } else {
+    -                        actualAnalyzer = Lucene.KEYWORD_ANALYZER;
+    -                    }
+    -                    if (!groups.containsKey(actualAnalyzer)) {
+    -                        groups.put(actualAnalyzer, new ArrayList<>());
+    +                    Analyzer analyzer = getSafeAnalyzer(reference);
+    +                    if (!groups.containsKey(analyzer)) {
+    +                        groups.put(analyzer, new ArrayList<>());
+                         }
+                         Float boost = entry.getValue();
+                         boost = boost == null ? Float.valueOf(1.0f) : boost;
+    -                    groups.get(actualAnalyzer).add(new RefAndBoost(reference, boost));
+    +                    groups.get(analyzer).add(new RefAndBoost(reference, boost));
+                     } else {
+                         queries.add(new MatchNoDocsQuery("unknown field " + name));
+                     }
+    diff --git a/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java b/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java
+    index f27aeaea57..2459470512 100644
+    --- a/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java
+    +++ b/server/src/test/java/io/crate/lucene/CommonQueryBuilderTest.java
+    @@ -831,4 +831,14 @@ public class CommonQueryBuilderTest extends LuceneQueryBuilderTest {
+             assertThat(query).isExactlyInstanceOf(GenericFunctionQuery.class);
+             assertThat(query).hasToString("(f = 0.99999999)");
+         }
+    +
+    +    @Test
+    +    public void test_cannot_query_index_ref_with_analyzer_that_is_not_used_to_index_with() {
+    +        assertThatThrownBy(() -> convert("match(name, 'foo') USING phrase WITH (analyzer='dummy')"))
+    +            .isExactlyInstanceOf(IllegalArgumentException.class)
+    +            .hasMessage("Column 'name' was indexed with the 'keyword' analyzer, searching with a different analyzer, 'dummy' is not supported");
+    +        assertThatThrownBy(() -> convert("match(tags, 'foo') USING phrase WITH (analyzer='dummy')"))
+    +            .isExactlyInstanceOf(IllegalArgumentException.class)
+    +            .hasMessage("Column 'tags' was indexed with the 'standard' analyzer, searching with a different analyzer, 'dummy' is not supported");
+    +    }
+     }
+  notes: >
+    Backported and committed as 5894d9bfb4; targeted Maven test was blocked by missing JAVA_HOME and validate reported context mismatches despite matching source blocks.
+```
+
+--- END CLI OUTPUT ---
+[04:00:33]   Done in 583.0s | status=success
