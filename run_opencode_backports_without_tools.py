@@ -852,7 +852,7 @@ def main() -> int:
                 suffix = stderr.strip() or f"OpenCode exited with status {code}."
                 error = f"{error} {suffix}".strip()
 
-            result["backport_status"] = "completed"
+            result["backport_status"] = "success"
             result["old_version_generated_patch"] = generated_diff
             result["is_100_percent_similar"] = success
             result["amount_of_token_usage"] = token_usage.get("total_tokens")
