@@ -367,6 +367,37 @@ def process_row(
         return result
     repo_dir = str(repo_path)
 
+    _log(log_path, "  Cleaning repo (locks, branches, reset)...")
+    try:
+        # Clean git locks
+        for root, _, files in os.walk(os.path.join(repo_dir, ".git")):
+            for f in files:
+                if f.endswith(".lock"):
+                    try:
+                        os.remove(os.path.join(root, f))
+                    except Exception:
+                        pass
+        
+        # Force reset, clean untracked
+        subprocess.run(["git", "reset", "--hard"], cwd=repo_dir, capture_output=True)
+        subprocess.run(["git", "clean", "-fdx"], cwd=repo_dir, capture_output=True)
+        
+        # Checkout master (or main)
+        res = subprocess.run(["git", "checkout", "master"], cwd=repo_dir, capture_output=True)
+        if res.returncode != 0:
+            subprocess.run(["git", "checkout", "main"], cwd=repo_dir, capture_output=True)
+            
+        # Delete all other branches
+        res = subprocess.run(["git", "branch"], cwd=repo_dir, capture_output=True, text=True)
+        for branch in res.stdout.splitlines():
+            branch = branch.strip()
+            if branch.startswith("*"):
+                branch = branch[1:].strip()
+            if branch and branch not in ("master", "main"):
+                subprocess.run(["git", "branch", "-D", branch], cwd=repo_dir, capture_output=True)
+    except Exception as e:
+        _log(log_path, f"  Warning during git cleanup: {e}")
+
     # 2. Resolve the backport parent commit
     _log(log_path, f"  Resolving parent of backport commit {backport_commit[:8]}...")
     backport_parent = get_parent_commit(repo_dir, backport_commit)
