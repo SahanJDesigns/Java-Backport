@@ -145,27 +145,15 @@ For every significant hunk in the patch above:
 3. Do **not** traverse child commits of `{original_commit}` on `{original_version}` to \
    gather more patches — use only the diff provided above.
 
-### Step 3 — Construct the backport patch
-Based on your analysis, write a unified diff patch that:
-- Applies cleanly against ref `{backport_parent}` (current HEAD)
-- Preserves the intent of the original change `{original_commit}`
-- Adapts to any API or structural differences in `{backport_version}`
-- If a hunk is purely new code with no counterpart, mark it as `need not ported`
+### Step 3 — Apply the backport
+Based on your analysis, modify the files in the repository to port the changes:
+- The changes must apply cleanly against ref `{backport_parent}` (current HEAD)
+- Preserve the intent of the original change `{original_commit}`
+- Adapt to any API or structural differences in `{backport_version}`
+- If a hunk is purely new code with no counterpart, mark it as `need not ported` in your notes.
 
-The patch must follow standard unified diff format with 3 lines of context:
-```diff
---- a/path/to/File.java
-+++ b/path/to/File.java
-@@ -N,M +N,M @@
- context line
--removed line
-+added line
- context line
-```
-
-### Step 4 — Validate each hunk
-Use the `validate` tool with `mode=hunk` and `ref={backport_parent}` to test that each hunk \
-applies cleanly. Fix any context mismatches before proceeding.
+### Step 4 — Validate your changes
+Use the available validation or compilation tools to test that your changes compile and apply cleanly. Fix any issues before proceeding.
 
 ### Step 5 — Final validation
 Do not do the final validation (mode=full), even though you have the tools. Skip it to save time, and proceed directly to returning the YAML.
@@ -179,8 +167,6 @@ At the end of your work, output the following YAML block so the orchestrator can
 ```yaml
 backport_result:
   status: success
-  patch: |
-    <full unified diff here, or empty if need_not_ported>
   notes: >
     <one-line explanation of what was done or why it failed>
 ```
