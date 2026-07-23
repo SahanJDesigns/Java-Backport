@@ -100,7 +100,6 @@ Your goal is to **backport** a commit from the `{original_version}` branch of th
 | Original branch  | `{original_version}` |
 | Original commit  | `{original_commit}` |
 | Backport branch  | `{backport_version}` |
-| Backport commit  | `{backport_commit}` (ground-truth result — do NOT check it out) |
 | Backport type    | `{backport_type}` |
 
 The target ref you must apply the patch **to** is the **parent** of the backport commit:
@@ -124,7 +123,7 @@ on the `{original_version}` branch. This is the change you must port to `{backpo
 `{original_version}` branch to infer what to port. The diff above is your sole source of \
 truth for what changed. Use git tools only to understand the *context* of the surrounding \
 code on the `{backport_version}` branch at ref `{backport_parent}`.
-
+Do not use Validation Full Mode
 ---
 
 ## Workflow
@@ -167,11 +166,8 @@ The patch must follow standard unified diff format with 3 lines of context:
 Use the `validate` tool with `mode=hunk` and `ref={backport_parent}` to test that each hunk \
 applies cleanly. Fix any context mismatches before proceeding.
 
-### Step 5 — Final validation
-Call `validate` with `mode=full` and `ref={backport_parent}` to verify the complete patch compiles and passes tests.
-
-### Step 6 — Apply and commit the patch
-Once full validation passes, apply the full patch to the working tree and **commit** the \
+### Step 5 — Apply and commit the patch
+Apply the full patch to the working tree and **commit** the \
 result so the orchestrator can extract it with `git diff {backport_parent} HEAD`.
 
 ---
@@ -368,6 +364,16 @@ def process_row(
         result["Duration Seconds"] = round(time.time() - t_start, 1)
         return result
     repo_dir = str(repo_path)
+
+    _log(log_path, "  Resetting repo and checking out master to ensure a clean state...")
+    try:
+        subprocess.run(["git", "reset", "--hard"], cwd=repo_dir, capture_output=True, text=True, check=True)
+        subprocess.run(["git", "clean", "-fd"], cwd=repo_dir, capture_output=True, text=True, check=True)
+        res = subprocess.run(["git", "checkout", "master"], cwd=repo_dir, capture_output=True, text=True)
+        if res.returncode != 0:
+            subprocess.run(["git", "checkout", "main"], cwd=repo_dir, capture_output=True, text=True)
+    except subprocess.CalledProcessError as e:
+        _log(log_path, f"  Warning: failed to reset repo: {e.stderr.strip() if e.stderr else str(e)}")
 
     # 2. Resolve the backport parent commit
     _log(log_path, f"  Resolving parent of backport commit {backport_commit[:8]}...")
